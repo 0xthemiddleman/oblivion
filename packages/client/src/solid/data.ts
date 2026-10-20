@@ -1720,6 +1720,10 @@ export function createData(config: CreateDataInput) {
               order: "desc",
             })
             const fetched = response.data.toReversed()
+            const current = store.session.message[sessionID] ?? []
+            // A refetched newest window that overlaps loaded history replaces only the rows from
+            // that overlap on, so older pages already loaded stay loaded and keep their cursor.
+            const overlap = fetched.length ? messageIndex.get(sessionID)?.get(fetched[0]!.id) : undefined
             // Same protection as the pending sync: a re-fetch racing an
             // admission must not wipe its local transcript row.
             const ids = new Set(fetched.map((item) => item.id))
@@ -1728,14 +1732,20 @@ export function createData(config: CreateDataInput) {
                 item.type === "user" || item.type === "synthetic" ? [item.id] : [],
               ),
             )
-            const local = (store.session.message[sessionID] ?? []).filter(
-              (item) => !ids.has(item.id) && (outbox.has(item.id) || admitted.has(item.id)),
-            )
-            const messages = local.length === 0 ? fetched : [...fetched, ...local]
+            const local = current
+              .slice(overlap)
+              .filter((item) => !ids.has(item.id) && (outbox.has(item.id) || admitted.has(item.id)))
+            const older = overlap ? current.slice(0, overlap).filter((item) => !ids.has(item.id)) : []
+            const messages = [...older, ...fetched, ...local]
             batch(() => {
               messageIndex.set(sessionID, new Map(messages.map((message, index) => [message.id, index])))
               setStore("session", "message", sessionID, reconcile(messages))
-              setStore("session", "messageCursor", sessionID, response.cursor.next ?? undefined)
+              setStore(
+                "session",
+                "messageCursor",
+                sessionID,
+                overlap ? store.session.messageCursor[sessionID] : (response.cursor.next ?? undefined),
+              )
             })
           })
         },

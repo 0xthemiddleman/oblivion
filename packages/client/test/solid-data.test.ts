@@ -1069,6 +1069,69 @@ test("loads bounded message pages", async () => {
   }
 })
 
+test("keeps loaded history when the newest window is read again", async () => {
+  const history = Array.from({ length: 6 }, (_, index) => ({
+    id: `msg_${index}`,
+    type: "user",
+    text: `Message ${index}`,
+    time: { created: index },
+  }))
+  const api = OpenCode.make({
+    baseUrl: "http://opencode.local",
+    fetch: async (input, init) => {
+      const url = new URL((input instanceof Request ? input : new Request(input, init)).url)
+      const end = Number(url.searchParams.get("cursor") ?? history.length)
+      const start = Math.max(0, end - 2)
+      return Response.json({
+        data: history.slice(start, end).toReversed(),
+        cursor: start > 0 ? { next: String(start) } : {},
+      })
+    },
+  })
+  const setup = createRoot((dispose) => ({
+    data: createData({
+      api: () => api,
+      directory: "/project",
+      initialMessageLimit: () => 2,
+      event: { on: () => () => {}, listen: () => () => {} },
+    }),
+    dispose,
+  }))
+  const ids = () => setup.data.session.message.list("ses_history").map((message) => message.id)
+
+  try {
+    await setup.data.session.message.sync("ses_history")
+    await setup.data.session.message.loadMore("ses_history")
+    const loaded = setup.data.session.message.list("ses_history")
+    expect(ids()).toEqual(["msg_2", "msg_3", "msg_4", "msg_5"])
+
+    setup.data.session.message.invalidate("ses_history")
+    await setup.data.session.message.sync("ses_history")
+    expect(ids()).toEqual(["msg_2", "msg_3", "msg_4", "msg_5"])
+    expect(setup.data.session.message.list("ses_history")[0]).toBe(loaded[0])
+    expect(setup.data.session.message.more("ses_history")).toBe(true)
+
+    history.push({ id: "msg_6", type: "user", text: "Message 6", time: { created: 6 } })
+    setup.data.session.message.invalidate("ses_history")
+    await setup.data.session.message.sync("ses_history")
+    expect(ids()).toEqual(["msg_2", "msg_3", "msg_4", "msg_5", "msg_6"])
+
+    await setup.data.session.message.loadMore("ses_history")
+    expect(ids()).toEqual(["msg_0", "msg_1", "msg_2", "msg_3", "msg_4", "msg_5", "msg_6"])
+
+    // A newest window that no longer overlaps what is loaded replaces it.
+    history.push(
+      ...[7, 8, 9].map((index) => ({ id: `msg_${index}`, type: "user", text: "", time: { created: index } })),
+    )
+    setup.data.session.message.invalidate("ses_history")
+    await setup.data.session.message.sync("ses_history")
+    expect(ids()).toEqual(["msg_8", "msg_9"])
+    expect(setup.data.session.message.more("ses_history")).toBe(true)
+  } finally {
+    setup.dispose()
+  }
+})
+
 test.each(["success", "failure", "cancel", "cancel-retry", "cancel-page", "join-cancel", "join-failure"])(
   "bulk history (%s)",
   async (mode) => {
