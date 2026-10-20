@@ -192,6 +192,8 @@ function createServerController(
   const source = createData({
     api: () => sdk.api,
     initialMessageLimit: () => (timelinePreset(settings.general.timelineDetail())?.id === "compact" ? 40 : 20),
+    // A reconnect re-reads the pages the transcript already loaded instead of collapsing it to the newest window.
+    resyncMessageLimit: () => 2_000,
     event: {
       on: sdk.event.on,
       listen: (handler) => sdk.event.listen((event) => handler({ name: event.type, details: event })),

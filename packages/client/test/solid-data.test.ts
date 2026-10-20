@@ -1069,9 +1069,112 @@ test("loads bounded message pages", async () => {
   }
 })
 
-test("keeps loaded history when the newest window is read again", async () => {
-  const history = Array.from({ length: 6 }, (_, index) => ({
-    id: `msg_${index}`,
+test.each(["completed and cancelled", "reverted"] as const)(
+  "a resync re-reads loaded history from the server when it was %s while disconnected",
+  async (change) => {
+    const sessionID = "ses_resync"
+    const user = (id: string, created: number) => ({ id, type: "user", text: id, time: { created } })
+    const assistant = (completed: boolean) => ({
+      id: "msg_1",
+      type: "assistant",
+      agent: "build",
+      model: { providerID: "fixture", id: "model" },
+      content: [{ type: "text", text: completed ? "done" : "working" }],
+      time: completed ? { created: 1, completed: 2 } : { created: 1 },
+    })
+    const synthetic = (id: string, created: number) => ({ id, type: "synthetic", text: id, time: { created } })
+    const server = {
+      messages: [user("msg_0", 0), assistant(false)] as unknown[],
+      inbox: [] as unknown[],
+    }
+    const listeners = new Set<Parameters<CreateDataInput["event"]["listen"]>[0]>()
+    const api = OpenCode.make({
+      baseUrl: "http://opencode.local",
+      fetch: async (input, init) => {
+        const url = new URL((input instanceof Request ? input : new Request(input, init)).url)
+        if (url.pathname.endsWith("/inbox")) return Response.json({ data: server.inbox })
+        const end = Number(url.searchParams.get("cursor") ?? server.messages.length)
+        const start = Math.max(0, end - Number(url.searchParams.get("limit")))
+        return Response.json({
+          data: server.messages.slice(start, end).toReversed(),
+          cursor: start > 0 ? { next: String(start) } : {},
+        })
+      },
+    })
+    const setup = createRoot((dispose) => ({
+      data: createData({
+        api: () => api,
+        directory: "/project",
+        initialMessageLimit: () => 2,
+        resyncMessageLimit: () => 100,
+        event: {
+          on: () => () => {},
+          listen(handler) {
+            listeners.add(handler)
+            return () => listeners.delete(handler)
+          },
+        },
+      }),
+      dispose,
+    }))
+    let seq = 0
+    const emit = (event: Record<string, unknown>) =>
+      listeners.forEach((listener) =>
+        listener({
+          name: event.type as OpenCodeEvent["type"],
+          details: { created: ++seq, durable: { aggregateID: sessionID, seq, version: 1 }, ...event } as OpenCodeEvent,
+        }),
+      )
+    const appendSynthetic = (id: string) => {
+      server.messages.push(synthetic(id, seq + 1))
+      emit({ id: id.replace(/^msg_/, "evt_"), type: "session.synthetic", data: { sessionID, text: id } })
+    }
+    const ids = () => setup.data.session.message.list(sessionID).map((message) => message.id)
+
+    try {
+      await setup.data.session.message.sync(sessionID)
+      await setup.data.session.pending.sync(sessionID)
+      emit({
+        id: "evt_q",
+        type: "session.inbox.enqueued",
+        data: { sessionID, inboxID: "msg_q", item: { type: "user", delivery: "queue", payload: { text: "Queued" } } },
+      })
+      server.inbox = [
+        { id: "msg_q", sessionID, type: "user", delivery: "queue", time: { created: 3 }, payload: { text: "Queued" } },
+      ]
+      appendSynthetic("msg_2")
+      appendSynthetic("msg_3")
+      expect(ids()).toEqual(["msg_0", "msg_1", "msg_q", "msg_2", "msg_3"])
+
+      // Disconnected: the server finishes msg_1 and cancels the queued prompt, or reverts everything after msg_0.
+      server.inbox = []
+      if (change === "completed and cancelled") server.messages[1] = assistant(true)
+      if (change === "reverted") server.messages.splice(1)
+      setup.data.session.pending.invalidate(sessionID)
+      setup.data.session.message.invalidate(sessionID)
+      if (change === "reverted") {
+        appendSynthetic("msg_4")
+        appendSynthetic("msg_5")
+      }
+      await setup.data.session.pending.sync(sessionID)
+      await setup.data.session.message.sync(sessionID)
+
+      if (change === "completed and cancelled") {
+        expect(ids()).toEqual(["msg_0", "msg_1", "msg_2", "msg_3"])
+        const message = setup.data.session.message.get(sessionID, "msg_1")
+        expect(message?.type === "assistant" ? message.time.completed : undefined).toBe(2)
+      }
+      if (change === "reverted") expect(ids()).toEqual(["msg_0", "msg_4", "msg_5"])
+      expect(setup.data.session.message.more(sessionID)).toBe(false)
+    } finally {
+      setup.dispose()
+    }
+  },
+)
+
+test("a resync keeps paged history and takes changed rows from the server", async () => {
+  const history = Array.from({ length: 450 }, (_, index) => ({
+    id: `msg_${String(index).padStart(4, "0")}`,
     type: "user",
     text: `Message ${index}`,
     time: { created: index },
@@ -1081,9 +1184,9 @@ test("keeps loaded history when the newest window is read again", async () => {
     fetch: async (input, init) => {
       const url = new URL((input instanceof Request ? input : new Request(input, init)).url)
       const end = Number(url.searchParams.get("cursor") ?? history.length)
-      const start = Math.max(0, end - 2)
+      const start = Math.max(0, end - Number(url.searchParams.get("limit")))
       return Response.json({
-        data: history.slice(start, end).toReversed(),
+        data: structuredClone(history.slice(start, end)).toReversed(),
         cursor: start > 0 ? { next: String(start) } : {},
       })
     },
@@ -1092,41 +1195,33 @@ test("keeps loaded history when the newest window is read again", async () => {
     data: createData({
       api: () => api,
       directory: "/project",
-      initialMessageLimit: () => 2,
+      initialMessageLimit: () => 20,
+      resyncMessageLimit: () => 400,
       event: { on: () => () => {}, listen: () => () => {} },
     }),
     dispose,
   }))
-  const ids = () => setup.data.session.message.list("ses_history").map((message) => message.id)
+  const list = () => setup.data.session.message.list("ses_paged")
 
   try {
-    await setup.data.session.message.sync("ses_history")
-    await setup.data.session.message.loadMore("ses_history")
-    const loaded = setup.data.session.message.list("ses_history")
-    expect(ids()).toEqual(["msg_2", "msg_3", "msg_4", "msg_5"])
+    await setup.data.session.message.sync("ses_paged")
+    while (list().length < 300) await setup.data.session.message.loadMore("ses_paged")
+    const before = [...list()]
+    history[449] = { ...history[449]!, text: "Edited" }
 
-    setup.data.session.message.invalidate("ses_history")
-    await setup.data.session.message.sync("ses_history")
-    expect(ids()).toEqual(["msg_2", "msg_3", "msg_4", "msg_5"])
-    expect(setup.data.session.message.list("ses_history")[0]).toBe(loaded[0])
-    expect(setup.data.session.message.more("ses_history")).toBe(true)
+    setup.data.session.message.invalidate("ses_paged")
+    await setup.data.session.message.sync("ses_paged")
+    expect(list().map((message) => message.id)).toEqual(before.map((message) => message.id))
+    expect(list().at(-1)?.type === "user" ? list().at(-1)?.text : undefined).toBe("Edited")
+    expect(setup.data.session.message.more("ses_paged")).toBe(true)
 
-    history.push({ id: "msg_6", type: "user", text: "Message 6", time: { created: 6 } })
-    setup.data.session.message.invalidate("ses_history")
-    await setup.data.session.message.sync("ses_history")
-    expect(ids()).toEqual(["msg_2", "msg_3", "msg_4", "msg_5", "msg_6"])
-
-    await setup.data.session.message.loadMore("ses_history")
-    expect(ids()).toEqual(["msg_0", "msg_1", "msg_2", "msg_3", "msg_4", "msg_5", "msg_6"])
-
-    // A newest window that no longer overlaps what is loaded replaces it.
-    history.push(
-      ...[7, 8, 9].map((index) => ({ id: `msg_${index}`, type: "user", text: "", time: { created: index } })),
-    )
-    setup.data.session.message.invalidate("ses_history")
-    await setup.data.session.message.sync("ses_history")
-    expect(ids()).toEqual(["msg_8", "msg_9"])
-    expect(setup.data.session.message.more("ses_history")).toBe(true)
+    // Past the limit, the re-read keeps only the newest rows it read.
+    while (setup.data.session.message.more("ses_paged")) await setup.data.session.message.loadMore("ses_paged")
+    setup.data.session.message.invalidate("ses_paged")
+    await setup.data.session.message.sync("ses_paged")
+    expect(setup.data.session.message.get("ses_paged", "msg_0000")).toBeUndefined()
+    expect(setup.data.session.message.get("ses_paged", "msg_0449")).toBeDefined()
+    expect(setup.data.session.message.more("ses_paged")).toBe(true)
   } finally {
     setup.dispose()
   }

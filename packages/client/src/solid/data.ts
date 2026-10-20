@@ -66,6 +66,11 @@ export type CreateDataInput = {
   readonly directory: string
   /** Raw-message window used for an initial transcript read. Older pages retain their normal size. */
   readonly initialMessageLimit?: () => number
+  /**
+   * Most raw messages a transcript re-read may page through to cover the history already loaded. Without it, a
+   * re-read (for example after a reconnect) replaces loaded history with the initial window.
+   */
+  readonly resyncMessageLimit?: () => number
   readonly event: {
     readonly on: <Type extends OpenCodeEvent["type"]>(
       type: Type,
@@ -82,6 +87,7 @@ export type CreateDataInput = {
 
 const messageIDFromEvent = (eventID: string) => eventID.replace(/^evt_/, "msg_")
 const messagePageLimit = 20
+const resyncPageLimit = 200
 // Trailing window for event bursts that each ask for the same refetch.
 export const settleMs = 150
 
@@ -1714,16 +1720,30 @@ export function createData(config: CreateDataInput) {
         },
         sync(sessionID: string) {
           return sync.run(`session.message:${sessionID}`, async () => {
+            const limit = config.initialMessageLimit?.() ?? messagePageLimit
+            const depth = config.resyncMessageLimit?.() ?? 0
+            // A re-read covers every loaded page so the transcript keeps its place, then replaces it wholesale:
+            // the server stays the source of truth, and reconcile writes only the rows that changed.
+            const loaded = store.session.message[sessionID] ?? []
+            const oldest =
+              depth > limit && loaded.length > limit
+                ? loaded.find((item) => !outbox.has(item.id) && !result.session.input.has(sessionID, item.id))?.id
+                : undefined
             const response = await api().message.list({
               sessionID,
-              limit: config.initialMessageLimit?.() ?? messagePageLimit,
+              limit: oldest ? Math.min(resyncPageLimit, loaded.length) : limit,
               order: "desc",
             })
-            const fetched = response.data.toReversed()
-            const current = store.session.message[sessionID] ?? []
-            // A refetched newest window that overlaps loaded history replaces only the rows from
-            // that overlap on, so older pages already loaded stay loaded and keep their cursor.
-            const overlap = fetched.length ? messageIndex.get(sessionID)?.get(fetched[0]!.id) : undefined
+            const pages = [...response.data]
+            let cursor = response.cursor.next ?? undefined
+            // Past the limit, older loaded rows drop as they do without one.
+            while (oldest && cursor && pages.length < depth && (pages.at(-1)?.id ?? "") > oldest) {
+              const size = Math.min(resyncPageLimit, Math.max(1, loaded.length - pages.length))
+              const page = await api().message.list({ sessionID, limit: size, cursor })
+              pages.push(...page.data)
+              cursor = page.cursor.next ?? undefined
+            }
+            const fetched = pages.toReversed()
             // Same protection as the pending sync: a re-fetch racing an
             // admission must not wipe its local transcript row.
             const ids = new Set(fetched.map((item) => item.id))
@@ -1732,20 +1752,14 @@ export function createData(config: CreateDataInput) {
                 item.type === "user" || item.type === "synthetic" ? [item.id] : [],
               ),
             )
-            const local = current
-              .slice(overlap)
-              .filter((item) => !ids.has(item.id) && (outbox.has(item.id) || admitted.has(item.id)))
-            const older = overlap ? current.slice(0, overlap).filter((item) => !ids.has(item.id)) : []
-            const messages = [...older, ...fetched, ...local]
+            const local = (store.session.message[sessionID] ?? []).filter(
+              (item) => !ids.has(item.id) && (outbox.has(item.id) || admitted.has(item.id)),
+            )
+            const messages = local.length === 0 ? fetched : [...fetched, ...local]
             batch(() => {
               messageIndex.set(sessionID, new Map(messages.map((message, index) => [message.id, index])))
               setStore("session", "message", sessionID, reconcile(messages))
-              setStore(
-                "session",
-                "messageCursor",
-                sessionID,
-                overlap ? store.session.messageCursor[sessionID] : (response.cursor.next ?? undefined),
-              )
+              setStore("session", "messageCursor", sessionID, cursor)
             })
           })
         },
