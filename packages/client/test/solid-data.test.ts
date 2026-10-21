@@ -1211,7 +1211,8 @@ test("a resync keeps paged history and takes changed rows from the server", asyn
 
     setup.data.session.message.invalidate("ses_paged")
     await setup.data.session.message.sync("ses_paged")
-    expect(list().map((message) => message.id)).toEqual(before.map((message) => message.id))
+    // Whole pages may read a little further back than what was loaded.
+    expect(list().map((message) => message.id).slice(-before.length)).toEqual(before.map((message) => message.id))
     expect(list().at(-1)?.type === "user" ? list().at(-1)?.text : undefined).toBe("Edited")
     expect(setup.data.session.message.more("ses_paged")).toBe(true)
 
@@ -1223,6 +1224,93 @@ test("a resync keeps paged history and takes changed rows from the server", asyn
     expect(setup.data.session.message.get("ses_paged", "msg_0449")).toBeDefined()
     expect(setup.data.session.message.more("ses_paged")).toBe(true)
   } finally {
+    setup.dispose()
+  }
+})
+
+test.each(["delivered", "reverted"] as const)("a resync falls back to the newest window when history is %s while it pages", async (change) => {
+  const sessionID = "ses_paging"
+  const row = (index: number) => ({
+    id: `msg_${String(index).padStart(4, "0")}`,
+    type: "user",
+    text: `Message ${index}`,
+    time: { created: index },
+  })
+  const history: { id: string }[] = Array.from({ length: 250 }, (_, index) => row(index))
+  const hold = { active: false, entered: Promise.withResolvers<void>(), release: Promise.withResolvers<void>() }
+  const listeners = new Set<Parameters<CreateDataInput["event"]["listen"]>[0]>()
+  const api = OpenCode.make({
+    baseUrl: "http://opencode.local",
+    fetch: async (input, init) => {
+      const url = new URL((input instanceof Request ? input : new Request(input, init)).url)
+      if (url.pathname.endsWith("/inbox")) return Response.json({ data: [] })
+      const cursor = url.searchParams.get("cursor")
+      if (cursor && hold.active) {
+        hold.entered.resolve()
+        await hold.release.promise
+      }
+      // Like the server, a cursor names the oldest message already read; a removed anchor returns nothing.
+      const anchor = cursor ? history.findIndex((item) => item.id === cursor) : history.length
+      const end = anchor < 0 ? 0 : anchor
+      const start = Math.max(0, end - Number(url.searchParams.get("limit")))
+      return Response.json({
+        data: history.slice(start, end).toReversed(),
+        cursor: start > 0 ? { next: history[start]!.id } : {},
+      })
+    },
+  })
+  const setup = createRoot((dispose) => ({
+    data: createData({
+      api: () => api,
+      directory: "/project",
+      initialMessageLimit: () => 2,
+      resyncMessageLimit: () => 1_000,
+      event: {
+        on: () => () => {},
+        listen(handler) {
+          listeners.add(handler)
+          return () => listeners.delete(handler)
+        },
+      },
+    }),
+    dispose,
+  }))
+  const emit = (event: Record<string, unknown>) =>
+    listeners.forEach((listener) =>
+      listener({
+        name: event.type as OpenCodeEvent["type"],
+        details: { created: 1, durable: { aggregateID: sessionID, seq: 1, version: 1 }, ...event } as OpenCodeEvent,
+      }),
+    )
+  const ids = () => setup.data.session.message.list(sessionID).map((message) => message.id)
+
+  try {
+    await setup.data.session.message.sync(sessionID)
+    while (setup.data.session.message.more(sessionID)) await setup.data.session.message.loadMore(sessionID)
+    if (change === "delivered")
+      emit({
+        id: "evt_q",
+        type: "session.inbox.enqueued",
+        data: { sessionID, inboxID: "msg_q", item: { type: "user", delivery: "steer", payload: { text: "Steer" } } },
+      })
+
+    hold.active = true
+    setup.data.session.message.invalidate(sessionID)
+    const reading = setup.data.session.message.sync(sessionID)
+    await hold.entered.promise
+    if (change === "delivered") {
+      history.push({ ...row(250), id: "msg_q" })
+      emit({ id: "evt_delivered", type: "session.inbox.delivered", data: { sessionID, inboxID: "msg_q" } })
+    }
+    // A revert to msg_0040 removes the anchor of the page in flight; its event has not arrived yet.
+    if (change === "reverted") history.splice(40)
+    hold.release.resolve()
+    await reading
+
+    if (change === "delivered") expect(ids()).toEqual(["msg_0249", "msg_q"])
+    if (change === "reverted") expect(ids()).toEqual(["msg_0038", "msg_0039"])
+  } finally {
+    hold.release.resolve()
     setup.dispose()
   }
 })

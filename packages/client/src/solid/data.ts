@@ -286,6 +286,9 @@ export function createData(config: CreateDataInput) {
     Object.values(store.session.info).toSorted((a, b) => b.time.updated - a.time.updated),
   )
   const messageIndex = new Map<string, Map<string, number>>()
+  // Counts live-event transcript edits per session, so a multi-page re-read can tell its pages went stale.
+  const messageEvents = new Map<string, number>()
+  let handlingEvent = false
   const sync = createSync()
   let activeUpdates: Map<string, DataSessionStatus | undefined> | undefined
   const pendingUpdates = new Map<string, Map<string, SessionInboxInfo | SessionInbox.Delivery | undefined>>()
@@ -454,6 +457,7 @@ export function createData(config: CreateDataInput) {
 
   const message = {
     update(sessionID: string, fn: (messages: SessionMessageInfo[], index: Map<string, number>) => void) {
+      if (handlingEvent) messageEvents.set(sessionID, (messageEvents.get(sessionID) ?? 0) + 1)
       setStore(
         "session",
         "message",
@@ -1729,19 +1733,30 @@ export function createData(config: CreateDataInput) {
               depth > limit && loaded.length > limit
                 ? loaded.find((item) => !outbox.has(item.id) && !result.session.input.has(sessionID, item.id))?.id
                 : undefined
-            const response = await api().message.list({
-              sessionID,
-              limit: oldest ? Math.min(resyncPageLimit, loaded.length) : limit,
-              order: "desc",
-            })
-            const pages = [...response.data]
+            const events = messageEvents.get(sessionID)
+            const head = (size: number) => api().message.list({ sessionID, limit: size, order: "desc" })
+            const response = await head(oldest ? Math.min(resyncPageLimit, loaded.length) : limit)
+            let pages = [...response.data]
             let cursor = response.cursor.next ?? undefined
+            let stale = false
             // Past the limit, older loaded rows drop as they do without one.
             while (oldest && cursor && pages.length < depth && (pages.at(-1)?.id ?? "") > oldest) {
-              const size = Math.min(resyncPageLimit, Math.max(1, loaded.length - pages.length))
-              const page = await api().message.list({ sessionID, limit: size, cursor })
+              const page = await api().message.list({
+                sessionID,
+                limit: Math.min(resyncPageLimit, depth - pages.length),
+                cursor,
+              })
+              // An empty page means a revert removed the cursor's anchor.
+              stale = page.data.length === 0
+              if (stale) break
               pages.push(...page.data)
               cursor = page.cursor.next ?? undefined
+            }
+            // Live edits or a revert while paging leave the pages inconsistent, so fall back to the newest window.
+            if (stale || (oldest && messageEvents.get(sessionID) !== events)) {
+              const fresh = await head(limit)
+              pages = [...fresh.data]
+              cursor = fresh.cursor.next ?? undefined
             }
             const fetched = pages.toReversed()
             // Same protection as the pending sync: a re-fetch racing an
@@ -2055,7 +2070,12 @@ export function createData(config: CreateDataInput) {
 
   onCleanup(
     config.event.listen(({ details }) => {
-      handleEvent(details)
+      handlingEvent = true
+      try {
+        handleEvent(details)
+      } finally {
+        handlingEvent = false
+      }
     }),
   )
 
