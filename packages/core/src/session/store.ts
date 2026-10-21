@@ -89,6 +89,32 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionStore") {}
 
+/** Timeline-only projection. Read images can be opened by path; execute images must stay inline. */
+function omitReadMedia(row: typeof SessionMessageTable.$inferSelect): typeof SessionMessageTable.$inferSelect {
+  if (row.type !== "assistant" || !("content" in row.data)) return row
+  return {
+    ...row,
+    data: {
+      ...row.data,
+      content: row.data.content.map((part) => {
+        if (part.type !== "tool" || part.name !== "read") return part
+        if (part.state.status !== "completed" && part.state.status !== "error") return part
+        if (!part.state.content) return part
+        const content = part.state.content.filter((item) => !(item.type === "file" && item.uri.startsWith("data:")))
+        if (content.length === part.state.content.length) return part
+        return {
+          ...part,
+          state: {
+            ...part.state,
+            // Tool content is nonempty. Preserve the read tool's existing image-only success text.
+            content: [content[0] ?? { type: "text", text: "Image read successfully" }, ...content.slice(1)] as const,
+          },
+        }
+      }),
+    },
+  }
+}
+
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -176,30 +202,27 @@ const layer = Layer.effect(
         const rows = yield* (input.limit === undefined ? query.all() : query.limit(input.limit).all()).pipe(
           Effect.orDie,
         )
-        return yield* Effect.forEach(
-          direction === "previous" ? rows.toReversed() : rows,
-          (row) => {
-            if (input.attachments !== "reference" || row.type !== "user" || !("files" in row.data))
-              return SessionHistory.decodeMessageRow(row)
+        return yield* Effect.forEach(direction === "previous" ? rows.toReversed() : rows, (row) => {
+          if (input.attachments !== "reference") return SessionHistory.decodeMessageRow(row)
+          if (row.type !== "user" || !("files" in row.data)) return SessionHistory.decodeMessageRow(omitReadMedia(row))
 
-            return SessionHistory.decodeMessageRow({
-              ...row,
-              data: {
-                ...row.data,
-                files: row.data.files?.map((file, index) =>
-                  ((file.source.type === "inline" && file.data) ||
-                    (file.source.type === "uri" && file.source.uri.startsWith("data:")))
-                    ? {
-                        ...file,
-                        data: "",
-                        source: { type: "uri", uri: AttachmentReference.make(input.sessionID, row.id, index) },
-                      }
-                    : file,
-                ),
-              },
-            })
-          },
-        )
+          return SessionHistory.decodeMessageRow({
+            ...row,
+            data: {
+              ...row.data,
+              files: row.data.files?.map((file, index) =>
+                (file.source.type === "inline" && file.data) ||
+                (file.source.type === "uri" && file.source.uri.startsWith("data:"))
+                  ? {
+                      ...file,
+                      data: "",
+                      source: { type: "uri", uri: AttachmentReference.make(input.sessionID, row.id, index) },
+                    }
+                  : file,
+              ),
+            },
+          })
+        })
       }),
       context: Effect.fn("SessionStore.context")((sessionID) => SessionHistory.load(db, sessionID, "latest")),
       message: Effect.fn("SessionStore.message")(function* (messageID) {
