@@ -9,7 +9,7 @@ afterEach(() => {
   document.body.replaceChildren()
 })
 
-it("offers Snappy, Smooth and Calm for every spring, with one Global card and one card per section", async () => {
+it("offers Snappy, Smooth and Calm for the tab's springs, with one Global card and one card per section", async () => {
   const drawer = motionTuning.spring("test.drawer", {
     label: "Spring",
     group: "Drawer",
@@ -59,7 +59,59 @@ it("offers Snappy, Smooth and Calm for every spring, with one Global card and on
 
   chip.click()
   expect(drawer()).toEqual({ duration: 0.25, bounce: 0 })
-  expect(image()).toEqual({ duration: 0.3, bounce: 0 })
+  // A tab's presets move only its own springs.
+  expect(image()).toEqual({ duration: 0.2, bounce: 0 })
+})
+
+it("outlines the part of the app a row changes while it is hovered", async () => {
+  const target = document.createElement("div")
+  target.id = "outlined"
+  target.getBoundingClientRect = () => new DOMRect(10, 20, 100, 40)
+  document.body.append(target)
+
+  motionTuning.number("test.outline", {
+    group: "Outline",
+    label: "Size",
+    value: 1,
+    min: 0,
+    max: 2,
+    step: 0.1,
+    description: "Sets the size.",
+    target: "#outlined",
+  })
+
+  const other = document.createElement("div")
+  other.id = "other"
+  other.getBoundingClientRect = () => new DOMRect(300, 20, 50, 50)
+  document.body.append(other)
+  motionTuning.number("test.other", {
+    group: "Other",
+    label: "Size",
+    value: 1,
+    min: 0,
+    max: 2,
+    step: 0.1,
+    target: "#other",
+  })
+
+  const container = document.createElement("div")
+  document.body.append(container)
+  cleanups.push(mountMotionPanel(container))
+
+  const row = await waitFor(() => container.querySelector<HTMLElement>('[data-field="test.outline"]') ?? undefined)
+
+  const frames = () =>
+    [...document.body.children].filter(
+      (element) => element instanceof HTMLDivElement && element.style.position === "fixed",
+    )
+
+  row.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }))
+  expect(row.title).toBe("Sets the size.")
+  // SAFETY: frames() only keeps divs.
+  expect(frames().map((frame) => (frame as HTMLElement).style.left)).toEqual(["7px"])
+
+  container.dispatchEvent(new PointerEvent("pointerleave"))
+  await waitFor(() => (frames().length === 0 ? true : undefined))
 })
 
 it("closes only from its own close button or Esc inside it, never from the app around it", async () => {

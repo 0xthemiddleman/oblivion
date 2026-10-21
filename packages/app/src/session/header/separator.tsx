@@ -2,24 +2,24 @@ import { motionTuning } from "@opencode/ui/motion-tuning"
 import { Match, Switch } from "solid-js"
 import { createStore } from "solid-js/store"
 
-const group = "Experiments"
-const card = "Icons"
-const order = 3
+const meta = {
+  group: "Experiments",
+  card: "Header separator",
+  order: 3,
+  description: "The mark between the project and session names in the header.",
+  target: '[data-slot="session-title-separator"]',
+}
 
 const glyph = motionTuning.choice("sessionHeader.separator", {
   label: "Separator",
-  group,
-  card,
-  order,
+  ...meta,
   value: "chevron",
   labels: { divider: "Divider", slash: "Slash", chevron: "Chevron", bold: "Bold chevron", dot: "Dot" },
 })
 
 const size = motionTuning.number("sessionHeader.separator.size", {
   label: "Separator size",
-  group,
-  card,
-  order,
+  ...meta,
   value: 11,
   min: 6,
   max: 24,
@@ -29,9 +29,7 @@ const size = motionTuning.number("sessionHeader.separator.size", {
 
 const weight = motionTuning.number("sessionHeader.separator.weight", {
   label: "Separator weight",
-  group,
-  card,
-  order,
+  ...meta,
   value: 1,
   min: 0.5,
   max: 3,
@@ -41,9 +39,7 @@ const weight = motionTuning.number("sessionHeader.separator.weight", {
 
 const opacity = motionTuning.number("sessionHeader.separator.opacity", {
   label: "Separator opacity",
-  group,
-  card,
-  order,
+  ...meta,
   value: 1,
   min: 0.2,
   max: 1,
@@ -52,9 +48,7 @@ const opacity = motionTuning.number("sessionHeader.separator.opacity", {
 
 const gap = motionTuning.number("sessionHeader.separator.gap", {
   label: "Separator gap (ink to ink)",
-  group,
-  card,
-  order,
+  ...meta,
   value: 10,
   min: 4,
   max: 20,
