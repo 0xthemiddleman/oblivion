@@ -19,6 +19,7 @@ const chip = motionTuning.choice("activity.chip", {
   value: "today",
   labels: { today: en["experiment.activityChip.today"], orb: en["experiment.activityChip.orb"] },
 })
+
 const corners = motionTuning.choice("activity.chip.corners", {
   label: en["experiment.chipCorners"],
   group: "Experiments",
@@ -26,7 +27,9 @@ const corners = motionTuning.choice("activity.chip.corners", {
   value: "capsule",
   labels: { capsule: en["experiment.chipCorners.capsule"], composer: en["experiment.chipCorners.composer"] },
 })
+
 const [experiment, setExperiment] = createStore({ chip: chip(), corners: corners() })
+
 motionTuning.subscribe(() => setExperiment({ chip: chip(), corners: corners() }))
 
 export type SessionActivityItem = {
@@ -258,12 +261,16 @@ export function SessionActivityChips(props: {
 // Load on first opt-in, then retain both identities for an interruptible crossfade.
 function ActivityGlyph(props: { muted?: boolean }) {
   const enabled = createMemo((previous) => previous || experiment.chip === "orb", false)
+
   const [orb] = createResource(enabled, async () => {
     const { CssAgentOrb } = await import("@/session/agent-glyph/css-agent-orb")
+
     return CssAgentOrb
   })
+
   // Guard the first read so loading this experiment never suspends the composer or hides today's glyph.
   const loaded = () => orb.state === "ready"
+
   return (
     <span data-slot="activity-glyph" data-orb={experiment.chip === "orb" && loaded()} aria-hidden="true">
       <span data-slot="activity-glyph-today">
