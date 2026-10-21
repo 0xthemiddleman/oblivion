@@ -39,16 +39,29 @@ export const Response = Schema.Struct({
 export type Response = typeof Response.Type
 
 export interface Snapshot {
+  readonly type: "legacy"
   readonly response: Response
   // Console MCP servers carry the credential in their headers, so a rotated token changes the snapshot.
   readonly mcp: { servers: NonNullable<Response["mcp"]>["servers"]; headers: Record<string, string> } | undefined
 }
 
+/** The plugin's Console response in either format; this module only acts on the legacy one. */
+type Remote = Snapshot | { readonly type: "config" } | undefined
+
 type Connection = NonNullable<Effect.Success<ReturnType<Context["integration"]["connection"]["active"]>>>
 
+export function make(response: Response, headers: Record<string, string>): Snapshot {
+  return { type: "legacy", response, mcp: response.mcp && { servers: response.mcp.servers, headers } }
+}
+
 /** Organization policy statements, which the plugin hands to `ManagedPolicy` instead of config. */
-export function statements(snapshot: Snapshot | undefined) {
-  return [...(snapshot?.response.experimental?.policies ?? []), ...(snapshot?.response.policies ?? [])]
+export function statements(snapshot: Snapshot) {
+  return [...(snapshot.response.experimental?.policies ?? []), ...(snapshot.response.policies ?? [])]
+}
+
+/** Providers the legacy response routes through the Console, so the plugin can explain their rejected inference. */
+export function providerIDs(remote: Remote) {
+  return remote?.type === "legacy" ? Object.keys(remote.response.providers) : []
 }
 
 /**
@@ -57,12 +70,13 @@ export function statements(snapshot: Snapshot | undefined) {
  */
 export const register = Effect.fn("OpencodeLegacy.register")(function* (
   ctx: Context,
-  current: () => { readonly legacy: Snapshot | undefined; readonly connection: Connection | undefined },
+  current: () => { readonly remote: Remote; readonly connection: Connection | undefined },
   search: (providerID: WebSearch.ID, connection: Connection) => WebSearchDefinition,
 ) {
   yield* ctx.provider.transform((providers) => {
     const snapshot = current()
-    for (const [providerID, item] of Object.entries(snapshot.legacy?.response.providers ?? {})) {
+    const remote = snapshot.remote?.type === "legacy" ? snapshot.remote : undefined
+    for (const [providerID, item] of Object.entries(remote?.response.providers ?? {})) {
       const source = providers.get(item.canonical ?? providerID)
       providers.update(providerID, (provider) => {
         if (source && source.provider !== provider)
@@ -148,7 +162,7 @@ export const register = Effect.fn("OpencodeLegacy.register")(function* (
 
   yield* ctx.websearch.transform((editor) => {
     const snapshot = current()
-    const descriptor = snapshot.legacy?.response.websearch
+    const descriptor = snapshot.remote?.type === "legacy" ? snapshot.remote.response.websearch : undefined
     const connection = snapshot.connection
     if (!descriptor || !connection) return
     editor.add(search(descriptor.providerID, connection))
@@ -156,7 +170,8 @@ export const register = Effect.fn("OpencodeLegacy.register")(function* (
   })
 
   yield* ctx.mcp.transform((editor) => {
-    const mcp = current().legacy?.mcp
+    const remote = current().remote
+    const mcp = remote?.type === "legacy" ? remote.mcp : undefined
     if (!mcp) return
     for (const [name, server] of Object.entries(mcp.servers)) {
       // A server the user configured under the same name wins.

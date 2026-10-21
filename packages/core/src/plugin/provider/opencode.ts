@@ -171,14 +171,13 @@ export const OpencodePlugin = define<
     const scope = yield* Scope.Scope
     const loading = Semaphore.makeUnsafe(1)
     type ActiveConnection = Effect.Success<ReturnType<typeof ctx.integration.connection.active>>
-    // A Console response takes one of two paths: `config` holds a regular OpenCode config, merged as an integration
-    // config layer; `legacy` holds the original response, which OpencodeLegacy applies directly.
     let snapshot: {
-      config: ConfigIntegration.Remote | undefined
-      legacy: OpencodeLegacy.Snapshot | undefined
+      // The Console response in one of its two formats: a regular OpenCode config, merged as an integration config
+      // layer, or the legacy response, which OpencodeLegacy applies directly.
+      remote: { type: "config"; info: ConfigIntegration.Remote } | OpencodeLegacy.Snapshot | undefined
       connection: ActiveConnection
       organization: string | undefined
-    } = { config: undefined, legacy: undefined, connection: undefined, organization: undefined }
+    } = { remote: undefined, connection: undefined, organization: undefined }
     // Status last reported for the active connection, so inference failures can name the fix.
     let reported: IntegrationConnection.Status | undefined
     let explainers: Effect.Success<ReturnType<typeof ctx.session.hook>>[] = []
@@ -190,7 +189,7 @@ export const OpencodePlugin = define<
       const connection = yield* ctx.integration.connection.active("opencode")
       if (!connection) {
         reported = undefined
-        return { config: undefined, legacy: undefined, connection, organization: undefined }
+        return { remote: undefined, connection, organization: undefined }
       }
       const status = (status: IntegrationConnection.Status | undefined) => {
         reported = status
@@ -199,20 +198,13 @@ export const OpencodePlugin = define<
       return yield* ctx.integration.connection.resolve(connection).pipe(
         Effect.flatMap((credential) => {
           if (!credential || credential.type === "external")
-            return Effect.succeed({ config: undefined, legacy: undefined, connection, organization: undefined })
+            return Effect.succeed({ remote: undefined, connection, organization: undefined })
           return fetchConfig(http, credential).pipe(
             Effect.map((remote) => ({
-              config: remote?.type === "config" ? remote.info : undefined,
-              legacy:
+              remote:
                 remote?.type === "legacy"
-                  ? {
-                      response: remote.response,
-                      mcp: remote.response.mcp && {
-                        servers: remote.response.mcp.servers,
-                        headers: credentialHeaders(credential),
-                      },
-                    }
-                  : undefined,
+                  ? OpencodeLegacy.make(remote.response, credentialHeaders(credential))
+                  : remote,
               connection,
               organization: organizationName(credential),
             })),
@@ -228,35 +220,41 @@ export const OpencodePlugin = define<
             // A load that fails for the connection already in place keeps its last config: dropping it
             // would lift organization policy while personal credentials keep working.
             return IntegrationConnection.key(connection) === IntegrationConnection.key(snapshot.connection)
-              ? { config: snapshot.config, legacy: snapshot.legacy, connection, organization: snapshot.organization }
-              : { config: undefined, legacy: undefined, connection, organization: undefined }
+              ? { remote: snapshot.remote, connection, organization: snapshot.organization }
+              : { remote: undefined, connection, organization: undefined }
           }),
         ),
       )
     })
+    const integrate = (document: ConfigIntegration.Document | undefined) =>
+      config.integration?.(Integration.ID.make("opencode"), document) ?? Effect.void
     // Policies and providers ride on the snapshot, so a credential switch, disconnect, or 404 replaces them too.
-    const publish = (next: typeof snapshot) =>
-      Effect.all(
-        [
-          managed.set({ statements: OpencodeLegacy.statements(next.legacy), organization: next.organization }),
-          // A regular config merges as one integration document, which config loads right after managed policies.
-          config.integration?.(
-            Integration.ID.make("opencode"),
-            next.config && next.connection
-              ? ConfigIntegration.make({
-                  integrationID: Integration.ID.make("opencode"),
-                  connection:
-                    next.connection.type === "credential"
-                      ? { ...next.connection, id: Credential.ID.make(next.connection.id) }
-                      : next.connection,
-                  organization: next.organization,
-                  info: next.config,
-                })
-              : undefined,
-          ) ?? Effect.void,
-        ],
-        { discard: true },
-      )
+    const publish = Effect.fnUntraced(function* (next: typeof snapshot) {
+      switch (next.remote?.type) {
+        // A regular config merges as one integration document, which config loads right after managed policies,
+        // so its policies reach ManagedPolicy through config rather than as Console statements.
+        case "config":
+          yield* managed.set({ statements: [], organization: next.organization })
+          return yield* integrate(
+            next.connection &&
+              ConfigIntegration.make({
+                integrationID: Integration.ID.make("opencode"),
+                connection:
+                  next.connection.type === "credential"
+                    ? { ...next.connection, id: Credential.ID.make(next.connection.id) }
+                    : next.connection,
+                organization: next.organization,
+                info: next.remote.info,
+              }),
+          )
+        case "legacy":
+          yield* managed.set({ statements: OpencodeLegacy.statements(next.remote), organization: next.organization })
+          return yield* integrate(undefined)
+        default:
+          yield* managed.set({ statements: [], organization: next.organization })
+          return yield* integrate(undefined)
+      }
+    })
     const search = (providerID: WebSearch.ID, connection: NonNullable<ActiveConnection>) => ({
       id: providerID,
       name: "OpenCode Web Search",
@@ -348,7 +346,8 @@ export const OpencodePlugin = define<
     // Like any search plugin, the Console's provider is available whenever it is connected; the Console's config
     // selects it as the default through config, where the user's own selection wins.
     yield* ctx.websearch.transform((editor) => {
-      if (snapshot.config && snapshot.connection) editor.add(search(WebSearch.ID.make("opencode"), snapshot.connection))
+      if (snapshot.remote?.type === "config" && snapshot.connection)
+        editor.add(search(WebSearch.ID.make("opencode"), snapshot.connection))
     })
 
     const apply = Effect.fn("OpencodePlugin.apply")(function* (next: typeof snapshot) {
@@ -400,8 +399,9 @@ export const OpencodePlugin = define<
         next.connection
           ? new Set([
               Provider.ID.opencode,
-              ...Object.keys(next.config?.providers ?? {}),
-              ...Object.keys(next.legacy?.response.providers ?? {}),
+              ...(next.remote?.type === "config"
+                ? Object.keys(next.remote.info.providers ?? {})
+                : OpencodeLegacy.providerIDs(next.remote)),
             ])
           : [],
         (providerID) => ctx.session.hook("http.response", explain, { providerID }).pipe(Scope.provide(scope)),
