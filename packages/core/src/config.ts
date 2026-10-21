@@ -44,8 +44,9 @@ export interface Interface {
   /** Updates supported global config fields while preserving unrelated JSONC content. */
   readonly update?: (patch: Patch) => Effect.Effect<void, FSUtil.Error>
   /**
-   * Replaces, or clears with `undefined`, the document an integration connection contributes. It layers below
-   * remote, user, and project config, and changing it reloads config like any other source.
+   * Replaces, or clears with `undefined`, the document an integration connection contributes. It loads right after
+   * managed policies: its settings layer below remote, user, and project config, while its policies outrank theirs.
+   * Changing it reloads config like any other source.
    */
   readonly integration?: (
     integrationID: ConfigIntegration.Document["integrationID"],
@@ -291,7 +292,8 @@ export const layer = (options?: Options) =>
             ? new Document({ ...entry, info: new Info({ ...entry.info, policies: undefined }) })
             : entry,
         )
-        // Integration documents sit below remote well-known config, so every user and project layer overrides them.
+        // Integration documents load right after managed policies: every remote, user, and project layer overrides
+        // their settings, and since policies evaluate earliest-loaded first, only managed policies outrank theirs.
         // Global entries sit below explicit and direct files; project directories rank above them.
         const globalSupplementary = sources.global ? yield* loadDirectory(sources.global).pipe(Effect.orDie) : []
         const projectSupplementary = yield* Effect.forEach(
@@ -438,6 +440,7 @@ export const layer = (options?: Options) =>
         changes: () => Stream.fromPubSub(updates),
         update,
         integration: Effect.fn("Config.integration")(function* (integrationID, document) {
+          if (isDeepStrictEqual(integrations.get(integrationID), document)) return
           integrations.delete(integrationID)
           if (document) integrations.set(integrationID, document)
           yield* reload().pipe(

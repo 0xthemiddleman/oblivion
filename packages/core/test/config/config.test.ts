@@ -27,6 +27,7 @@ import { AbsolutePath } from "@opencode/core/schema"
 import { WellKnown } from "@opencode/core/wellknown"
 import { KV } from "@opencode/core/kv"
 import { ManagedPolicy } from "@opencode/core/managed-policy"
+import { Wildcard } from "@opencode/core/util/wildcard"
 import { Integration } from "@opencode/schema/integration"
 import { emptyCredentialNode, emptyWellknownNode } from "../fixture/config-nodes"
 import { location } from "../fixture/location"
@@ -508,6 +509,60 @@ describe("Config", () => {
           )
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
+  it.live("ranks integration policies below managed policies and above user and project policies", () =>
+    Effect.acquireDisposable(Effect.promise(() => tmpdir())).pipe(
+      Effect.flatMap((tmp) => {
+        const system = path.join(tmp.path, "system")
+        const global = path.join(tmp.path, "global")
+        const project = path.join(tmp.path, "project")
+        const shell = (resource: string, effect: "allow" | "deny") => ({ action: "tool.use", resource, effect })
+        const write = (directory: string, policies: unknown[]) =>
+          fs
+            .mkdir(directory, { recursive: true })
+            .then(() => fs.writeFile(path.join(directory, "opencode.json"), JSON.stringify({ policies })))
+        return Effect.promise(() =>
+          Promise.all([
+            write(system, [shell("shell:rm*", "deny")]),
+            write(global, [shell("shell:*", "allow")]),
+            write(project, [shell("shell:*", "allow")]),
+          ]),
+        ).pipe(
+          Effect.andThen(
+            Effect.gen(function* () {
+              const config = yield* Config.Service
+              const integration = Integration.ID.make("opencode")
+              yield* config.integration!(
+                integration,
+                ConfigIntegration.make({
+                  integrationID: integration,
+                  connection: { type: "env", name: "OPENCODE_API_KEY" },
+                  organization: "Acme",
+                  info: decodeInfo({ policies: [shell("shell:rm*", "allow"), shell("shell:*", "deny")] }),
+                }),
+              )
+              const statements = ManagedPolicy.statements(yield* config.entries(), { statements: [] })
+              const deciding = (resource: string) =>
+                statements.findLast(
+                  (policy) => policy.action === "tool.use" && Wildcard.match(resource, policy.resource),
+                )
+              expect(deciding("shell:rm -rf")).toMatchObject({
+                effect: "deny",
+                message: "Blocked by configuration policy",
+              })
+              expect(deciding("shell:ls")).toMatchObject({ effect: "deny", message: "Blocked by Acme's policy" })
+            }).pipe(
+              Effect.provide(
+                testLayer(project, global, project, undefined, undefined, emptyCredentialNode, emptyWellknownNode, {
+                  system,
+                }),
+              ),
+            ),
+          ),
+        )
+      }),
     ),
   )
 
