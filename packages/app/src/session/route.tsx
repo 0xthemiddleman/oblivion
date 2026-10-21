@@ -5,6 +5,7 @@ import { makeEventListener } from "@solid-primitives/event-listener"
 import { DataProvider } from "@opencode/session-ui/context"
 import { SessionUserMessage } from "@opencode/session-ui/message"
 import { TextShimmer } from "@opencode/ui/text-shimmer"
+import { ScrollView } from "@opencode/ui/scroll-view"
 import { CommentsProvider } from "@/composer/comments"
 import { readPromptPresentation } from "@/composer/comment-note"
 import { FileProvider } from "@/workspaces/files/model"
@@ -66,7 +67,7 @@ function PreparingSession(props: { sessionID: string; pending: PendingSession })
           provider: { all: providers.all(), default: providers.default(), connected: [] },
         }}
       >
-        <div data-component="session-preparing" class="min-h-0 flex-1 overflow-y-auto">
+        <ScrollView data-component="session-preparing" class="min-h-0 flex-1">
           <SessionIdentityHeader sessionID={props.sessionID} />
           <div class="mx-auto w-full min-w-0 px-4 pb-5 md:max-w-session md:px-6">
             <SessionUserMessage
@@ -87,7 +88,7 @@ function PreparingSession(props: { sessionID: string; pending: PendingSession })
               <TextShimmer text={language.t("session.new.worktree.creating")} active />
             </div>
           </div>
-        </div>
+        </ScrollView>
         <PreparingComposer pending={props.pending} />
       </DataProvider>
     </SessionStatePanel>

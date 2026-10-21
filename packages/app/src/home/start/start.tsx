@@ -2,6 +2,7 @@ import { Button } from "@opencode/ui/button"
 import { Icon } from "@opencode/ui/icon"
 import { IconButton } from "@opencode/ui/icon-button"
 import { Keybind } from "@opencode/ui/keybind"
+import { ScrollView } from "@opencode/ui/scroll-view"
 import {
   displayName,
   getProjectAvatarGenerated,
@@ -37,7 +38,7 @@ export function StartHome() {
       data-slot="home-panel"
       class="@container mx-[var(--shell-inline-inset,8px)] mb-[var(--shell-bottom-inset,8px)] mt-[var(--shell-top-inset,8px)] flex min-h-0 flex-1 flex-col self-stretch overflow-hidden rounded-[10px] bg-v2-background-bg-base shadow-[var(--v2-elevation-raised)]"
     >
-      <div class="min-h-0 flex-1 overflow-y-auto">
+      <ScrollView class="min-h-0 flex-1">
         <div class="mx-auto grid w-full max-w-[1240px] grid-cols-[minmax(0,880px)] justify-center gap-10 px-6 pb-16 pt-[max(48px,9vh)] @[1180px]:grid-cols-[minmax(0,880px)_240px]">
           <div class="flex min-w-0 flex-col gap-8">
             <StartGreeting model={model} />
@@ -50,7 +51,7 @@ export function StartHome() {
             </div>
           </aside>
         </div>
-      </div>
+      </ScrollView>
     </div>
   )
 }
