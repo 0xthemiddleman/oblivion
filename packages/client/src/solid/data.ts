@@ -289,6 +289,8 @@ export function createData(config: CreateDataInput) {
   // Counts live-event transcript edits per session, so a multi-page re-read can tell its pages went stale.
   const messageEvents = new Map<string, number>()
   let handlingEvent = false
+  // Message IDs the last transcript read took from the server, per session.
+  const fetchedMessages = new Map<string, Set<string>>()
   const sync = createSync()
   let activeUpdates: Map<string, DataSessionStatus | undefined> | undefined
   const pendingUpdates = new Map<string, Map<string, SessionInboxInfo | SessionInbox.Delivery | undefined>>()
@@ -1526,7 +1528,18 @@ export function createData(config: CreateDataInput) {
               // know about yet.
               const inflight = (store.session.pending[sessionID] ?? []).filter((item) => outbox.has(item.id))
               const merged = inflight.length === 0 ? pending : [...pending, ...inflight]
+              // A transcript read that finished first kept rows this snapshot no longer admits, such as input
+              // cancelled while disconnected. An unfinished read drops them itself.
+              const kept = new Set(merged.map((item) => item.id))
+              const settled =
+                sync.has(`session.message:${sessionID}`) && !sync.pending(`session.message:${sessionID}`)
+              const dropped = settled
+                ? (store.session.pending[sessionID] ?? []).filter(
+                    (item) => !kept.has(item.id) && !fetchedMessages.get(sessionID)?.has(item.id),
+                  )
+                : []
               batch(() => {
+                dropped.forEach((item) => retractLocal(sessionID, item.id))
                 setStore("session", "pending", sessionID, reconcile(merged))
                 merged.forEach(materializeInboxMessage)
               })
@@ -1738,9 +1751,11 @@ export function createData(config: CreateDataInput) {
             const response = await head(oldest ? Math.min(resyncPageLimit, loaded.length) : limit)
             let pages = [...response.data]
             let cursor = response.cursor.next ?? undefined
+            let paged = false
             let stale = false
             // Past the limit, older loaded rows drop as they do without one.
-            while (oldest && cursor && pages.length < depth && (pages.at(-1)?.id ?? "") > oldest) {
+            while (oldest && cursor && pages.length < depth && !pages.some((item) => item.id === oldest)) {
+              paged = true
               const page = await api().message.list({
                 sessionID,
                 limit: Math.min(resyncPageLimit, depth - pages.length),
@@ -1752,11 +1767,18 @@ export function createData(config: CreateDataInput) {
               pages.push(...page.data)
               cursor = page.cursor.next ?? undefined
             }
-            // Live edits or a revert while paging leave the pages inconsistent, so fall back to the newest window.
-            if (stale || (oldest && messageEvents.get(sessionID) !== events)) {
+            // A live edit or a revert between page reads leaves the pages inconsistent. Re-read the head and fall
+            // back to the newest window if it moved.
+            if (paged) {
               const fresh = await head(limit)
-              pages = [...fresh.data]
-              cursor = fresh.cursor.next ?? undefined
+              const moved =
+                stale ||
+                messageEvents.get(sessionID) !== events ||
+                fresh.data.some((item, index) => item.id !== response.data[index]?.id)
+              if (moved) {
+                pages = [...fresh.data]
+                cursor = fresh.cursor.next ?? undefined
+              }
             }
             const fetched = pages.toReversed()
             // Same protection as the pending sync: a re-fetch racing an
@@ -1772,6 +1794,7 @@ export function createData(config: CreateDataInput) {
             )
             const messages = local.length === 0 ? fetched : [...fetched, ...local]
             batch(() => {
+              fetchedMessages.set(sessionID, ids)
               messageIndex.set(sessionID, new Map(messages.map((message, index) => [message.id, index])))
               setStore("session", "message", sessionID, reconcile(messages))
               setStore("session", "messageCursor", sessionID, cursor)
