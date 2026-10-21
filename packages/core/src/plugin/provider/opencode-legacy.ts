@@ -4,36 +4,19 @@ export * as OpencodeLegacy from "./opencode-legacy.js"
 // OpenCode config, the plugin applies it itself: providers, organization policy, web search, and MCP servers.
 // Delete this module and its uses in opencode.ts once every Console serves a regular OpenCode config.
 
-import { Effect, Option, Schema, SchemaGetter } from "effect"
+import { Effect, Schema } from "effect"
 import type { Context } from "@opencode/plugin/effect/plugin"
 import type { WebSearchDefinition } from "@opencode/plugin/effect/websearch"
-import { ConfigPolicy } from "@opencode/schema/config/policy"
 import { ConfigProvider } from "@opencode/schema/config/provider"
 import { Mcp } from "@opencode/schema/mcp"
 import { Money } from "@opencode/schema/money"
+import { ConfigIntegration } from "../../config/integration.js"
 import { Integration } from "../../integration.js"
 import { Model } from "../../model.js"
 import { Provider } from "../../provider.js"
 import { Variant } from "../../variant.js"
 import { WebSearch } from "../../websearch.js"
 
-// Drop statements whose action or effect is a value this version does not know, so a newer Console can
-// extend either enum. Malformed statements still fail validation.
-const RemotePolicies = Schema.Array(Schema.Unknown).pipe(
-  Schema.decodeTo(Schema.Unknown, {
-    decode: SchemaGetter.transform((policies) =>
-      policies.filter((policy) => {
-        const action = Schema.decodeUnknownOption(Schema.Struct({ action: Schema.String }))(policy)
-        if (Option.isSome(action) && !Schema.is(ConfigPolicy.Info.fields.action)(action.value.action)) return false
-        const effect = Schema.decodeUnknownOption(Schema.Struct({ effect: Schema.String }))(policy)
-        return Option.isNone(effect) || Schema.is(ConfigPolicy.Effect)(effect.value.effect)
-      }),
-    ),
-    encode: SchemaGetter.passthrough({ strict: false }),
-  }),
-  Schema.decodeTo(Schema.Array(ConfigPolicy.Info)),
-  Schema.optional,
-)
 export const Response = Schema.Struct({
   providers: Schema.Record(Schema.String, ConfigProvider.Info),
   websearch: Schema.Struct({
@@ -50,8 +33,8 @@ export const Response = Schema.Struct({
   }).pipe(Schema.optional),
   // Organization policy compiled for the authenticated caller; omitted when there is none.
   // `experimental.policies` remains accepted alongside top-level `policies`.
-  policies: RemotePolicies,
-  experimental: Schema.Struct({ policies: RemotePolicies }).pipe(Schema.optional),
+  policies: ConfigIntegration.Policies.pipe(Schema.optional),
+  experimental: Schema.Struct({ policies: ConfigIntegration.Policies.pipe(Schema.optional) }).pipe(Schema.optional),
 })
 export type Response = typeof Response.Type
 

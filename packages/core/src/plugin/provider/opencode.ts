@@ -15,7 +15,6 @@ import type { IntegrationOAuthMethodRegistration } from "@opencode/plugin/effect
 import { define } from "@opencode/plugin/effect/plugin"
 import type { SessionHttpResponse } from "@opencode/plugin/effect/session"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
-import { Info } from "@opencode/schema/config"
 import { App } from "../../app.js"
 import { Bus } from "../../bus.js"
 import { Config } from "../../config.js"
@@ -175,7 +174,7 @@ export const OpencodePlugin = define<
     // A Console response takes one of two paths: `config` holds a regular OpenCode config, merged as an integration
     // config layer; `legacy` holds the original response, which OpencodeLegacy applies directly.
     let snapshot: {
-      config: Info | undefined
+      config: ConfigIntegration.Remote | undefined
       legacy: OpencodeLegacy.Snapshot | undefined
       connection: ActiveConnection
       organization: string | undefined
@@ -457,7 +456,7 @@ function fetchConfig(http: HttpClient.HttpClient, value: Credential.Key | Creden
           const body = yield* HttpClientResponse.filterStatusOk(response).pipe(Effect.flatMap((ok) => ok.json))
           // A Console that serves a regular OpenCode config marks it with `$schema`; any other body is the legacy response.
           if (Predicate.hasProperty(body, "$schema"))
-            return { type: "config" as const, info: yield* Schema.decodeUnknownEffect(Info)(body) }
+            return { type: "config" as const, info: yield* Schema.decodeUnknownEffect(ConfigIntegration.Remote)(body) }
           return { type: "legacy" as const, response: yield* Schema.decodeUnknownEffect(OpencodeLegacy.Response)(body) }
         }),
       ),

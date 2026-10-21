@@ -1,11 +1,41 @@
 export * as ConfigIntegration from "./integration.js"
 
-import { Schema } from "effect"
+import { Option, Schema, SchemaGetter } from "effect"
 import { Config } from "@opencode/schema/config"
 import { ConfigMCP } from "@opencode/schema/config/mcp"
+import { ConfigPolicy } from "@opencode/schema/config/policy"
 import { ConfigProvider } from "@opencode/schema/config/provider"
 import { Connection } from "@opencode/schema/connection"
 import { IntegrationID } from "@opencode/schema/integration-id"
+
+// Drop statements whose action or effect is a value this version does not know, so a newer remote source can
+// extend either enum. Malformed statements still fail validation.
+export const Policies = Schema.Array(Schema.Unknown).pipe(
+  Schema.decodeTo(Schema.Unknown, {
+    decode: SchemaGetter.transform((policies) =>
+      policies.filter((policy) => {
+        const action = Schema.decodeUnknownOption(Schema.Struct({ action: Schema.String }))(policy)
+        if (Option.isSome(action) && !Schema.is(ConfigPolicy.Info.fields.action)(action.value.action)) return false
+        const effect = Schema.decodeUnknownOption(Schema.Struct({ effect: Schema.String }))(policy)
+        return Option.isNone(effect) || Schema.is(ConfigPolicy.Effect)(effect.value.effect)
+      }),
+    ),
+    encode: SchemaGetter.passthrough({ strict: false }),
+  }),
+  Schema.decodeTo(Schema.Array(ConfigPolicy.Info)),
+)
+
+/**
+ * The allow-listed keys of a remote config. Only these keys are read before decoding, so a newer remote source's
+ * other keys, valid or not, can never reject the document.
+ */
+export const Remote = Schema.Struct({
+  providers: Config.Info.fields.providers,
+  mcp: Config.Info.fields.mcp,
+  policies: Policies.pipe(Schema.optional),
+  websearch: Config.Info.fields.websearch,
+})
+export type Remote = typeof Remote.Type
 
 /**
  * A config document delivered by an integration connection, such as the OpenCode Console's config. Config loads it
@@ -28,7 +58,7 @@ export function make(input: {
   readonly integrationID: IntegrationID
   readonly connection: Connection.Info
   readonly organization?: string
-  readonly info: Config.Info
+  readonly info: Remote
 }) {
   const servers = input.info.mcp?.servers
   return new Document({

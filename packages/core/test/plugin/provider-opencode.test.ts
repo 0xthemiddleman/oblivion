@@ -2170,6 +2170,39 @@ describe("OpencodePlugin with a Console config", () => {
       ),
   )
 
+  it.effect("keeps a newer Console config loadable despite values this version does not know", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() =>
+        Bun.serve({
+          port: 0,
+          fetch: () =>
+            Response.json({
+              $schema,
+              providers: { remote: { name: "Remote" } },
+              policies: [{ action: "future.use", resource: "anything", effect: "deny" }, deny],
+              shell: 123,
+              future: { shape: 42 },
+            }),
+        }),
+      ),
+      (server) =>
+        Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          const config = yield* Config.Service
+          yield* credentials.create({
+            integrationID: Integration.ID.make("opencode"),
+            value: Credential.Key.make({ type: "key", key: "secret", metadata: { server: server.url.origin } }),
+          })
+          yield* addPlugin().pipe(inProcess(server))
+
+          const info = required(yield* consoleDocument(config)).info
+          expect(info.providers?.remote?.name).toBe("Remote")
+          expect(info.policies).toEqual([deny])
+        }),
+      (server) => Effect.promise(() => server.stop(true)),
+    ),
+  )
+
   it.live("layers Console providers below user config, bound to the Console connection", () =>
     Effect.acquireUseRelease(
       Effect.sync(() =>
