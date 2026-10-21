@@ -4,6 +4,7 @@ import { describe, expect, test } from "bun:test"
 import { Arbitrary, Effect, Fiber, Layer, Logger, Schema, Stream } from "effect"
 import { Config } from "@opencode/core/config"
 import { ConfigDiscovery } from "@opencode/core/config/discovery"
+import { ConfigIntegration } from "@opencode/core/config/integration"
 import { Directory, Document, type Entry, Event, Info } from "@opencode/schema/config"
 import { ConfigModel } from "@opencode/schema/config/model"
 import { ConfigProvider } from "@opencode/schema/config/provider"
@@ -422,6 +423,91 @@ describe("Config", () => {
           ),
         )
       }),
+    ),
+  )
+
+  it.live("layers integration documents below remote and user config and reloads when they change", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        Effect.gen(function* () {
+          const global = path.join(tmp.path, "global")
+          const project = path.join(tmp.path, "project")
+          const named = (name: string) => ({ providers: { remote: { name } } })
+          yield* Effect.promise(async () => {
+            await fs.mkdir(global, { recursive: true })
+            await fs.mkdir(project, { recursive: true })
+            await fs.writeFile(path.join(global, "opencode.json"), JSON.stringify(named("global")))
+            await fs.writeFile(path.join(project, "opencode.json"), JSON.stringify(named("project")))
+          })
+          const integrationID = Integration.ID.make("https://example.com")
+          const credentialNode = makeGlobalNode({
+            service: Credential.Service,
+            layer: Layer.mock(Credential.Service)({
+              list: () =>
+                Effect.succeed([
+                  new Credential.Info({
+                    id: Credential.ID.create(),
+                    integrationID,
+                    label: "default",
+                    value: Credential.Key.make({ type: "key", key: "secret" }),
+                  }),
+                ]),
+            }),
+            deps: [],
+          })
+          const entry: WellKnown.Entry = {
+            origin: "https://example.com",
+            integrationID,
+            manifest: { auth: { command: ["login"], env: "TOKEN" } },
+          }
+          const wellknownNode = makeGlobalNode({
+            service: WellKnown.Service,
+            layer: Layer.mock(WellKnown.Service)({
+              entries: () => Effect.succeed([entry]),
+              snapshot: () => [entry],
+              resolve: () => Effect.succeed([named("wellknown")]),
+            }),
+            deps: [],
+          })
+          const names = (entries: readonly Entry[]) =>
+            entries.flatMap((entry) => (entry.type === "document" ? [entry.info.providers?.remote?.name] : []))
+
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const bus = yield* Bus.Service
+            const updated = Effect.fnUntraced(function* (change: Effect.Effect<void>) {
+              const event = yield* bus
+                .subscribe(Event.Updated)
+                .pipe(Stream.take(1), Stream.runCollect, Effect.forkScoped({ startImmediately: true }))
+              yield* change
+              expect(yield* Fiber.join(event)).toHaveLength(1)
+              return names(yield* config.entries())
+            })
+            const integration = Integration.ID.make("opencode")
+            expect(names(yield* config.entries())).toEqual(["wellknown", "global", "project"])
+            expect(
+              yield* updated(
+                config.integration!(
+                  integration,
+                  ConfigIntegration.make({
+                    integrationID: integration,
+                    connection: { type: "env", name: "OPENCODE_API_KEY" },
+                    info: decodeInfo(named("console")),
+                  }),
+                ),
+              ),
+            ).toEqual(["console", "wellknown", "global", "project"])
+            expect(yield* updated(config.integration!(integration, undefined))).toEqual([
+              "wellknown",
+              "global",
+              "project",
+            ])
+          }).pipe(
+            Effect.provide(testLayer(project, global, project, undefined, undefined, credentialNode, wellknownNode)),
+          )
+        }),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
 

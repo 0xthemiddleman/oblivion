@@ -17,18 +17,17 @@ import type { SessionHttpResponse } from "@opencode/plugin/effect/session"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/http"
 import { App } from "../../app.js"
 import { Bus } from "../../bus.js"
+import { Config } from "../../config.js"
+import { ConfigIntegration } from "../../config/integration.js"
 import { Credential } from "../../credential.js"
 import { Integration } from "../../integration.js"
 import { IntegrationConnection } from "../../integration/connection.js"
 import { ManagedPolicy } from "../../managed-policy.js"
-import { Model } from "../../model.js"
 import { Provider } from "../../provider.js"
-import { Variant } from "../../variant.js"
 import { WebSearch } from "../../websearch.js"
 import { ConfigPolicy } from "@opencode/schema/config/policy"
 import { ConfigProvider } from "@opencode/schema/config/provider"
 import { Mcp } from "@opencode/schema/mcp"
-import { Money } from "@opencode/schema/money"
 
 const defaultServer = "https://opencode.ai/console"
 const clientID = "opencode-cli"
@@ -194,7 +193,9 @@ function oauth(http: HttpClient.HttpClient) {
   } satisfies IntegrationOAuthMethodRegistration
 }
 
-export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | ManagedPolicy.Service | Scope.Scope>({
+export const OpencodePlugin = define<
+  HttpClient.HttpClient | Bus.Service | Config.Service | ManagedPolicy.Service | Scope.Scope
+>({
   id: "opencode.provider.opencode",
   effect: Effect.fn(function* (ctx) {
     const disableFree = ["1", "true"].includes(process.env.OPENCODE_DISABLE_FREE_MODELS?.toLowerCase() ?? "")
@@ -204,6 +205,7 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
     // and whether it evaluates the policies it is being sent.
     const http = HttpClient.mapRequest(client, HttpClientRequest.setHeader("User-Agent", App.useragent(ctx.app)))
     const managed = yield* ManagedPolicy.Service
+    const config = yield* Config.Service
     const scope = yield* Scope.Scope
     const loading = Semaphore.makeUnsafe(1)
     type ActiveConnection = Effect.Success<ReturnType<typeof ctx.integration.connection.active>>
@@ -262,12 +264,31 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
         ),
       )
     })
-    // Statements ride on the snapshot, so a credential switch, disconnect, or 404 replaces them too.
+    // Statements and providers ride on the snapshot, so a credential switch, disconnect, or 404 replaces them too.
     const publish = (next: typeof snapshot) =>
-      managed.set({
-        statements: [...(next.config?.experimental?.policies ?? []), ...(next.config?.policies ?? [])],
-        organization: next.organization,
-      })
+      Effect.all(
+        [
+          managed.set({
+            statements: [...(next.config?.experimental?.policies ?? []), ...(next.config?.policies ?? [])],
+            organization: next.organization,
+          }),
+          // The Console's providers merge as the lowest config layer, so user and project config override them.
+          config.integration?.(
+            Integration.ID.make("opencode"),
+            next.config && next.connection && Object.keys(next.config.providers).length > 0
+              ? ConfigIntegration.make({
+                  integrationID: Integration.ID.make("opencode"),
+                  connection:
+                    next.connection.type === "credential"
+                      ? { ...next.connection, id: Credential.ID.make(next.connection.id) }
+                      : next.connection,
+                  info: next.config,
+                })
+              : undefined,
+          ) ?? Effect.void,
+        ],
+        { discard: true },
+      )
 
     yield* ctx.integration.transform((editor) => {
       editor.update("opencode", (integration) => {
@@ -280,89 +301,6 @@ export const OpencodePlugin = define<HttpClient.HttpClient | Bus.Service | Manag
     snapshot = yield* load()
     yield* publish(snapshot)
     yield* ctx.provider.transform((providers) => {
-      for (const [providerID, item] of Object.entries(snapshot.config?.providers ?? {})) {
-        const source = providers.get(item.canonical ?? providerID)
-        providers.update(providerID, (provider) => {
-          if (source && source.provider !== provider)
-            Object.assign(provider, structuredClone(source.provider), { id: provider.id })
-          provider.integrationID = Integration.ID.make("opencode")
-          if (item.canonical !== undefined) provider.canonical = item.canonical
-          if (item.name !== undefined) provider.name = item.name
-          provider.package = item.package ?? provider.package
-          provider.settings = Provider.mergeOverlay(
-            withoutCredentials(provider.settings),
-            withoutCredentials(item.settings),
-          )
-          provider.headers = Provider.mergeHeaders(provider.headers, item.headers)
-          provider.body = Provider.mergeOverlay(provider.body, item.body)
-        })
-
-        for (const [modelID, config] of Object.entries(item.models ?? {})) {
-          const base = source?.models.get(config.modelID ?? modelID) ?? source?.models.get(modelID)
-          providers.models.update(providerID, modelID, (model) => {
-            Object.assign(model, structuredClone(base ?? model))
-            if (config.family !== undefined) model.family = config.family
-            if (config.name !== undefined) model.name = config.name
-            if (config.modelID !== undefined) model.modelID = config.modelID
-            if (config.releaseDate !== undefined) model.time = { released: Date.parse(config.releaseDate) }
-            if (config.compatibility !== undefined)
-              model.compatibility = { ...model.compatibility, ...config.compatibility }
-            model.package = config.package ?? (item.package !== undefined ? undefined : model.package)
-            if (item.settings?.baseURL !== undefined && model.settings) delete model.settings.baseURL
-            if (config.capabilities !== undefined)
-              model.capabilities = Model.mergeCapabilities(config.capabilities, model.capabilities)
-            model.settings = Provider.mergeOverlay(
-              withoutCredentials(model.settings),
-              withoutCredentials(config.settings),
-            )
-            model.headers = Provider.mergeHeaders(model.headers, config.headers)
-            model.body = Provider.mergeOverlay(model.body, config.body)
-            if (config.limit !== undefined) model.limit = { ...model.limit, ...config.limit }
-          })
-          // Variants are spelled for the final package, which the update above normalizes from `aisdk:*`.
-          providers.models.update(providerID, modelID, (model) => {
-            // The Console's reasoning replaces the base variants; its variants still overlay them below.
-            if (config.capabilities?.reasoning !== undefined)
-              model.variants = [
-                ...Variant.resolve(
-                  { ...model, package: model.package ?? providers.get(providerID)?.provider.package },
-                  Variant.supports(config.capabilities.reasoning),
-                ),
-              ]
-            for (const variant of config.variants ?? []) {
-              let existing = model.variants.find((item) => item.id === variant.id)
-              if (!existing) {
-                existing = { id: variant.id }
-                model.variants.push(existing)
-              }
-              if (variant.settings !== undefined)
-                existing.settings = Provider.mergeOverlay(existing.settings, withoutCredentials(variant.settings))
-              if (variant.headers !== undefined)
-                existing.headers = Provider.mergeHeaders(existing.headers, variant.headers)
-              if (variant.body !== undefined) existing.body = Provider.mergeOverlay(existing.body, variant.body)
-            }
-            if (config.cost !== undefined)
-              model.cost = (Array.isArray(config.cost) ? config.cost : [config.cost]).map((cost) => ({
-                tier: cost.tier && { ...cost.tier },
-                input: cost.input,
-                output: cost.output,
-                cache: {
-                  read: cost.cache?.read ?? Money.USDPerMillionTokens.zero,
-                  write: cost.cache?.write ?? Money.USDPerMillionTokens.zero,
-                },
-              }))
-            model.enabled = !config.disabled
-          })
-        }
-        const configured = providers.get(providerID)
-        if (configured)
-          providers.add({
-            info: configured.provider,
-            models: Array.from(configured.models.values()),
-            sourceConnection: snapshot.connection,
-          })
-      }
-
       const item = providers.get(Provider.ID.opencode)
       if (!item) return
       const hasKey = Boolean(process.env.OPENCODE_API_KEY || snapshot.connection || item.provider.settings?.apiKey)
@@ -606,13 +544,6 @@ function serverUrl(value: Credential.Value) {
   // Credentials saved before August 2026 store the retired console.opencode.ai host, which maps path-for-path onto
   // the default server; rewriting it lets that host be shut down without forcing those users to reconnect.
   return server.replace(/^https:\/\/console\.opencode\.ai(?=\/|$)/, defaultServer)
-}
-
-function withoutCredentials<Value>(body: Readonly<Record<string, Value>> | undefined) {
-  return (
-    body &&
-    Object.fromEntries(Object.entries(body).filter(([key]) => !["apiKey", "authToken", "accessToken"].includes(key)))
-  )
 }
 
 function normalizeServer(input: unknown) {
