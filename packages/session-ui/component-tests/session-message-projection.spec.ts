@@ -44,12 +44,12 @@ story.describe("message timestamp", () => {
   })
 })
 
-story("drops a pending footer at once on delivery with and without hover", async ({ mount, page }) => {
+story("folds the Steering label on delivery while preserving the hovered footer", async ({ mount, page }) => {
   const timeline = await mount("current-prompt-message--pending")
   const message = timeline.locator('[data-component="user-message"]')
   const footer = timeline.locator('[data-slot="user-message-copy-wrapper"]')
   const timestamp = timeline.locator('[data-slot="user-message-meta-tail"]')
-  const pending = timeline.locator('[data-slot="user-message-transition"]:has([data-slot="user-message-pending"])')
+  const pending = timeline.locator('[data-slot="user-message-pending-label"]')
 
   await page.mouse.move(0, 0)
   await expect(footer).toHaveCSS("height", "20px")
@@ -58,38 +58,18 @@ story("drops a pending footer at once on delivery with and without hover", async
 
   for (const hover of [true, false]) {
     await timeline.getByLabel("Delivery state").selectOption("steering")
-    await expect(footer).toHaveCSS("opacity", "1")
-    await expect(pending).toHaveCSS("opacity", "1")
-    const before = await pending.boundingBox()
-    if (!before) throw new Error("Pending footer geometry is unavailable")
-
     if (hover) await message.hover()
     if (!hover) await page.mouse.move(0, 0)
-    // Pending stands in for the unsent time, so the actions follow the labels without a gap held for it.
+    await expect(footer).toHaveCSS("opacity", hover ? "1" : "0")
+    await expect(pending).toHaveCSS("opacity", "1")
+    await expect(pending).toHaveText("Steering")
+    // The timestamp appears only after delivery; the top label owns the waiting status.
     await expect(timestamp).toBeHidden()
     const label = await timeline.locator('[data-slot="user-message-meta-item"]').last().boundingBox()
     const actions = await timeline.locator('[data-slot="user-message-actions"]').boundingBox()
     if (!label || !actions) throw new Error("Pending footer geometry is unavailable")
     expect(actions.x - label.x - label.width).toBeLessThanOrEqual(9)
     await timeline.getByLabel("Delivery state").selectOption("delivered")
-
-    // The first frame after delivery already shows the delivered footer: nothing shrinks or fades out.
-    const after = await message.evaluate((element) => {
-      const pending = element.querySelector(
-        '[data-slot="user-message-transition"]:has([data-slot="user-message-pending"])',
-      )!
-      const footer = element.querySelector('[data-slot="user-message-copy-wrapper"]')!
-
-      return {
-        animations: [...pending.getAnimations(), ...footer.getAnimations()].length,
-        width: pending.getBoundingClientRect().width,
-        opacity: Number(getComputedStyle(pending).opacity),
-        footer: Number(getComputedStyle(footer).opacity),
-      }
-    })
-
-    expect(after).toEqual({ animations: 0, width: 0, opacity: 0, footer: hover ? 1 : 0 })
-    expect(before.width).toBeGreaterThan(0)
 
     await expect(pending).toBeHidden()
     await expect(footer).toHaveCSS("opacity", hover ? "1" : "0")
