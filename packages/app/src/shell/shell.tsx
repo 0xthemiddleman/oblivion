@@ -1,4 +1,4 @@
-import { Show, startTransition, Suspense, type ParentProps } from "solid-js"
+import { lazy, Show, startTransition, Suspense, type ParentProps } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createMediaQuery } from "@solid-primitives/media"
 import { ResizeHandle } from "@opencode/ui/resize-handle"
@@ -30,6 +30,15 @@ import { windowDragEnabled } from "@/session/header/drag-area"
 // How far Home steps along a peek's header to clear the collapsed toggle: to the toggle's end, from the sidebar's 10px
 // start padding.
 const homeClearance = collapsedSidebarToggleEnd - 10
+
+// The dev server and Beta only, like the components lab: other builds drop the import and never contain the tour. A
+// `?tour=<url>` in the address the app opened with starts one.
+const ReviewTour =
+  import.meta.env.DEV || import.meta.env.VITE_OPENCODE_CHANNEL === "beta"
+    ? lazy(() => import("@/review-tour/tour"))
+    : undefined
+
+const tourUrl = ReviewTour && new URLSearchParams(location.search).get("tour")
 
 export const sidebarToggleCommand = { id: "sidebar.toggle", keybind: "mod+shift+b" }
 
@@ -302,6 +311,11 @@ export default function Layout(props: ParentProps) {
       <ExtensionSlot at="window.bottom" input={{}} />
       <ToastRegion />
       <UploadToastHost />
+      {ReviewTour && tourUrl && (
+        <Suspense>
+          <ReviewTour url={tourUrl} />
+        </Suspense>
+      )}
     </div>
   )
 }
