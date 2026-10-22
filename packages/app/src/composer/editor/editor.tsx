@@ -1424,9 +1424,9 @@ function ComposerEditorAlternateDelivery(props: { controller: ComposerEditorMode
 
 const meta = {
   group: "Experiments",
-  card: "Composer button icons",
+  card: "Composer button",
   order: 70,
-  description: "Try other icons and sizes for the composer's send and stop buttons.",
+  description: "The send and stop button in the composer.",
   target: '[data-action="composer-submit"]',
 }
 

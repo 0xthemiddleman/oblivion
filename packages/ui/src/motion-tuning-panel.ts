@@ -8,7 +8,8 @@ const experiments = "Experiments"
  * Mounts the Motion workspace into `container`: one Global card (speed, slow motion and other settings every surface
  * reads) pinned above a tab per surface, Experiments last. Each tab has its own Shipped, Snappy, Smooth and Calm presets
  * for its springs, then a card per surface or experiment in `order`: its choices and switches, then its tuning, with
- * its replay buttons under a Replay sub-heading. Hovering or focusing a row shows its card's description and outlines the part of the app it changes.
+ * its replay buttons under a Replay sub-heading. Each card's description sits under its title, and hovering or focusing
+ * a card or row outlines the part of the app it changes.
  * knobs loads on first mount, so importing this module costs nothing until then. Works anywhere a surface registered
  * its knobs, including Storybook stories. Returns its removal.
  */
@@ -34,6 +35,8 @@ export function mountMotionPanel(
       import("knobs"),
       import("./motion-tuning-fields"),
     ])
+
+    const show = outline()
 
     // A lone section needs no tab strip.
     let tabbed = false
@@ -131,7 +134,7 @@ export function mountMotionPanel(
           // Global sits above the tabs and presets leave it alone.
           pinned: [global],
           persist: "variants",
-          // Panels show these from knobs 0.4.0-next.16; until then the rows' tooltips below carry them.
+          // One muted line under each card's title.
           groupDescriptions: Object.fromEntries(
             [...about].flatMap(([card, info]) => (info.description ? [[card, info.description]] : [])),
           ),
@@ -192,9 +195,20 @@ export function mountMotionPanel(
         })
       })
 
-      // A row's `data-field` is its knob's id and a card heading's `data-group` its card.
-      const cardOfKey = new Map(list.map((item) => [item.id, cardOf(item)]))
-      const stopTarget = explain(container, (key) => about.get(cardOfKey.get(key) ?? key))
+      // A row's own target, where it names a narrower one, else its card's.
+      const targets = new Map(list.flatMap((item) => (item.target ? [[item.id, item.target] as const] : [])))
+
+      // Experiments fold to one line each, showing what's picked; knobs remembers the ones opened in this session.
+      const leads = new Map(
+        cards.flatMap((card) => {
+          const lead = list.find(
+            (item) =>
+              cardOf(item) === card && item.group === experiments && (item.kind === "choice" || item.kind === "toggle"),
+          )
+
+          return lead ? [[card, lead] as const] : []
+        }),
+      )
 
       const stopPanel = controls.mount(container, {
         theme: "auto",
@@ -205,6 +219,18 @@ export function mountMotionPanel(
         hints: "panel",
         tabs: tabbed ? sections : undefined,
         tab: section,
+        groupFolded: Object.fromEntries([...leads.keys()].map((card) => [card, true])),
+        // What's picked. The header's reset button already shows when anything else in the card has changed.
+        groupSummary: (group) => {
+          const lead = leads.get(group)
+          const value = lead && controls.get()[lead.id]
+
+          if (!lead || value === undefined) return null
+
+          return lead.kind === "choice" ? (lead.labels[String(value)] ?? String(value)) : value ? "On" : "Off"
+        },
+        // knobs reports a card or row at most once per frame, and null when nothing in the panel is active.
+        onActive: (at) => show(at ? (at.key && targets.get(at.key)) || about.get(at.group)?.target : undefined),
         onTab: (id) => {
           const offered = (tab: string | undefined) => all.some((item) => item.kind === "mode" && item.group === tab)
 
@@ -224,7 +250,7 @@ export function mountMotionPanel(
       unmount = () => {
         stopWatch()
         stopModes()
-        stopTarget()
+        show(undefined)
         stopPanel()
       }
     }
@@ -253,14 +279,11 @@ function openEditors(ids: string[]) {
   sessionStorage.setItem(key, JSON.stringify({ ...session, expanded: [...new Set([...expanded, ...ids])] }))
 }
 
-// What hovering or focusing a row says and shows. knobs shows no group descriptions in a panel, so the description is
-// the row's tooltip, and the part of the app it changes gets a pointer-transparent frame that fades in and out. Rows
-// carry their key in `data-field` and card headings their group in `data-group`.
-function explain(
-  container: HTMLElement,
-  about: (key: string) => { description?: string; target?: string } | undefined,
-) {
+// Frames the part of the app a card changes: a pointer-transparent outline that fades in and out. Its rects are read
+// once per change of target, never per frame.
+function outline() {
   const frames: HTMLElement[] = []
+  let current: string | undefined
 
   const clear = () =>
     frames.splice(0).forEach((frame) => {
@@ -268,21 +291,14 @@ function explain(
       setTimeout(() => frame.remove(), 200)
     })
 
-  const show = (event: Event) => {
-    const spot =
-      event.target instanceof Element ? event.target.closest<HTMLElement>("[data-field], [data-group]") : null
-
-    const info = spot ? about(spot.dataset.field ?? spot.dataset.group ?? "") : undefined
-
+  return (target: string | undefined) => {
+    if (target === current) return
+    current = target
     clear()
 
-    if (!spot || !info) return
+    if (!target) return
 
-    if (info.description) spot.title = info.description
-
-    if (!info.target) return
-
-    document.querySelectorAll(info.target).forEach((element) => {
+    document.querySelectorAll(target).forEach((element) => {
       const rect = element.getBoundingClientRect()
 
       if (rect.width === 0 || rect.height === 0) return
@@ -294,18 +310,5 @@ function explain(
       requestAnimationFrame(() => (frame.style.opacity = "1"))
       frames.push(frame)
     })
-  }
-
-  container.addEventListener("pointerover", show)
-  container.addEventListener("focusin", show)
-  container.addEventListener("pointerleave", clear)
-  container.addEventListener("focusout", clear)
-
-  return () => {
-    container.removeEventListener("pointerover", show)
-    container.removeEventListener("focusin", show)
-    container.removeEventListener("pointerleave", clear)
-    container.removeEventListener("focusout", clear)
-    clear()
   }
 }

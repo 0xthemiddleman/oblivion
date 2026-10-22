@@ -63,7 +63,7 @@ it("offers Snappy, Smooth and Calm for the tab's springs, with one Global card a
   expect(image()).toEqual({ duration: 0.2, bounce: 0 })
 })
 
-it("outlines the part of the app a row changes while it is hovered", async () => {
+it("describes each card under its title and outlines what a hovered row changes", async () => {
   const target = document.createElement("div")
   target.id = "outlined"
   target.getBoundingClientRect = () => new DOMRect(10, 20, 100, 40)
@@ -100,17 +100,21 @@ it("outlines the part of the app a row changes while it is hovered", async () =>
 
   const row = await waitFor(() => container.querySelector<HTMLElement>('[data-field="test.outline"]') ?? undefined)
 
+  expect(container.textContent).toContain("Sets the size.")
+  expect(row.title).toBe("")
+
   const frames = () =>
-    [...document.body.children].filter(
-      (element) => element instanceof HTMLDivElement && element.style.position === "fixed",
+    [...document.body.children].flatMap((element) =>
+      element instanceof HTMLDivElement && element.style.position === "fixed" ? [element] : [],
     )
 
   row.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }))
-  expect(row.title).toBe("Sets the size.")
-  // SAFETY: frames() only keeps divs.
-  expect(frames().map((frame) => (frame as HTMLElement).style.left)).toEqual(["7px"])
+  row.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, movementX: 1 }))
+  // knobs reports what's active once a frame.
+  await waitFor(() => (frames().length > 0 ? true : undefined))
+  expect(frames().map((frame) => frame.style.left)).toEqual(["7px"])
 
-  container.dispatchEvent(new PointerEvent("pointerleave"))
+  row.dispatchEvent(new PointerEvent("pointerout", { bubbles: true, relatedTarget: document.body }))
   await waitFor(() => (frames().length === 0 ? true : undefined))
 })
 
