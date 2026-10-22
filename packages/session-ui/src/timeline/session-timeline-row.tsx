@@ -533,12 +533,7 @@ export function createSessionTimelineRowRenderer(input: {
       const outcome: Outcome = state === "error" || state === "cancelled" ? state : "completed"
 
       return {
-        label: i18n.t(
-          outcome === "cancelled" && message.metadata?.cancellationReason === "shutdown"
-            ? "ui.sessionTimeline.notice.stoppedByRestart"
-            : outcomeNoticeKey(outcome),
-          { actor },
-        ),
+        label: i18n.t(outcomeNoticeKey(outcome), { actor }),
         data: message.description,
         outcome,
         icon: source === "shell" && outcome === "completed" ? undefined : outcomeNoticeIcon(outcome),
