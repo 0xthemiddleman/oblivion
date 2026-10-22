@@ -24,6 +24,7 @@ import { ModelResolver } from "@opencode/core/model-resolver"
 import { Plugin } from "@opencode/core/plugin"
 import { PluginHooks } from "@opencode/core/plugin/hooks"
 import { PluginHost } from "@opencode/core/plugin/host"
+import { OpenAIPlugin } from "@opencode/core/plugin/provider/openai"
 import { OpencodePlugin } from "@opencode/core/plugin/provider/opencode"
 import { Provider } from "@opencode/core/provider"
 import { Session } from "@opencode/core/session"
@@ -2271,6 +2272,47 @@ describe("OpencodePlugin with a Console config", () => {
           expect(required(yield* models.get(Provider.ID.make("remote"), Model.ID.make("other"))).name).toBe(
             "Console Other",
           )
+        }),
+      (server) => Effect.promise(() => server.stop(true)),
+    ),
+  )
+
+  it.effect("applies Console providers before provider plugins tune their canonical provider", () =>
+    Effect.acquireUseRelease(
+      Effect.sync(() =>
+        Bun.serve({
+          port: 0,
+          fetch: () =>
+            Response.json({
+              $schema,
+              providers: { "console-openai": { canonical: "openai", name: "Console OpenAI" } },
+            }),
+        }),
+      ),
+      (server) =>
+        Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          const providers = yield* Provider.Service
+          yield* providers.transform((catalog) =>
+            catalog.update(Provider.ID.openai, (provider) => {
+              provider.package = "aisdk:@ai-sdk/openai"
+            }),
+          )
+          yield* credentials.create({
+            integrationID: Integration.ID.make("opencode"),
+            value: Credential.Key.make({ type: "key", key: "secret", metadata: { server: server.url.origin } }),
+          })
+          const host = yield* PluginHost.make(yield* Plugin.Service)
+          // Registered in production order: the OpenCode and OpenAI provider plugins, then config in `post`.
+          yield* OpencodePlugin.effect(host).pipe(inProcess(server))
+          yield* OpenAIPlugin.effect(host)
+          yield* ConfigProviderPlugin.Plugin.effect(host)
+
+          expect(required(yield* providers.get(Provider.ID.openai)).settings?.transport).toBe("websocket")
+          const consoleOpenAI = required(yield* providers.get(Provider.ID.make("console-openai")))
+          expect(consoleOpenAI.name).toBe("Console OpenAI")
+          expect(consoleOpenAI.integrationID).toBe(Integration.ID.make("opencode"))
+          expect(consoleOpenAI.settings?.transport).toBeUndefined()
         }),
       (server) => Effect.promise(() => server.stop(true)),
     ),

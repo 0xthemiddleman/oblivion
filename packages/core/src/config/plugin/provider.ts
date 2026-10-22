@@ -1,6 +1,7 @@
 export * as ConfigProviderPlugin from "./provider.js"
 
 import type { ModelEditor } from "@opencode/plugin/effect/model"
+import type { ProviderEditor } from "@opencode/plugin/effect/provider"
 import { define } from "@opencode/plugin/effect/plugin"
 import { Document, type Entry } from "@opencode/schema/config"
 import { ConfigProvider } from "@opencode/schema/config/provider"
@@ -23,9 +24,7 @@ export const Plugin = define({
       ctx.integration.reload().pipe(Effect.andThen(ctx.provider.reload())),
     )
     yield* ctx.integration.transform((integrations) => {
-      for (const [id, provider, origin] of configuredProviders(loaded.entries)) {
-        // An integration's providers authenticate with its connection, so they add no integration or method.
-        if (origin) continue
+      for (const [id, provider] of configuredProviders(loaded.entries)) {
         const integrationID = id
         if (!integrations.get(integrationID)) {
           integrations.method.update({
@@ -57,46 +56,9 @@ export const Plugin = define({
     }
     yield* ctx.provider.transform((providers) => {
       const next: typeof sources.models = new Map()
-      for (const [id, item, origin] of configuredProviders(loaded.entries)) {
+      for (const [id, item] of configuredProviders(loaded.entries)) {
         const providerID = id
-        const current = providers.get(providerID)
-        const source = providers.get(item.canonical ?? current?.provider.canonical ?? providerID)
-        const changed = item.canonical !== undefined && item.canonical !== current?.provider.canonical
-        providers.update(providerID, (provider) => {
-          if (changed && source && source.provider !== provider)
-            Object.assign(provider, structuredClone(source.provider), {
-              id: provider.id,
-              integrationID: provider.integrationID,
-            })
-          if (origin) provider.integrationID = origin.integrationID
-          provider.activation = "enabled"
-          if (item.canonical !== undefined) provider.canonical = item.canonical
-          if (item.name) provider.name = item.name
-          if (item.package !== undefined) provider.package = item.package
-          if (item.compatibility !== undefined)
-            provider.compatibility = { ...provider.compatibility, ...item.compatibility }
-          if (item.settings !== undefined) provider.settings = Provider.mergeOverlay(provider.settings, item.settings)
-          if (item.headers !== undefined) provider.headers = Provider.mergeHeaders(provider.headers, item.headers)
-          if (item.body !== undefined) provider.body = Provider.mergeOverlay(provider.body, item.body)
-        })
-        // An integration lists the models it routes: each starts again from the catalog and takes the provider's
-        // package and URL. Its models are complete here, so later model transforms and config apply on top.
-        if (origin) {
-          for (const [id, config] of Object.entries(item.models ?? {})) {
-            overlay(providers.models, providers.get(providerID)?.provider.package, item, providerID, id, config, {
-              base: source?.models.get(config.modelID ?? id) ?? source?.models.get(id),
-            })
-          }
-          const configured = providers.get(providerID)
-          // Bound to the connection so its providers disappear as soon as the account changes or signs out.
-          if (configured)
-            providers.add({
-              info: configured.provider,
-              models: Array.from(configured.models.values()),
-              sourceConnection: origin.connection,
-            })
-          continue
-        }
+        const { current, source, changed } = overlayProvider(providers, providerID, item)
         const definitions = new Map<string, { readonly inherit: boolean; readonly base?: Model.Info }>()
         for (const [id, config] of Object.entries(item.models ?? {})) {
           const base = source?.models.get(config.modelID ?? id) ?? source?.models.get(id)
@@ -169,14 +131,67 @@ export const Plugin = define({
   }),
 })
 
+// Integration documents are left out: their providers authenticate with the integration's connection, so they add no
+// integration or method, and the integration's own plugin applies them earlier in the provider chain (`integrate`).
 function configuredProviders(entries: readonly Entry[]) {
   return entries
-    .filter((entry): entry is Document => entry.type === "document")
-    .flatMap((file) =>
-      Object.entries(file.info.providers ?? {}).map(
-        ([id, item]) => [id, item, file instanceof ConfigIntegration.Document ? file : undefined] as const,
-      ),
-    )
+    .filter((entry): entry is Document => entry.type === "document" && !(entry instanceof ConfigIntegration.Document))
+    .flatMap((file) => Object.entries(file.info.providers ?? {}))
+}
+
+/**
+ * Applies an integration document's providers. The integration's plugin calls this at its own position in the
+ * provider chain, so provider plugins registered after it treat these providers as configured ones rather than
+ * as their canonical provider, while user and project config still overlay them in this plugin's late transform.
+ */
+export function integrate(providers: ProviderEditor, document: ConfigIntegration.Document) {
+  for (const [providerID, item] of Object.entries(document.info.providers ?? {})) {
+    const { source } = overlayProvider(providers, providerID, item, document.integrationID)
+    // An integration lists the models it routes: each starts again from the catalog and takes the provider's
+    // package and URL. Its models are complete here, so later model transforms and config apply on top.
+    for (const [id, config] of Object.entries(item.models ?? {})) {
+      overlay(providers.models, providers.get(providerID)?.provider.package, item, providerID, id, config, {
+        base: source?.models.get(config.modelID ?? id) ?? source?.models.get(id),
+      })
+    }
+    const configured = providers.get(providerID)
+    // Bound to the connection so its providers disappear as soon as the account changes or signs out.
+    if (configured)
+      providers.add({
+        info: configured.provider,
+        models: Array.from(configured.models.values()),
+        sourceConnection: document.connection,
+      })
+  }
+}
+
+/** Applies one configured provider, first copying its source when `canonical` points it at another provider. */
+function overlayProvider(
+  providers: ProviderEditor,
+  providerID: string,
+  item: ConfigProvider.Info,
+  integrationID?: ConfigIntegration.Document["integrationID"],
+) {
+  const current = providers.get(providerID)
+  const source = providers.get(item.canonical ?? current?.provider.canonical ?? providerID)
+  const changed = item.canonical !== undefined && item.canonical !== current?.provider.canonical
+  providers.update(providerID, (provider) => {
+    if (changed && source && source.provider !== provider)
+      Object.assign(provider, structuredClone(source.provider), {
+        id: provider.id,
+        integrationID: provider.integrationID,
+      })
+    if (integrationID) provider.integrationID = integrationID
+    provider.activation = "enabled"
+    if (item.canonical !== undefined) provider.canonical = item.canonical
+    if (item.name) provider.name = item.name
+    if (item.package !== undefined) provider.package = item.package
+    if (item.compatibility !== undefined) provider.compatibility = { ...provider.compatibility, ...item.compatibility }
+    if (item.settings !== undefined) provider.settings = Provider.mergeOverlay(provider.settings, item.settings)
+    if (item.headers !== undefined) provider.headers = Provider.mergeHeaders(provider.headers, item.headers)
+    if (item.body !== undefined) provider.body = Provider.mergeOverlay(provider.body, item.body)
+  })
+  return { current, source, changed }
 }
 
 /** Applies one configured model, first resetting it to `inherit.base` when it starts again from the catalog. */

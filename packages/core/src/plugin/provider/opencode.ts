@@ -19,6 +19,7 @@ import { App } from "../../app.js"
 import { Bus } from "../../bus.js"
 import { Config } from "../../config.js"
 import { ConfigIntegration } from "../../config/integration.js"
+import { ConfigProviderPlugin } from "../../config/plugin/provider.js"
 import { Credential } from "../../credential.js"
 import { Integration } from "../../integration.js"
 import { IntegrationConnection } from "../../integration/connection.js"
@@ -226,8 +227,16 @@ export const OpencodePlugin = define<
         ),
       )
     })
-    const integrate = (document: ConfigIntegration.Document | undefined) =>
-      config.integration?.(Integration.ID.make("opencode"), document) ?? Effect.void
+    // The Console document as config layered it. Its providers apply at this plugin's position in the provider chain,
+    // where the legacy overlay applies, while the rest of the document merges through config.
+    let integrated: ConfigIntegration.Document | undefined
+    const integrate = Effect.fnUntraced(function* (document: ConfigIntegration.Document | undefined) {
+      yield* config.integration?.(Integration.ID.make("opencode"), document) ?? Effect.void
+      integrated = (yield* config.entries()).find(
+        (entry): entry is ConfigIntegration.Document =>
+          entry instanceof ConfigIntegration.Document && entry.integrationID === Integration.ID.make("opencode"),
+      )
+    })
     // Policies and providers ride on the snapshot, so a credential switch, disconnect, or 404 replaces them too.
     const publish = Effect.fnUntraced(function* (next: typeof snapshot) {
       switch (next.remote?.type) {
@@ -316,6 +325,9 @@ export const OpencodePlugin = define<
     snapshot = yield* load()
     yield* publish(snapshot)
     yield* OpencodeLegacy.register(ctx, () => snapshot, search)
+    yield* ctx.provider.transform((providers) => {
+      if (integrated) ConfigProviderPlugin.integrate(providers, integrated)
+    })
     yield* ctx.provider.transform((providers) => {
       const item = providers.get(Provider.ID.opencode)
       if (!item) return
