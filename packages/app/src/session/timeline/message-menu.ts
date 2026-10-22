@@ -6,7 +6,7 @@ const toggle = motionTuning.toggle("session.messageMenu", {
   group: "Experiments",
   card: "Message menu",
   order: 50,
-  description: "A ⋯ menu beside each message instead of the hover info line.",
+  description: "A ⋯ menu beside each message in the timeline, instead of the hover info line.",
   target: '[data-slot="message-options"]',
   value: false,
 })

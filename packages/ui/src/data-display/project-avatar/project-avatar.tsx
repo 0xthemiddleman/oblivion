@@ -26,7 +26,7 @@ const avatarChoice = motionTuning.choice("projectAvatar.style", {
   group: "Experiments",
   card: "Project avatars",
   order: 20,
-  description: "The mark shown for projects without an icon.",
+  description: "The mark for projects without an icon, on Home and in tabs.",
   target: '[data-component="project-avatar-v2"]',
   value: "letters",
   labels: { letters: "Letters", generated: "Generated" },

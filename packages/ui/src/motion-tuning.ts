@@ -16,7 +16,7 @@ type Knob<Kind extends string, Value> = {
    */
   card?: string
   order?: number
-  /** One plain line explaining the card. */
+  /** One plain line saying what the card changes and where to see it: the card's `groupDescriptions` entry. */
   description?: string
   /** A CSS selector for the part of the app the card changes, outlined while one of its rows is hovered or focused. */
   target?: string

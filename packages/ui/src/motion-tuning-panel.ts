@@ -85,6 +85,15 @@ export function mountMotionPanel(
       const cards = [...new Set([...list, ...actions].map(cardOf))]
       const place = new Map(cards.map((card) => [card, list.find((item) => cardOf(item) === card)?.order ?? 0]))
 
+      // What each card explains and outlines, by its knobs group id: the first of its knobs that says.
+      const about = new Map(
+        cards.flatMap((card) => {
+          const info = list.find((item) => cardOf(item) === card && (item.description || item.target))
+
+          return info ? [[card, info] as const] : []
+        }),
+      )
+
       const controls = defineControls(
         "opencode-motion",
         {
@@ -122,6 +131,10 @@ export function mountMotionPanel(
           // Global sits above the tabs and presets leave it alone.
           pinned: [global],
           persist: "variants",
+          // Panels show these from knobs 0.4.0-next.16; until then the rows' tooltips below carry them.
+          groupDescriptions: Object.fromEntries(
+            [...about].flatMap(([card, info]) => (info.description ? [[card, info.description]] : [])),
+          ),
           // Springs ship different presets, so the defaults get their own chip.
           defaultLabel: Object.fromEntries(scopes.map((scope) => [scope, "Shipped"])),
           presetLabels: { ...motionPresets, ...Object.fromEntries(modes.map((item) => [item.id, item.label])) },
@@ -179,17 +192,9 @@ export function mountMotionPanel(
         })
       })
 
-      // What each row and card heading explains and outlines: the first knob of its card that says.
-      const about = new Map(
-        list.flatMap((item) => {
-          const card = item.card ?? item.group
-          const info = list.find((other) => (other.card ?? other.group) === card && (other.description || other.target))
-
-          return info ? [[item.id, info] as const, [card, info] as const] : []
-        }),
-      )
-
-      const stopTarget = explain(container, (key) => about.get(key))
+      // A row's `data-field` is its knob's id and a card heading's `data-group` its card.
+      const cardOfKey = new Map(list.map((item) => [item.id, cardOf(item)]))
+      const stopTarget = explain(container, (key) => about.get(cardOfKey.get(key) ?? key))
 
       const stopPanel = controls.mount(container, {
         theme: "auto",
