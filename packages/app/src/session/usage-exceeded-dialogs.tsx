@@ -26,7 +26,19 @@ const MAX_RETRY_AFTER_MS = 7 * 86_400_000
 
 const CHATGPT_USAGE_LIMIT_WINDOW = 86_400_000 // 24 hrs
 
-function formatLimitReset(locale: string, created: number, retryAfterMs: number | undefined) {
+// Sessions whose Go limit is still in effect, with when Go is back. The composer's Go-limit tray shows the limit; a
+// free-limit error in one of these sessions comes from a Go subscriber who switched to a free model, so the tray
+// answers it too instead of the free-tier upsell.
+export const goLimited = new Map<string, number | undefined>()
+
+export function goLimitActive(sessionID: string | undefined) {
+  if (!sessionID || !goLimited.has(sessionID)) return false
+  const at = goLimited.get(sessionID)
+
+  return at === undefined || at > Date.now()
+}
+
+export function formatLimitReset(locale: string, created: number, retryAfterMs: number | undefined) {
   if (
     retryAfterMs === undefined ||
     !Number.isFinite(retryAfterMs) ||
@@ -140,35 +152,6 @@ export function useUsageExceededDialogs(input?: {
     ))
   }
 
-  const showGoLimitDialog = (evt: SessionStepFailed) => {
-    if (evt.data.sessionID !== params.id || dialog.active) return
-    const seen = goUpsellState[GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT]
-
-    if (seen && Date.now() - seen < GO_UPSELL_WINDOW) return
-
-    if (goUpsellState[GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW]) return
-
-    setGoUpsellState(GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT, Date.now())
-
-    const reset = formatLimitReset(locale(), evt.created, evt.data.error.retryAfterMs)
-
-    dialog.show(() => (
-      <DialogUsageExceeded
-        title={t("dialog.usageExceeded.accountRateLimit.title")}
-        description={
-          reset
-            ? t("dialog.usageExceeded.accountRateLimit.descriptionReset", { time: reset })
-            : t("dialog.usageExceeded.accountRateLimit.description")
-        }
-        actionLabel={t("dialog.usageExceeded.accountRateLimit.actionLabel")}
-        link={goLimitLink(evt.data.error)}
-        onClose={(dontShowAgain) => {
-          if (dontShowAgain) setGoUpsellState(GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW, Date.now())
-        }}
-      />
-    ))
-  }
-
   const whenGoUpsellReady = (show: (evt: SessionStepFailed) => void, evt: SessionStepFailed) => {
     if (goUpsellReady()) show(evt)
     else if (goUpsellInit instanceof Promise) void goUpsellInit.then(() => show(evt))
@@ -179,9 +162,9 @@ export function useUsageExceededDialogs(input?: {
       if (evt.data.sessionID !== params.id || dialog.active) return
       const error = evt.data.error
 
-      if (error.type === "provider.free-limit") return whenGoUpsellReady(showFreeLimitDialog, evt)
-
-      if (error.type === "provider.go-limit") return whenGoUpsellReady(showGoLimitDialog, evt)
+      // A Go limit, and running out of free models while one is in effect, show in the composer's Go-limit tray.
+      if (error.type === "provider.free-limit" && !goLimitActive(params.id))
+        return whenGoUpsellReady(showFreeLimitDialog, evt)
 
       if (error.type !== "provider.chatgpt-limit") return
 
