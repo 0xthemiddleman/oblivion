@@ -1425,7 +1425,7 @@ function ComposerEditorAlternateDelivery(props: { controller: ComposerEditorMode
 const meta = {
   group: "Experiments",
   card: "Composer button icons",
-  order: 3,
+  order: 70,
   description: "Try other icons and sizes for the composer's send and stop buttons.",
   target: '[data-action="composer-submit"]',
 }
@@ -1447,6 +1447,7 @@ const stopIcon = motionTuning.choice("composer.stopIcon", {
 const roundedStopSize = motionTuning.number("composer.stopIcon.size", {
   ...meta,
   label: "Rounded stop size",
+  when: () => stopIcon() === "rounded",
   value: 10,
   min: 6,
   max: 14,

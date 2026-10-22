@@ -2,6 +2,7 @@ import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
   "experiment.activityChip": "Activity chip",
+  "experiment.activityChip.style": "Style",
   "experiment.activityChip.today": "Today",
   "experiment.activityChip.orb": "CSS orb",
   "experiment.chipCorners": "Chip corners",

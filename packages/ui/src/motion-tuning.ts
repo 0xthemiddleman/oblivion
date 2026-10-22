@@ -7,9 +7,13 @@ import type { DurationOptions } from "./motion"
 type Knob<Kind extends string, Value> = {
   kind: Kind
   id: string
+  /** What the row changes, without the card's name: "Style", "Glide speed". */
   label: string
   group: string
-  /** Its own card within the group's tab, such as one experiment among several; `order` places that card. */
+  /**
+   * The card it sits on within the group's tab, named for what you see ("Activity chip"): one per experiment or
+   * feature. Its first knob's `order` places the card; Experiments' cards follow the window, sidebar first.
+   */
   card?: string
   order?: number
   /** One plain line explaining the card. */

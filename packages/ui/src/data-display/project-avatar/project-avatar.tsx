@@ -22,9 +22,12 @@ import "./project-avatar.css"
 export { generateProjectIcon, GENERATED_PROJECT_ICON_STYLE, type GeneratedProjectIcon } from "./generated"
 
 const avatarChoice = motionTuning.choice("projectAvatar.style", {
-  label: "Project avatars",
+  label: "Style",
   group: "Experiments",
-  order: 1,
+  card: "Project avatars",
+  order: 20,
+  description: "The mark shown for projects without an icon.",
+  target: '[data-component="project-avatar-v2"]',
   value: "letters",
   labels: { letters: "Letters", generated: "Generated" },
 })

@@ -8,9 +8,12 @@ export type SpinnerVariantName = "today" | keyof typeof spinnerVariants
 // Every activity spinner (tabs, loaders, the activity chip, subagents, the update button) shows Soft Radar; Knobs →
 // Experiments tries the other dot-matrix variations, and Today's PNG, in its place.
 const choice = motionTuning.choice("spinner.variant", {
-  label: "Activity spinner",
+  label: "Style",
   group: "Experiments",
-  order: 1,
+  card: "Activity spinner",
+  order: 30,
+  description: "The spinner on running sessions, loaders and the activity chip.",
+  target: '[data-slot="spinner-grid"], [data-slot="spinner-dots"]',
   value: "radar",
   // SAFETY: built from spinnerVariants' own keys, plus "today".
   labels: Object.fromEntries([

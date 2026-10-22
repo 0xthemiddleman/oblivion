@@ -1,4 +1,4 @@
-import { motionPresets, motionTuning, type MotionKnob, type MotionPreset } from "./motion-tuning"
+import { motionPresets, motionTuning, type MotionAction, type MotionKnob, type MotionPreset } from "./motion-tuning"
 
 const global = "Global"
 
@@ -7,8 +7,8 @@ const experiments = "Experiments"
 /**
  * Mounts the Motion workspace into `container`: one Global card (speed, slow motion and other settings every surface
  * reads) pinned above a tab per surface, Experiments last. Each tab has its own Shipped, Snappy, Smooth and Calm presets
- * for its springs, then a card per surface or experiment: its springs and knobs, with its replay buttons under a Replay
- * sub-heading. Hovering or focusing a row shows its card's description and outlines the part of the app it changes.
+ * for its springs, then a card per surface or experiment in `order`: its choices and switches, then its tuning, with
+ * its replay buttons under a Replay sub-heading. Hovering or focusing a row shows its card's description and outlines the part of the app it changes.
  * knobs loads on first mount, so importing this module costs nothing until then. Works anywhere a surface registered
  * its knobs, including Storybook stories. Returns its removal.
  */
@@ -81,10 +81,14 @@ export function mountMotionPanel(
 
       const scopes = [...new Set([...springs, ...modes].map(scopeOf))]
 
+      // A card takes its place from its first knob, so one experiment's rows never split around another's.
+      const cards = [...new Set([...list, ...actions].map(cardOf))]
+      const place = new Map(cards.map((card) => [card, list.find((item) => cardOf(item) === card)?.order ?? 0]))
+
       const controls = defineControls(
         "opencode-motion",
         {
-          // Global first, then each section's knobs and its replay buttons together, so each shows as one card.
+          // Global first, then each section's cards in order, each card's knobs and replay buttons together.
           ...Object.fromEntries(list.filter((item) => item.group === global).map((item) => [item.id, field(item)])),
           ...Object.fromEntries(
             [...list, ...actions]
@@ -92,7 +96,9 @@ export function mountMotionPanel(
               .toSorted(
                 (a, b) =>
                   sections.indexOf(a.group) - sections.indexOf(b.group) ||
-                  ("order" in a ? (a.order ?? 0) : 0) - ("order" in b ? (b.order ?? 0) : 0),
+                  (place.get(cardOf(a)) ?? 0) - (place.get(cardOf(b)) ?? 0) ||
+                  cards.indexOf(cardOf(a)) - cards.indexOf(cardOf(b)) ||
+                  tuning(a) - tuning(b),
               )
               .map((item) =>
                 "run" in item
@@ -177,9 +183,7 @@ export function mountMotionPanel(
       const about = new Map(
         list.flatMap((item) => {
           const card = item.card ?? item.group
-          const info = list.find(
-            (other) => (other.card ?? other.group) === card && (other.description || other.target),
-          )
+          const info = list.find((other) => (other.card ?? other.group) === card && (other.description || other.target))
 
           return info ? [[item.id, info] as const, [card, info] as const] : []
         }),
@@ -222,6 +226,15 @@ export function mountMotionPanel(
 
     if (!disposed) mount()
   }
+}
+
+function cardOf(item: MotionKnob | MotionAction) {
+  return ("card" in item ? item.card : undefined) ?? item.group
+}
+
+// A card leads with what it switches between, then what tunes it.
+function tuning(item: MotionKnob | MotionAction) {
+  return "kind" in item && (item.kind === "choice" || item.kind === "toggle") ? 0 : 1
 }
 
 // knobs remembers which rows' editors are open in this tab's session; adding ids there opens them on mount.
