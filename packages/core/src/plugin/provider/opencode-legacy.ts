@@ -1,7 +1,8 @@
 export * as OpencodeLegacy from "./opencode-legacy.js"
 
 // The OpenCode Console's original `/api/v2/config` response, which it serves without `$schema`. Unlike a regular
-// OpenCode config, the plugin applies it itself: providers, organization policy, web search, and MCP servers.
+// OpenCode config, the plugin applies it itself: providers, organization policy, web search, and MCP servers. Hosted
+// voice uses the plugin's shared Console voice host on both formats.
 // Delete this module and its uses in opencode.ts once every Console serves a regular OpenCode config.
 
 import { Effect, Schema } from "effect"
@@ -16,6 +17,7 @@ import { Model } from "../../model.js"
 import { Provider } from "../../provider.js"
 import { Variant } from "../../variant.js"
 import { WebSearch } from "../../websearch.js"
+import { OpencodeVoice } from "./opencode-voice.js"
 
 export const Response = Schema.Struct({
   providers: Schema.Record(Schema.String, ConfigProvider.Info),
@@ -31,6 +33,7 @@ export const Response = Schema.Struct({
       Schema.Struct({ ...Mcp.RemoteConfig.fields, auth: Schema.Literal("console").pipe(Schema.optional) }),
     ),
   }).pipe(Schema.optional),
+  voice: OpencodeVoice.Offer.pipe(Schema.optional),
   // Organization policy compiled for the authenticated caller; omitted when there is none.
   // `experimental.policies` remains accepted alongside top-level `policies`.
   policies: ConfigIntegration.Policies.pipe(Schema.optional),
@@ -57,6 +60,11 @@ export function make(response: Response, headers: Record<string, string>): Snaps
 /** Organization policy statements, which the plugin hands to `ManagedPolicy` instead of config. */
 export function statements(snapshot: Snapshot) {
   return [...(snapshot.response.experimental?.policies ?? []), ...(snapshot.response.policies ?? [])]
+}
+
+/** The hosted voice the legacy response offers, which the plugin registers like the config format's. */
+export function voice(snapshot: Snapshot) {
+  return snapshot.response.voice
 }
 
 /** Providers the legacy response routes through the Console, so the plugin can explain their rejected inference. */
