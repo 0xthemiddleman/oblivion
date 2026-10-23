@@ -8,6 +8,7 @@ import { DockPrompt } from "@opencode/session-ui/dock-prompt"
 import { Icon } from "@opencode/ui/icon"
 import { TextInput } from "@opencode/ui/text-input"
 import { useSpring } from "@opencode/ui/motion-spring"
+import { prefersReducedMotion } from "@opencode/ui/motion"
 import { showToast } from "@/shell/notifications/toast"
 import type { FormAnswer, FormInfo, FormMultiselectField, FormStringField } from "@opencode/client/promise"
 import { useLanguage } from "@/runtime/i18n/language"
@@ -16,10 +17,15 @@ import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { useServerSDK } from "@/runtime/server/client"
 import { ScopedKey } from "@/runtime/server/scope"
 import { useCommand } from "@/shell/commands/command"
+import { questionKey, type QuestionKeyZone } from "./question-keys"
 
 const cache = new Map<string, { tab: number; answers: string[][]; custom: string[]; customOn: boolean[] }>()
 
 const IS_MAC = /(Mac|iPod|iPhone|iPad)/.test(navigator.platform)
+
+// A bounce-0 spring with a 0.3s visual duration, sampled for the Web Animations API.
+const SPRING_EASE =
+  "linear(0, 0.04, 0.131, 0.243, 0.358, 0.466, 0.562, 0.645, 0.715, 0.774, 0.821, 0.859, 0.89, 0.914, 0.934, 0.949, 0.96, 0.97, 0.977, 0.982, 1)"
 
 type QuestionField = FormStringField | FormMultiselectField
 
@@ -46,6 +52,7 @@ function Option(props: {
   description?: string
   shortcut?: string
   disabled: boolean
+  tabbable: boolean
   ref?: (el: HTMLButtonElement) => void
   onFocus?: VoidFunction
   onClick: VoidFunction
@@ -59,10 +66,12 @@ function Option(props: {
       role={props.multi ? "checkbox" : "radio"}
       aria-checked={props.picked}
       aria-keyshortcuts={props.shortcut}
+      tabindex={props.tabbable ? 0 : -1}
       disabled={props.disabled}
       onFocus={props.onFocus}
       onClick={props.onClick}
     >
+      <span data-slot="question-option-ring" aria-hidden="true" />
       <Mark multi={props.multi} picked={props.picked} />
       <span data-slot="question-option-main">
         <span data-slot="option-label">
@@ -106,16 +115,18 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
     editing: false,
     focus: 0,
     minimized: false,
-    optionsHeight: 180,
+    listHeight: 0,
   })
 
   let root: HTMLDivElement | undefined
+  let detailsRef: HTMLDivElement | undefined
   let optionsRef: HTMLDivElement | undefined
+  let listRef: HTMLDivElement | undefined
   let customRef: HTMLButtonElement | undefined
   let customInput: HTMLInputElement | undefined
   let optsRef: HTMLButtonElement[] = []
   let replied = false
-  let focusFrame: number | undefined
+  const arrivals: Animation[] = []
 
   const question = createMemo(() => questions()[store.tab])
   const options = createMemo(() => question()?.options ?? [])
@@ -137,6 +148,13 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
   const collapse = useSpring(() => (store.minimized ? 1 : 0), { visualDuration: 0.3, bounce: 0 })
   const hidden = createMemo(() => Math.max(0, Math.min(1, collapse())))
   const optionsOff = createMemo(() => hidden() > 0.98)
+  // The answers box follows its list's measured height, so the dock grows and shrinks with each question. Under
+  // reduced motion it lands at once while the content fades.
+  const listHeight = useSpring(
+    () => store.listHeight,
+    () => ({ visualDuration: prefersReducedMotion() ? 0.01 : 0.4, bounce: 0 }),
+    () => store.listHeight > 0,
+  )
 
   const customUpdate = (value: string, selected: boolean = on()) => {
     const prev = input().trim()
@@ -202,18 +220,14 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
     )
   }
 
-  const focus = (i: number) => {
+  // Focus moves in the same task as the key that moved it, so the highlight and the focus never disagree for a frame.
+  const focus = (i: number, how?: FocusOptions) => {
     const next = clamp(i)
     setStore("focus", next)
 
     if (store.editing) return
-
-    if (focusFrame !== undefined) cancelAnimationFrame(focusFrame)
-    focusFrame = requestAnimationFrame(() => {
-      focusFrame = undefined
-      const el = next === options().length ? customRef : optsRef[next]
-      el?.focus()
-    })
+    const el = next === options().length ? customRef : optsRef[next]
+    el?.focus(how)
   }
 
   onMount(() => {
@@ -243,16 +257,19 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
   })
 
   createEffect(() => {
-    const el = optionsRef
+    const el = listRef
 
     if (!el) return
-    const update = () => setStore("optionsHeight", (height) => Math.max(height, el.scrollHeight))
-    update()
-    createResizeObserver(el, update)
+    const observer = new ResizeObserver((entries) => {
+      const size = entries[0]?.borderBoxSize[0]?.blockSize
+      if (size !== undefined) setStore("listHeight", size)
+    })
+    observer.observe(el)
+    onCleanup(() => observer.disconnect())
   })
 
   onCleanup(() => {
-    if (focusFrame !== undefined) cancelAnimationFrame(focusFrame)
+    arrivals.forEach((animation) => animation.cancel())
 
     if (replied) return
     cache.set(cacheKey, {
@@ -340,30 +357,20 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
     })
   }
 
+  const startCustom = () => {
+    setStore("focus", options().length)
+    setStore("customOn", store.tab, true)
+    setStore("editing", true)
+    customUpdate(input(), true)
+    customInput?.focus()
+  }
+
   const customToggle = () => {
     if (sending()) return
-    setStore("focus", options().length)
 
-    if (!multi()) {
-      setStore("customOn", store.tab, true)
-      setStore("editing", true)
-      customUpdate(input(), true)
-      customInput?.focus()
+    if (!multi() || !on()) return startCustom()
 
-      return
-    }
-
-    const next = !on()
-    setStore("customOn", store.tab, next)
-
-    if (next) {
-      setStore("editing", true)
-      customUpdate(input(), true)
-      customInput?.focus()
-
-      return
-    }
-
+    setStore("customOn", store.tab, false)
     const value = input().trim()
 
     if (value) setStore("answers", store.tab, (current = []) => current.filter((item) => item.trim() !== value))
@@ -371,95 +378,96 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
     focus(options().length)
   }
 
-  const move = (step: number) => {
-    if (store.editing || sending()) return
-    focus(store.focus + step)
+  // A radio group's selection follows its focus; a checkbox group only moves focus.
+  const select = (i: number) => {
+    const index = clamp(i)
+
+    if (!multi() && index === options().length) {
+      setStore("customOn", store.tab, true)
+      customUpdate(input(), true)
+    }
+
+    if (!multi() && index < options().length) selectOption(index)
+    focus(index)
+  }
+
+  const zone = (target: EventTarget | null): QuestionKeyZone => {
+    if (store.editing) return "input"
+
+    if (!(target instanceof HTMLElement)) return "other"
+
+    if (target.closest(".question-custom-field")) return "input"
+
+    if (target.matches('[data-slot="question-custom-toggle"]')) return "custom"
+
+    if (target.matches('[data-slot="question-option"]')) return "option"
+
+    return "other"
   }
 
   const nav = (event: KeyboardEvent) => {
     if (event.defaultPrevented) return
 
-    if (event.key === "Escape") {
+    const intent = questionKey(event, { mac: IS_MAC, zone: zone(event.target), count: count() })
+
+    if (intent.type === "none") return
+
+    if (intent.type === "dismiss") {
       event.preventDefault()
       reject()
 
       return
     }
 
-    const previous = IS_MAC
-      ? event.metaKey && !event.ctrlKey && !event.altKey && event.key === "["
-      : event.altKey && !event.ctrlKey && !event.metaKey && event.key === "ArrowLeft"
-
-    if (previous) {
-      if (event.repeat) return
-      event.preventDefault()
-      back()
-
-      return
-    }
-
-    const mod = (event.metaKey || event.ctrlKey) && !event.altKey
-
-    if (mod && event.key === "Enter") {
-      if (event.repeat) return
+    if (intent.type === "advance") {
       event.preventDefault()
       next()
 
       return
     }
 
-    const target =
-      event.target instanceof HTMLElement ? event.target.closest('[data-slot="question-options"]') : undefined
-
-    if (store.editing) return
-
-    if (event.altKey || event.ctrlKey || event.metaKey) return
-
-    if (/^[1-9]$/.test(event.key)) {
-      if (event.repeat || event.isComposing || store.minimized || sending()) return
-      const index = Number(event.key) - 1
-
-      if (index >= count()) return
+    if (intent.type === "question") {
       event.preventDefault()
+      const rtl = event.key.startsWith("Arrow") && !event.altKey && root?.matches(":dir(rtl)")
+      const step = rtl ? -intent.step : intent.step
 
-      if (index === options().length) {
-        customToggle()
+      if (step < 0) return back()
 
-        return
-      }
-
-      selectOption(index)
-      focus(index)
+      if (!last()) jump(store.tab + 1)
 
       return
     }
 
-    if (!(target instanceof HTMLElement)) return
+    if (store.minimized || sending()) return
 
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+    if (intent.type === "number") {
       event.preventDefault()
-      move(1)
+
+      if (intent.index === options().length) return customToggle()
+
+      selectOption(intent.index)
+      focus(intent.index)
 
       return
     }
 
-    if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault()
-      move(-1)
+    if (intent.type === "type") return startCustom()
 
-      return
-    }
-
-    if (event.key === "Home") {
-      event.preventDefault()
-      focus(0)
-
-      return
-    }
-
-    if (event.key !== "End") return
     event.preventDefault()
-    focus(count() - 1)
+
+    if (intent.type === "swallow") return
+
+    if (intent.type === "activate") {
+      if (store.focus === options().length) return customToggle()
+
+      return selectOption(store.focus)
+    }
+
+    const target = intent.type === "edge" ? (intent.to === "first" ? 0 : count() - 1) : store.focus + intent.step
+
+    if (multi()) return focus(target)
+
+    select(target)
   }
 
   const selectOption = (optIndex: number) => {
@@ -506,14 +514,34 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
     jump(store.tab - 1)
   }
 
+  // The new question's text and answers slide in from the side they come from and fade up; under reduced motion they
+  // only fade.
+  const arrive = (step: number) => {
+    arrivals.forEach((animation) => animation.cancel())
+    arrivals.length = 0
+    const reduced = prefersReducedMotion()
+    const x = (root?.matches(":dir(rtl)") ? -step : step) * 12
+    const frames = reduced
+      ? [{ opacity: 0 }, { opacity: 1 }]
+      : [
+          { opacity: 0, transform: `translate3d(${x}px,0,0)` },
+          { opacity: 1, transform: "none" },
+        ]
+    ;[detailsRef, optionsRef].forEach((el) => {
+      if (el?.animate) arrivals.push(el.animate(frames, { duration: reduced ? 150 : 300, easing: SPRING_EASE }))
+    })
+  }
+
   const jump = (tab: number) => {
     if (sending() || tab === store.tab) return
+    const step = Math.sign(tab - store.tab)
     setStore("tab", tab)
     setStore("editing", false)
 
-    if (optionsRef) setStore("optionsHeight", optionsRef.scrollHeight)
-
-    if (!store.minimized) focus(pickFocus(tab))
+    if (store.minimized) return
+    // The answers box is still springing to the new list's height, so focusing must not scroll it.
+    focus(pickFocus(tab), { preventScroll: true })
+    arrive(step)
   }
 
   command.register("session.question.back", () => [
@@ -567,7 +595,9 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
                           onClick={() => jump(i())}
                           aria-label={language.t("ui.tool.questions.numbered", { number: i() + 1 })}
                           aria-current={i() === store.tab ? "step" : undefined}
-                        />
+                        >
+                          <span data-slot="question-progress-bar" aria-hidden="true" />
+                        </button>
                       )}
                     </For>
                   </div>
@@ -583,7 +613,7 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
                 />
               </div>
             </div>
-            <div data-slot="question-details">
+            <div data-slot="question-details" ref={(el) => (detailsRef = el)}>
               <div
                 data-slot="question-text"
                 style={{
@@ -665,95 +695,101 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
           aria-hidden={store.minimized || optionsOff() ? "true" : undefined}
           classList={{ "pointer-events-none": hidden() > 0.1 }}
           style={{
-            "max-height": `${Math.max(0, store.optionsHeight * (1 - hidden()))}px`,
+            height: store.listHeight > 0 ? `${Math.max(0, listHeight() * (1 - hidden()))}px` : undefined,
             opacity: `${Math.max(0, Math.min(1, 1 - hidden()))}`,
             visibility: optionsOff() ? "hidden" : "visible",
           }}
+          // Space already acted on key down; its release must not click the button again.
+          onKeyUp={(event) => {
+            if (event.key !== " ") return
+            const where = zone(event.target)
+
+            if (where === "option" || where === "custom") event.preventDefault()
+          }}
         >
-          <For each={options()}>
-            {(opt, i) => (
-              <Option
-                multi={multi()}
-                picked={picked(opt.value)}
-                label={opt.label}
-                description={opt.description}
-                shortcut={i() < 9 ? String(i() + 1) : undefined}
-                disabled={sending()}
-                ref={(el) => (optsRef[i()] = el)}
-                onFocus={() => setStore("focus", i())}
-                onClick={() => selectOption(i())}
-              />
-            )}
-          </For>
+          <div data-slot="question-options-list" ref={(el) => (listRef = el)}>
+            <For each={options()}>
+              {(opt, i) => (
+                <Option
+                  multi={multi()}
+                  picked={picked(opt.value)}
+                  label={opt.label}
+                  description={opt.description}
+                  shortcut={i() < 9 ? String(i() + 1) : undefined}
+                  disabled={sending()}
+                  tabbable={store.focus === i()}
+                  ref={(el) => (optsRef[i()] = el)}
+                  onFocus={() => setStore("focus", i())}
+                  onClick={() => selectOption(i())}
+                />
+              )}
+            </For>
 
-          <div
-            data-slot="question-option"
-            data-custom="true"
-            data-picked={on()}
-            data-editing={store.editing}
-            data-disabled={sending()}
-            onClick={(event) => {
-              if (event.target !== event.currentTarget || sending()) return
-              setStore("focus", options().length)
-              setStore("customOn", store.tab, true)
-              setStore("editing", true)
-              customUpdate(input(), true)
-              customInput?.focus()
-            }}
-          >
-            <button
-              type="button"
-              ref={customRef}
-              data-slot="question-custom-toggle"
-              role={multi() ? "checkbox" : "radio"}
-              aria-checked={on()}
-              aria-label={customLabel()}
-              aria-keyshortcuts={count() <= 9 ? String(count()) : undefined}
-              disabled={sending()}
-              onFocus={() => setStore("focus", options().length)}
-              onClick={customToggle}
+            <div
+              data-slot="question-option"
+              data-custom="true"
+              data-picked={on()}
+              data-editing={store.editing}
+              data-disabled={sending()}
+              onClick={(event) => {
+                if (event.target !== event.currentTarget || sending()) return
+                startCustom()
+              }}
             >
-              <Mark multi={multi()} picked={on()} />
-            </button>
-            <TextInput
-              ref={(el) => (customInput = el)}
-              class="question-custom-field"
-              dir="auto"
-              aria-label={customLabel()}
-              placeholder={customLabel()}
-              value={input()}
-              disabled={sending()}
-              onFocus={() => {
-                if (focusFrame !== undefined) cancelAnimationFrame(focusFrame)
-                focusFrame = undefined
-                setStore("focus", options().length)
-                setStore("editing", true)
-              }}
-              onClick={() => {
-                setStore("customOn", store.tab, true)
-                customUpdate(input(), true)
-              }}
-              onBlur={() => setStore("editing", false)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
+              <span data-slot="question-option-ring" aria-hidden="true" />
+              <button
+                type="button"
+                ref={customRef}
+                data-slot="question-custom-toggle"
+                role={multi() ? "checkbox" : "radio"}
+                aria-checked={on()}
+                aria-label={customLabel()}
+                aria-keyshortcuts={count() <= 9 ? String(count()) : undefined}
+                tabindex={store.focus === options().length ? 0 : -1}
+                disabled={sending()}
+                onFocus={() => setStore("focus", options().length)}
+                onClick={customToggle}
+              >
+                <Mark multi={multi()} picked={on()} />
+              </button>
+              <TextInput
+                ref={(el) => (customInput = el)}
+                class="question-custom-field"
+                dir="auto"
+                aria-label={customLabel()}
+                placeholder={customLabel()}
+                value={input()}
+                disabled={sending()}
+                onFocus={() => {
+                  setStore("focus", options().length)
+                  setStore("editing", true)
+                }}
+                onClick={() => {
+                  setStore("customOn", store.tab, true)
+                  customUpdate(input(), true)
+                }}
+                onBlur={() => setStore("editing", false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    e.preventDefault()
+                    setStore("editing", false)
+                    focus(options().length)
+
+                    return
+                  }
+
+                  if ((e.metaKey || e.ctrlKey) && !e.altKey) return
+
+                  if (e.key !== "Enter") return
                   e.preventDefault()
-                  setStore("editing", false)
-                  focus(options().length)
-
-                  return
-                }
-
-                if ((e.metaKey || e.ctrlKey) && !e.altKey) return
-
-                if (e.key !== "Enter") return
-                e.preventDefault()
-                commitCustom()
-              }}
-              onInput={(e) => {
-                setStore("customOn", store.tab, true)
-                customUpdate(e.currentTarget.value, true)
-              }}
-            />
+                  commitCustom()
+                }}
+                onInput={(e) => {
+                  setStore("customOn", store.tab, true)
+                  customUpdate(e.currentTarget.value, true)
+                }}
+              />
+            </div>
           </div>
         </div>
       </DockPrompt>

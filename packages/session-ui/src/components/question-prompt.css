@@ -1,10 +1,37 @@
 [data-component="dock-prompt"][data-kind="question"] {
   --v2-question-answer-bg-selected: light-dark(#f5f8ff, #7698fd26);
+  /* A bounce-0 spring sampled for CSS: every selection, focus and progress change eases on it, so two answers trading
+     places always cross in the same frames. */
+  --question-spring: linear(
+    0,
+    0.04,
+    0.131,
+    0.243,
+    0.358,
+    0.466,
+    0.562,
+    0.645,
+    0.715,
+    0.774,
+    0.821,
+    0.859,
+    0.89,
+    0.914,
+    0.934,
+    0.949,
+    0.96,
+    0.97,
+    0.977,
+    0.982,
+    1
+  );
+  --question-quick: 200ms;
+  --question-settle: 300ms;
 
   max-block-size: var(--question-prompt-max-height, 100dvh);
   font-family: var(--v2-font-family-sans);
 
-  [data-color-scheme="dark"] & [data-slot="question-option"]:not([data-picked="true"]) {
+  [data-color-scheme="dark"] & [data-slot="question-option"] {
     background-color: var(--v2-background-bg-layer-02);
   }
 
@@ -106,20 +133,12 @@
     cursor: pointer;
     touch-action: manipulation;
 
-    &::after {
-      content: "";
-      inline-size: 14px;
-      block-size: 2px;
-      flex-shrink: 0;
-      background-color: var(--v2-background-bg-layer-04);
+    &[data-answered="true"] [data-slot="question-progress-bar"]::before {
+      transform: scaleX(1);
     }
 
-    &[data-answered="true"]::after {
-      background-color: var(--v2-background-bg-accent);
-    }
-
-    &[data-active="true"]::after {
-      background-color: var(--v2-icon-icon-muted);
+    &[data-active="true"] [data-slot="question-progress-bar"]::after {
+      opacity: 1;
     }
 
     &:focus-visible {
@@ -133,6 +152,40 @@
     }
   }
 
+  [data-slot="question-progress-bar"] {
+    position: relative;
+    inline-size: 14px;
+    block-size: 2px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background-color: var(--v2-background-bg-layer-04);
+
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Answering fills the segment from its start; the current question sits on top in its own colour. */
+    &::before {
+      background-color: var(--v2-background-bg-accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform var(--question-settle) var(--question-spring);
+    }
+
+    &::after {
+      background-color: var(--v2-icon-icon-muted);
+      opacity: 0;
+      transition: opacity var(--question-quick) var(--question-spring);
+    }
+
+    &:dir(rtl)::before {
+      transform-origin: right;
+    }
+  }
+
   [data-slot="question-content"] {
     display: flex;
     flex-direction: column;
@@ -142,9 +195,6 @@
   }
 
   [data-slot="question-options"] {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
     flex: 1 1 auto;
     min-block-size: 0;
     min-inline-size: 0;
@@ -158,6 +208,12 @@
     }
   }
 
+  [data-slot="question-options-list"] {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
   [data-slot="question-option"] {
     display: flex;
     align-items: flex-start;
@@ -165,25 +221,46 @@
     flex-shrink: 0;
     box-sizing: border-box;
     inline-size: 100%;
+    position: relative;
+    isolation: isolate;
     padding: 10px;
     border: 0;
     border-radius: 6px;
+    outline: none;
     background-color: var(--v2-background-bg-layer-01);
     box-shadow: inset 0 0 0 0.5px var(--v2-border-border-base);
     color: var(--v2-text-text-base);
     text-align: start;
     cursor: pointer;
     touch-action: manipulation;
-    transition: background-color 150ms ease;
 
-    &[data-picked="true"] {
-      background-image: linear-gradient(var(--v2-question-answer-bg-selected), var(--v2-question-answer-bg-selected));
+    /* Hover and selection are layers that fade, never property swaps, so an answer losing its selection and the one
+       gaining it cross in the same frames. */
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--question-quick) var(--question-spring);
+    }
+
+    &::before {
+      background-color: var(--v2-background-bg-layer-02);
+    }
+
+    &::after {
+      background:
+        linear-gradient(var(--v2-question-answer-bg-selected), var(--v2-question-answer-bg-selected)),
+        var(--v2-background-bg-layer-01);
       box-shadow: inset 0 0 0 0.5px var(--v2-border-border-focus);
     }
 
-    &:focus-visible {
-      outline: 2px solid var(--v2-border-border-focus);
-      outline-offset: -2px;
+    &[data-picked="true"]::after {
+      opacity: 1;
     }
 
     &:disabled,
@@ -212,9 +289,23 @@
     flex: 0 0 16px;
     padding: 0;
     border: 0;
+    position: relative;
+    isolation: isolate;
     border-radius: 4px;
     background: linear-gradient(180deg, var(--v2-alpha-light-6), var(--v2-alpha-light-0)), var(--v2-background-bg-base);
     box-shadow: inset 0 0 0 0.5px var(--v2-border-border-strong);
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      background:
+        linear-gradient(180deg, var(--v2-alpha-light-20), var(--v2-alpha-light-0)), var(--v2-background-bg-accent);
+      opacity: 0;
+      transition: opacity var(--question-quick) var(--question-spring);
+    }
 
     [data-slot="icon-svg"] {
       inline-size: 16px;
@@ -222,6 +313,10 @@
       flex: 0 0 16px;
       opacity: 0;
       color: var(--v2-icon-icon-contrast);
+      clip-path: inset(0 100% 0 0);
+      transition:
+        opacity var(--question-quick) var(--question-spring),
+        clip-path var(--question-settle) var(--question-spring);
     }
 
     &[data-type="radio"] {
@@ -236,20 +331,52 @@
       background-color: var(--v2-grey-300);
       box-shadow: var(--v2-elevation-elements);
       opacity: 0;
+      transform: scale(0.3);
+      transition:
+        opacity var(--question-quick) var(--question-spring),
+        transform var(--question-settle) var(--question-spring);
     }
 
     &[data-picked="true"] {
-      background:
-        linear-gradient(180deg, var(--v2-alpha-light-20), var(--v2-alpha-light-0)), var(--v2-background-bg-accent);
-
+      &::before,
       [data-slot="icon-svg"],
       [data-slot="question-option-radio-dot"] {
         opacity: 1;
       }
 
-      &[data-type="radio"] {
-        box-shadow: none;
+      [data-slot="icon-svg"] {
+        clip-path: inset(0);
       }
+
+      [data-slot="question-option-radio-dot"] {
+        transform: none;
+      }
+    }
+  }
+
+  /* Keyboard focus is a quiet ring that fades between answers. In a radio group the selection follows focus and is
+     already the indicator, so a focused, selected radio shows no ring. */
+  [data-slot="question-option-ring"] {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1.5px var(--v2-border-border-focus);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--question-quick) var(--question-spring);
+  }
+
+  [data-slot="question-option"]:focus-visible,
+  [data-slot="question-option"][data-custom="true"]:has([data-slot="question-custom-toggle"]:focus-visible) {
+    > [data-slot="question-option-ring"] {
+      opacity: 1;
+    }
+  }
+
+  [data-slot="question-option"][role="radio"][data-picked="true"]:focus-visible,
+  [data-slot="question-option"][data-custom="true"][data-picked="true"]:has([role="radio"]:focus-visible) {
+    > [data-slot="question-option-ring"] {
+      opacity: 0;
     }
   }
 
@@ -324,8 +451,7 @@
     touch-action: manipulation;
 
     &:focus-visible {
-      outline: 2px solid var(--v2-border-border-focus);
-      outline-offset: 2px;
+      outline: none;
     }
 
     &:disabled {
@@ -414,15 +540,31 @@
       background-color: var(--v2-overlay-simple-overlay-hover);
     }
 
-    [data-slot="question-option"]:hover:not(:disabled):not([data-disabled="true"]):not([data-picked="true"]) {
-      background-color: var(--v2-background-bg-layer-02);
+    [data-slot="question-option"]:hover:not(:disabled):not([data-disabled="true"])::before {
+      opacity: 1;
     }
   }
 
+  /* Reduced motion keeps the fades and drops the movement. */
   :root[data-motion="reduce"] & {
-    [data-slot="question-option"],
-    .question-custom-field[data-component="text-input-v2"] {
-      transition: none;
+    [data-slot="question-option-box"] [data-slot="icon-svg"] {
+      clip-path: none;
+      transition: opacity var(--question-quick) linear;
+    }
+
+    [data-slot="question-option-radio-dot"] {
+      transform: none;
+      transition: opacity var(--question-quick) linear;
+    }
+
+    [data-slot="question-progress-bar"]::before {
+      transform: none;
+      opacity: 0;
+      transition: opacity var(--question-quick) linear;
+    }
+
+    [data-slot="question-progress-segment"][data-answered="true"] [data-slot="question-progress-bar"]::before {
+      opacity: 1;
     }
   }
 }

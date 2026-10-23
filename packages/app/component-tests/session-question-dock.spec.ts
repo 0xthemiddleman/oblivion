@@ -76,6 +76,88 @@ story("selects single answers and toggles multiple answers with number keys", as
   await expect(terminal).not.toBeChecked()
 })
 
+story("moves the single selection with Up and Down", async ({ mount, page }) => {
+  const component = await mount("app-current-session-surface--question-request")
+  const question = component.locator('[data-component="dock-prompt"][data-kind="question"]')
+  const focused = question.getByRole("radio", { name: /Focused/ })
+  const wide = question.getByRole("radio", { name: /Wide/ })
+  const custom = question.getByRole("radio", { name: "Type your own answer…", exact: true })
+  await expect(focused).toBeFocused()
+
+  await page.keyboard.press("ArrowDown")
+  await expect(wide).toBeChecked()
+  await expect(wide).toBeFocused()
+  await expect(focused).not.toBeChecked()
+  await expect(wide).toHaveAttribute("tabindex", "0")
+  await expect(focused).toHaveAttribute("tabindex", "-1")
+
+  await page.keyboard.press("ArrowDown")
+  await expect(custom).toBeChecked()
+  await expect(custom).toBeFocused()
+  await expect(wide).not.toBeChecked()
+
+  await page.keyboard.press("ArrowUp")
+  await expect(wide).toBeChecked()
+  await expect(custom).not.toBeChecked()
+  await page.keyboard.press("Home")
+  await expect(focused).toBeChecked()
+  await expect(focused).toBeFocused()
+})
+
+story("switches questions with Left and Right outside the text field", async ({ mount, page }) => {
+  const component = await mount("app-current-session-surface--question-request")
+  const question = component.locator('[data-component="dock-prompt"][data-kind="question"]')
+  const focused = question.getByRole("radio", { name: /Focused/ })
+  const files = question.getByRole("checkbox", { name: "Changed files", exact: true })
+  const submit = question.getByRole("button", { name: "Submit", exact: true })
+  const wide = question.getByRole("radio", { name: /Wide/ })
+  await expect(focused).toBeFocused()
+  await page.keyboard.press("ArrowDown")
+  await expect(wide).toBeChecked()
+
+  await page.keyboard.press("ArrowRight")
+  await expect(files).toBeFocused()
+  await expect(submit).toBeVisible()
+  await page.keyboard.press("ArrowRight")
+  await expect(submit).toBeVisible()
+  await expect(files).toBeFocused()
+
+  await page.keyboard.press("ArrowLeft")
+  await expect(wide).toBeFocused()
+  await expect(wide).toBeChecked()
+
+  const input = question.getByRole("textbox", { name: "Type your own answer…", exact: true })
+  await input.focus()
+  await input.fill("ab")
+  await page.keyboard.press("ArrowLeft")
+  await expect(input).toBeFocused()
+  await expect(focused).toBeVisible()
+})
+
+story("toggles checkboxes with Space on key down and moves focus with arrows", async ({ mount, page }) => {
+  const component = await mount("app-current-session-surface--question-request")
+  const question = component.locator('[data-component="dock-prompt"][data-kind="question"]')
+  await question.getByRole("button", { name: "Next", exact: true }).click()
+  const files = question.getByRole("checkbox", { name: "Changed files", exact: true })
+  const terminal = question.getByRole("checkbox", { name: "Terminal", exact: true })
+  await expect(files).toBeFocused()
+
+  await page.keyboard.down(" ")
+  await expect(files).toBeChecked()
+  await page.keyboard.down(" ")
+  await page.keyboard.up(" ")
+  await expect(files).toBeChecked()
+
+  await page.keyboard.press("ArrowDown")
+  await expect(terminal).toBeFocused()
+  await expect(terminal).not.toBeChecked()
+  await page.keyboard.press(" ")
+  await expect(terminal).toBeChecked()
+  await page.keyboard.press(" ")
+  await expect(terminal).not.toBeChecked()
+  await expect(files).toBeChecked()
+})
+
 story("ignores modified, out-of-range, and repeated number shortcuts", async ({ mount, page }) => {
   const component = await mount("app-current-session-surface--question-request")
   const question = component.locator('[data-component="dock-prompt"][data-kind="question"]')
