@@ -722,6 +722,36 @@ story("keeps live elements and selection when a stream completes and later chang
   await expect(markdown).toHaveCount(0)
 })
 
+story("settles fully clipped word fades while preserving visible fades", async ({ page }) => {
+  await page.addStyleTag({
+    content: `
+      [data-testid="markdown-fixture"] { position: fixed; inset: 0 auto auto 0; width: 400px; }
+      [data-testid="markdown-fixture"] [data-component="markdown"] { width: 100px; height: 20px; overflow: clip; }
+      [data-testid="markdown-fixture"] p { margin: 0; }
+      [data-testid="markdown-fixture"] [data-markdown-enter] { animation-play-state: paused; }
+    `,
+  })
+  await page.evaluate(async (fixture) => {
+    const { mountMarkdown } = await import(fixture)
+    await mountMarkdown({ text: "Hello", streaming: true, prepared: true })
+    await document.fonts.ready
+  }, fixture)
+  const harness = page.getByTestId("markdown-fixture")
+  await harness.getByLabel("Markdown text").fill("Hello Visible Clipped")
+  const markdown = harness.locator('[data-component="markdown"]')
+  const visible = markdown.locator("[data-markdown-word]", { hasText: "Visible" })
+  const clipped = markdown.locator("[data-markdown-word]", { hasText: "Clipped" })
+  await expect(clipped).toHaveCount(1)
+  await expect(clipped).not.toHaveAttribute("data-markdown-enter")
+  await expect(visible).toHaveAttribute("data-markdown-enter", "")
+  await markdown.evaluate((element) => (element.style.height = "200px"))
+  await expect(clipped).toBeInViewport()
+  await expect(clipped).toHaveCSS("opacity", "1")
+  await expect(clipped).toHaveCSS("animation-name", "none")
+  await harness.getByRole("button", { name: "Toggle Markdown", exact: true }).click()
+  await expect(markdown).toHaveCount(0)
+})
+
 story("replaces completed DOM before live rendering and retains streamed code copy actions", async ({ page }) => {
   await page.evaluate(async (fixture) => {
     const { mountMarkdown } = await import(fixture)

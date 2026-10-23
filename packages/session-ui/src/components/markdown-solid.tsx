@@ -21,9 +21,24 @@ export function createMarkdownRenderer(root: HTMLDivElement, html: string, words
   )
   let ready = animate && document.visibilityState !== "hidden"
   let frontier = 0
+  let observer: IntersectionObserver | undefined
+
+  const observe = (element: HTMLElement) => {
+    observer ??= new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        observer!.unobserve(entry.target)
+        if (entry.isIntersecting) return
+        // A clipped word is revealed by its container, not by an invisible opacity animation.
+        entry.target.removeAttribute("data-markdown-enter")
+        if (entry.target instanceof HTMLElement) entry.target.style.removeProperty("--markdown-word-delay")
+      })
+    })
+    observer.observe(element)
+  }
 
   const settle = () => {
     frontier = 0
+    observer?.disconnect()
     root.querySelectorAll<HTMLElement>("[data-markdown-enter]").forEach((element) => {
       element.removeAttribute("data-markdown-enter")
       element.style.removeProperty("--markdown-word-delay")
@@ -45,7 +60,11 @@ export function createMarkdownRenderer(root: HTMLDivElement, html: string, words
   }
 
   const dispose = render(
-    () => <For each={nodes}>{(node) => <MarkdownDomNode node={node} animate={() => ready} delay={delay} />}</For>,
+    () => (
+      <For each={nodes}>
+        {(node) => <MarkdownDomNode node={node} animate={() => ready} delay={delay} observe={observe} />}
+      </For>
+    ),
     root,
   )
 
@@ -58,12 +77,18 @@ export function createMarkdownRenderer(root: HTMLDivElement, html: string, words
     },
     dispose() {
       document.removeEventListener("visibilitychange", settle)
+      observer?.disconnect()
       dispose()
     },
   }
 }
 
-function MarkdownDomNode(props: { node: MarkdownNode; animate: () => boolean; delay: () => number }) {
+function MarkdownDomNode(props: {
+  node: MarkdownNode
+  animate: () => boolean
+  delay: () => number
+  observe: (element: HTMLElement) => void
+}) {
   const node = props.node
 
   if (node.type === "text") return node.text
@@ -75,6 +100,7 @@ function MarkdownDomNode(props: { node: MarkdownNode; animate: () => boolean; de
         const wait = props.delay()
         if (wait > 0) ref.style.setProperty("--markdown-word-delay", `${wait}ms`)
         ref.setAttribute("data-markdown-enter", "")
+        props.observe(ref)
       }
     })
 
@@ -94,13 +120,16 @@ function MarkdownDomNode(props: { node: MarkdownNode; animate: () => boolean; de
 
   let ref: HTMLElement | undefined
   onMount(() => {
-    if (props.animate() && node.animate) ref?.setAttribute("data-markdown-enter", "")
+    if (props.animate() && node.animate && ref) {
+      ref.setAttribute("data-markdown-enter", "")
+      props.observe(ref)
+    }
   })
 
   return (
     <Dynamic component={node.tag} ref={ref} {...node.attributes}>
       <For each={node.children}>
-        {(node) => <MarkdownDomNode node={node} animate={props.animate} delay={props.delay} />}
+        {(node) => <MarkdownDomNode node={node} animate={props.animate} delay={props.delay} observe={props.observe} />}
       </For>
     </Dynamic>
   )
