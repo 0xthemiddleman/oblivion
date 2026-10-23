@@ -651,11 +651,21 @@ function paintEdge(wrapper: HTMLElement, growth: Growth | undefined, fade: numbe
     growth.maskPx = px
     growth.maskGap = inset
   }
-  if (px === 0 && inset === 0) return wrapper.style.removeProperty("mask-image")
+  if (px === 0 && inset === 0) {
+    wrapper.style.removeProperty("mask-image")
+    wrapper.style.removeProperty("mask-size")
+    wrapper.style.removeProperty("mask-position")
+    wrapper.style.removeProperty("mask-repeat")
+    return
+  }
+  // Keep the edge image independent of the row's changing height; only its size and position move.
   wrapper.style.setProperty(
     "mask-image",
-    `linear-gradient(to bottom, #000 calc(100% - ${px + inset}px), rgba(0, 0, 0, 0.72) calc(100% - ${Math.round(px * 0.62) + inset}px), rgba(0, 0, 0, 0.28) calc(100% - ${Math.round(px * 0.28) + inset}px), transparent calc(100% - ${inset}px))`,
+    "linear-gradient(#000, #000), linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.72) 38%, rgba(0, 0, 0, 0.28) 72%, transparent)",
   )
+  wrapper.style.setProperty("mask-size", `100% max(0px, calc(100% - ${px + inset}px)), 100% ${px}px`)
+  wrapper.style.setProperty("mask-position", `left top, left bottom ${inset}px`)
+  wrapper.style.setProperty("mask-repeat", "no-repeat")
 }
 
 function paintArrival(wrapper: HTMLElement, growth: Growth, shown: number) {
