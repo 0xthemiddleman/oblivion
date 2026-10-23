@@ -770,6 +770,8 @@ export const SessionQuestionDock: Component<{ request: FormInfo; onSubmit: () =>
                 }}
                 onBlur={() => setStore("editing", false)}
                 onKeyDown={(e) => {
+                  if (e.isComposing || e.keyCode === 229) return
+
                   if (e.key === "Escape") {
                     e.preventDefault()
                     setStore("editing", false)

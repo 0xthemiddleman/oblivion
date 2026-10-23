@@ -14,13 +14,19 @@ export type QuestionKeyIntent =
   | { type: "swallow" }
   | { type: "none" }
 
-type Key = Pick<KeyboardEvent, "key" | "repeat" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey" | "isComposing">
+type Key = Pick<
+  KeyboardEvent,
+  "key" | "keyCode" | "repeat" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey" | "isComposing"
+>
 
 // Maps one keydown to what the dock should do. Answers act on key down, so Space never waits for its release.
 export function questionKey(
   event: Key,
   context: { mac: boolean; zone: QuestionKeyZone; count: number },
 ): QuestionKeyIntent {
+  // Enter and Escape during IME composition confirm or cancel the composition; Safari reports those as keyCode 229.
+  if (event.isComposing || event.keyCode === 229) return { type: "none" }
+
   if (event.key === "Escape") return { type: "dismiss" }
 
   const back = context.mac
@@ -37,7 +43,7 @@ export function questionKey(
   if (/^[1-9]$/.test(event.key)) {
     const index = Number(event.key) - 1
 
-    if (event.repeat || event.isComposing || index >= context.count) return { type: "none" }
+    if (event.repeat || index >= context.count) return { type: "none" }
 
     return { type: "number", index }
   }
@@ -61,7 +67,7 @@ export function questionKey(
   if (event.key === " ") return event.repeat ? { type: "swallow" } : { type: "activate" }
 
   // A printable key on the custom answer's toggle starts typing the answer.
-  if (context.zone === "custom" && event.key.length === 1 && !event.isComposing) return { type: "type" }
+  if (context.zone === "custom" && event.key.length === 1) return { type: "type" }
 
   return { type: "none" }
 }

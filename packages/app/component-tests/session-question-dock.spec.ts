@@ -198,6 +198,31 @@ story("types digits into the custom answer without selecting numbered options", 
   await expect(question.getByRole("radio", { name: /Wide/ })).not.toBeChecked()
 })
 
+story("leaves Enter and Escape to an IME composition in the custom answer", async ({ mount }) => {
+  const component = await mount("app-current-session-surface--question-request")
+  const question = component.locator('[data-component="dock-prompt"][data-kind="question"]')
+  const toggle = question.getByRole("radio", { name: "Type your own answer…", exact: true })
+  const input = question.getByRole("textbox", { name: "Type your own answer…", exact: true })
+  await input.focus()
+  await input.fill("にほん")
+  const compose = (key: string, keyCode: number) =>
+    input.evaluate(
+      (element, init) =>
+        element.dispatchEvent(new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true })),
+      { key, keyCode, isComposing: keyCode !== 229 },
+    )
+  await compose("Enter", 13)
+  await compose("Escape", 27)
+  await compose("Enter", 229)
+  await compose("Escape", 229)
+  await expect(input).toBeFocused()
+  await expect(input).toHaveValue("にほん")
+  await expect(question).toBeVisible()
+  await input.press("Escape")
+  await expect(toggle).toBeFocused()
+  await expect(question).toBeVisible()
+})
+
 story("shows question navigation shortcuts in buttons and tooltips", async ({ mount, page }) => {
   const component = await mount("app-current-session-surface--question-request")
   const mac = await page.evaluate(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform))

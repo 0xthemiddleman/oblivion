@@ -11,6 +11,8 @@ const press = (
     meta?: boolean
     alt?: boolean
     shift?: boolean
+    composing?: boolean
+    keyCode?: number
   } = {},
 ) =>
   questionKey(
@@ -21,12 +23,21 @@ const press = (
       ctrlKey: false,
       altKey: options.alt ?? false,
       shiftKey: options.shift ?? false,
-      isComposing: false,
+      isComposing: options.composing ?? false,
+      keyCode: options.keyCode ?? 0,
     },
     { mac: options.mac ?? true, zone: options.zone ?? "option", count: options.count ?? 3 },
   )
 
 describe("questionKey", () => {
+  test("Enter and Escape that confirm or cancel an IME composition do nothing", () => {
+    expect(press("Escape", { composing: true })).toEqual({ type: "none" })
+    expect(press("Enter", { composing: true, meta: true })).toEqual({ type: "none" })
+    expect(press("Escape", { keyCode: 229 })).toEqual({ type: "none" })
+    expect(press("Enter", { keyCode: 229, meta: true })).toEqual({ type: "none" })
+    expect(press("Escape")).toEqual({ type: "dismiss" })
+  })
+
   test("Up and Down move through the answers", () => {
     expect(press("ArrowDown")).toEqual({ type: "move", step: 1 })
     expect(press("ArrowUp", { zone: "custom" })).toEqual({ type: "move", step: -1 })
