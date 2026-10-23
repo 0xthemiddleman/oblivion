@@ -9,6 +9,7 @@ Do not treat this branch as a private or hardened distribution.
 - [Privacy audit and findings (Italian)](docs/oblivion/phase-0/AUDIT.md)
 - [Reproduce the audit](docs/oblivion/phase-0/REPRODUCE.md)
 - [Networking and file transfers](docs/oblivion/NETWORK-AND-FILES.md)
+- [Minimal live system, boot flow and TUI design (Italian)](docs/oblivion/BOOT-AND-TUI.md)
 
 The upstream README follows. Its installation instructions install upstream OpenCode.
 

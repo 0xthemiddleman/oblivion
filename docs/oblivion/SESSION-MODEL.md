@@ -1,6 +1,6 @@
 # Sessioni OpenCode e ambienti Oblivion
 
-23 ottobre 2026. Analisi sul commit upstream `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`. **La proposta di integrazione descritta qui è da discutere con l'utente; non è implementata.** Rimangono confermati un volume e una password indipendenti per sessione Oblivion, una sola aperta e nessun filesystem condiviso.
+24 ottobre 2026. Analisi sul commit upstream `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`. **Modello approvato dall'utente; non ancora implementato.** Il manager e la riduzione dell'interfaccia sono definiti nella [specifica di avvio e TUI](BOOT-AND-TUI.md). Rimangono confermati un volume e una password indipendenti per sessione Oblivion, una sola aperta e nessun filesystem condiviso.
 
 ## Il comportamento attuale di OpenCode
 
@@ -14,11 +14,11 @@ Un client TUI può creare, elencare e selezionare più conversazioni servite dal
 
 Questo separa la cronologia applicativa, ma non crea il confine di riservatezza per ogni chat richiesto da Oblivion. Cifrare il DB comune protegge tutte quelle chat insieme; quando lo si apre, non mantiene le altre indipendentemente bloccate.
 
-## Proposta per mantenere una password per chat dell'utente
+## Modello concordato: una password per chat dell'utente
 
 Chiamare **sessione Oblivion** l'ambiente protetto: contenitore LUKS2, password, filesystem, VM e processi. Gli ID di sessione OpenCode al suo interno sono dati applicativi, non autorità che possono sbloccare altri ambienti.
 
-Per l'MVP, una sessione Oblivion espone una conversazione principale dell'utente. Eventuali sottosessioni tecniche degli agenti sono parte della stessa attività e dello stesso volume; non ricevono password distinte. Questa distinzione va mostrata chiaramente nella UX e confermata prima dell'implementazione. Se il guest crea altri ID o viene compromesso, essi rimangono nel medesimo confine: l'isolamento dagli altri vault non deve dipendere dal contare le righe del DB.
+Per l'MVP, una sessione Oblivion espone una conversazione principale dell'utente. Eventuali sottosessioni tecniche degli agenti sono parte della stessa attività e dello stesso volume; non ricevono password distinte. Questa distinzione è confermata e va mostrata chiaramente nella UX. Se il guest crea altri ID o viene compromesso, essi rimangono nel medesimo confine: l'isolamento dagli altri vault non deve dipendere dal contare le righe del DB.
 
 La finestra terminale può restare unica. Un selettore fidato sulla live gestisce gli ambienti; per quello aperto mostra la TUI eseguita dentro la relativa VM. Client e server della VM vengono ricreati a ogni apertura. Non si riutilizza un unico client OpenCode che mantenga in memoria dati di più VM.
 
@@ -36,7 +36,7 @@ La UI dell'agente può esprimere una richiesta di cambio ambiente, ma non può s
 
 Nel generale rimane soltanto un indice minimo di identificatori opachi, senza titoli, anteprime o indici dei messaggi. Dopo lo sblocco si può mostrare il titolo interno della sessione aperta. Il requisito di titoli visibili a sessioni chiuse richiederebbe una scelta esplicita diversa sulla riservatezza dei metadati.
 
-L'alternativa più vicina a OpenCode invariato è un **vault con molte chat**, tutte con la stessa password. È più semplice da integrare ma cambia il requisito: le chat di quel vault si sbloccano insieme. Non è assunta come scelta dell'utente.
+L'alternativa più vicina a OpenCode invariato è un **vault con molte chat**, tutte con la stessa password. È più semplice da integrare ma cambia il requisito: le chat di quel vault si sbloccano insieme. L'utente ha confermato invece il modello con una chat principale per ambiente protetto.
 
 ## `/tmp` e il momento della pulizia
 
