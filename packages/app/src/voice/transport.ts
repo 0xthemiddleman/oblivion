@@ -15,7 +15,6 @@ export class VoiceTransport {
   private audio = new Audio()
   private context = new AudioContext()
   private stream?: MediaStream
-  private hostedID?: string
   private timer?: ReturnType<typeof setInterval>
   private ended = false
   private closing?: Promise<void>
@@ -85,7 +84,6 @@ export class VoiceTransport {
       !offered.models.some(
         (model) =>
           model.model === "gpt-live-1" &&
-          model.integration === "opencode" &&
           model.available &&
           model.transports.includes("webrtc"),
       )
@@ -131,7 +129,6 @@ export class VoiceTransport {
     )
 
     if (response.transport.type !== "webrtc") throw new VoiceFailure("connection")
-    this.hostedID = response.session?.id
     await this.peer.setRemoteDescription({ type: "answer", sdp: response.transport.sdp })
     signal.throwIfAborted()
     const timedOut = () => this.ready.reject(new VoiceFailure("connection"))
@@ -168,12 +165,9 @@ export class VoiceTransport {
     this.send({ type: muted ? "session.input_audio.mute" : "session.input_audio.unmute" })
   }
 
-  async instructions(instructions: string) {
-    if (!this.hostedID) throw new VoiceFailure("connection")
-    await this.inputOptions.api.voice.instructions(
-      { sessionID: this.hostedID, instructions },
-      { signal: this.abort.signal },
-    )
+  /** The call runs on the server's own OpenAI key, so its data channel can update the backend's instructions. */
+  instructions(instructions: string) {
+    this.send({ type: "session.update", session: { delegation: { type: "responses", responses: { instructions } } } })
   }
 
   close() {

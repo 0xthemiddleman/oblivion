@@ -11,7 +11,7 @@ export const dict = {
   "voice.connecting": "Connecting…",
   "voice.you": "You:",
   "voice.assistant": "OpenCode:",
-  "voice.failure.unavailable": "Console voice is unavailable on this server.",
+  "voice.failure.unavailable": "Voice calls need an OpenAI API key on this server.",
   "voice.failure.microphone": "Microphone access is required to call.",
   "voice.failure.dropped": "The call disconnected.",
   "voice.failure.connection": "Couldn’t connect the call.",
