@@ -5,6 +5,7 @@ import { homedir, tmpdir } from "node:os"
 import path from "node:path"
 import { app } from "electron"
 import { APP_ID, APP_NAME } from "../constants"
+import { memoryLogInterval, remoteDebuggingPort } from "../diagnostics/options"
 
 const testOnboarding = process.env.OPENCODE_TEST_ONBOARDING === "1"
 
@@ -29,8 +30,15 @@ export function configureApplication() {
   // Chromium animates each mouse-wheel notch on Linux; native Linux apps scroll by the full delta immediately.
   if (process.platform === "linux") app.commandLine.appendSwitch("disable-smooth-scrolling")
 
-  if (!app.isPackaged)
-    app.commandLine.appendSwitch("remote-debugging-port", process.env.OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT ?? "9222")
+  const debugPort = remoteDebuggingPort(app.isPackaged, process.env.OPENCODE_DESKTOP_REMOTE_DEBUGGING_PORT)
+
+  if (debugPort) app.commandLine.appendSwitch("remote-debugging-port", debugPort)
+
+  if (app.commandLine.hasSwitch("remote-debugging-port"))
+    app.commandLine.appendSwitch("remote-debugging-address", "127.0.0.1")
+
+  if (memoryLogInterval(process.env.OPENCODE_DESKTOP_MEMORY_LOG) !== undefined)
+    app.commandLine.appendSwitch("enable-precise-memory-info")
 
   const testRoot = createTestRoot()
   app.setPath("userData", testRoot ? path.join(testRoot, "desktop") : path.join(app.getPath("appData"), APP_ID))
