@@ -1,6 +1,8 @@
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  "experiment.timeline.fadeLength": "Fade length",
+  "experiment.timeline.workingGap": "Gap above Working",
   "experiment.activityChip": "Activity chip",
   "experiment.activityChip.today": "Today",
   "experiment.activityChip.orb": "CSS orb",

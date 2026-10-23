@@ -1,5 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test"
 import { frameLoop } from "@opencode/ui/motion"
+import { motionTuning } from "@opencode/ui/motion-tuning"
 import { createRowGrowth, streamingEdgeFor, workingHandoffPose } from "./row-growth"
 
 function setup() {
@@ -247,7 +248,34 @@ describe("row growth", () => {
     const [feather, fast, whole, fade] = (["feather", "fast", "whole", "fade"] as const).map(streamingEdgeFor)
     expect(feather).toEqual({ catchUp: 1, feather: 28, floor: 18, fadeOut: 1.8, spring: 1, clip: true })
     expect(fast!.catchUp > feather!.catchUp && fast!.feather < feather!.feather && fast!.clip).toBe(true)
-    expect([whole!.clip, whole!.feather, fade!.clip, fade!.feather]).toEqual([false, 0, false, 0])
+    expect([whole!.clip, whole!.feather, fade!.clip, fade!.feather]).toEqual([false, 0, true, 12])
+  })
+
+  test("bounds Word fade when switching from an overflowing stream and clears its mask at rest", () => {
+    const edge = motionTuning.list().find((knob) => knob.id === "timeline.edge")!
+    const previous = edge.value
+    const schedule = spyOn(frameLoop, "addMeasured").mockImplementation(() => () => {})
+    const { growth, wrapper } = setup()
+    wrapper.style.overflow = "clip"
+    try {
+      motionTuning.set(edge, "whole")
+      growth.grow("row", 80, 240, false, undefined, true)
+      const advance = schedule.mock.calls[0]![1]
+      advance(1 / 60)
+      expect(wrapper.style.overflow).toBe("visible")
+      motionTuning.set(edge, "fade")
+      advance(1 / 60)
+      expect(wrapper.style.overflow).toBe("clip")
+      expect(wrapper.style.getPropertyValue("mask-image")).toContain("transparent calc(100% - 4px)")
+      Array.from({ length: 180 }, () => advance(1 / 60))
+      expect(growth.growing()).toBe(false)
+      expect(wrapper.style.getPropertyValue("mask-image")).toBe("")
+      expect(wrapper.style.overflow).toBe("clip")
+    } finally {
+      growth.finish()
+      schedule.mockRestore()
+      motionTuning.set(edge, previous)
+    }
   })
 
   test("computes WorkingHandoffPose curves for copy handoff and reduced motion", () => {

@@ -1,6 +1,7 @@
 import { batch } from "solid-js"
 import { frameLoop, Spring } from "@opencode/ui/motion"
 import { motionTuning } from "@opencode/ui/motion-tuning"
+import en from "@/runtime/i18n/en"
 
 // Like the iOS transcript: while the timeline follows its end, a row's displayed height springs to its measured height.
 export const growthSpring = motionTuning.spring("timeline.growth", {
@@ -20,14 +21,38 @@ const softEdge = 28
 
 // How a streaming row's newest line lands, an experiment for Kit to pick from. Feather, as shipped, grows each line in
 // under a long soft mask; Fast feather gains each line's height sooner so the mask shows for less time; No mask lets the
-// line draw whole while the row's height, and so the scroll, still glides; Word fade does the same with its new words
-// fading in place.
+// line draw whole while the row's height, and so the scroll, still glides; Word fade fades new words in place inside
+// a bounded edge above Working.
 export const streamingEdge = motionTuning.choice("timeline.edge", {
   label: "Streaming edge",
   group: "Experiments",
   card: "Timeline",
   value: "feather",
   labels: { feather: "Feather", fast: "Fast feather", whole: "No mask", fade: "Word fade" },
+})
+
+const fadeLength = motionTuning.number("timeline.fade.length", {
+  label: en["experiment.timeline.fadeLength"],
+  group: "Experiments",
+  card: "Timeline",
+  when: () => streamingEdge() === "fade",
+  value: 12,
+  min: 0,
+  max: 64,
+  step: 1,
+  unit: "px",
+})
+
+const workingGap = motionTuning.number("timeline.fade.gap", {
+  label: en["experiment.timeline.workingGap"],
+  group: "Experiments",
+  card: "Timeline",
+  when: () => streamingEdge() === "fade",
+  value: 4,
+  min: 0,
+  max: 24,
+  step: 1,
+  unit: "px",
 })
 
 type Edge = { catchUp: number; feather: number; floor: number; fadeOut: number; spring: number; clip: boolean }
@@ -38,10 +63,11 @@ const edges = {
   feather,
   fast: { catchUp: 2.4, feather: 12, floor: 6, fadeOut: 4, spring: 0.55, clip: true },
   whole: unmasked,
-  fade: unmasked,
+  fade: { ...unmasked, clip: true },
 } satisfies Record<ReturnType<typeof streamingEdge>, Edge>
 
 export function streamingEdgeFor(style = streamingEdge()): Edge {
+  if (style === "fade") return { ...edges.fade, feather: fadeLength(), floor: fadeLength() }
   return edges[style]
 }
 
@@ -126,6 +152,7 @@ type Growth = {
   opaque: number
   maskValue: number
   maskPx: number
+  maskGap: number
   freshRow: boolean
   streaming: boolean
   cruiseStep: number
@@ -222,6 +249,7 @@ export function createRowGrowth(input: {
       }
       const slowWorking = input.movesWorking?.(key) ?? false
       const edge = growth.streaming ? streamingEdgeFor() : edges.feather
+      const gap = growth.streaming && streamingEdge() === "fade" ? Math.min(workingGap(), rem) : 0
       if (growth.freshRow) {
         growth.freshRow = false
         if (!independent) lastTake = 0
@@ -323,6 +351,10 @@ export function createRowGrowth(input: {
         growths.delete(key)
       } else {
         if (wrapper) {
+          if (growth.unclipped && edge.clip) {
+            wrapper.style.overflow = "clip"
+            growth.unclipped = false
+          }
           if (!edge.clip && growth.streaming && !coupled) {
             // The line draws whole past the row's growing edge, over the gap below it.
             paintEdge(wrapper, growth, 0)
@@ -337,7 +369,7 @@ export function createRowGrowth(input: {
               wantFade >= growth.maskValue
                 ? Math.min(wantFade, growth.maskValue + 5)
                 : Math.max(wantFade, growth.maskValue - edge.fadeOut)
-            paintEdge(wrapper, growth, Math.min(shown, growth.maskValue))
+            paintEdge(wrapper, growth, Math.min(shown, growth.maskValue), Math.min(shown, gap))
           }
           if (growth.entering) paintArrival(wrapper, growth, shown)
         }
@@ -476,6 +508,7 @@ export function createRowGrowth(input: {
         opaque: Math.max(0, from),
         maskValue: streaming ? Math.min(16, streamingEdgeFor().feather) : Math.min(softEdge, rem),
         maskPx: 0,
+        maskGap: 0,
         freshRow: true,
         streaming,
         cruiseStep: 0,
@@ -610,16 +643,18 @@ export function createRowGrowth(input: {
   }
 }
 
-function paintEdge(wrapper: HTMLElement, growth: Growth | undefined, fade: number) {
+function paintEdge(wrapper: HTMLElement, growth: Growth | undefined, fade: number, gap = 0) {
   const px = fade < 1 ? 0 : Math.round(fade)
+  const inset = grid(gap)
   if (growth) {
-    if (growth.maskPx === px) return
+    if (growth.maskPx === px && growth.maskGap === inset) return
     growth.maskPx = px
+    growth.maskGap = inset
   }
-  if (px === 0) return wrapper.style.removeProperty("mask-image")
+  if (px === 0 && inset === 0) return wrapper.style.removeProperty("mask-image")
   wrapper.style.setProperty(
     "mask-image",
-    `linear-gradient(to bottom, #000 calc(100% - ${px}px), rgba(0, 0, 0, 0.72) calc(100% - ${Math.round(px * 0.62)}px), rgba(0, 0, 0, 0.28) calc(100% - ${Math.round(px * 0.28)}px), transparent)`,
+    `linear-gradient(to bottom, #000 calc(100% - ${px + inset}px), rgba(0, 0, 0, 0.72) calc(100% - ${Math.round(px * 0.62) + inset}px), rgba(0, 0, 0, 0.28) calc(100% - ${Math.round(px * 0.28) + inset}px), transparent calc(100% - ${inset}px))`,
   )
 }
 
