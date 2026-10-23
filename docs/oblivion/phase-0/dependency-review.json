@@ -1,0 +1,47 @@
+[
+  {
+    "package": "@opentui/core",
+    "version": "0.6.8",
+    "scope": "Targeted review of filesystem/network helpers only; not a complete dependency audit",
+    "files": [
+      {
+        "path": "packages/tui/node_modules/@opentui/core/chunk-bun-4e5bpeqh.js",
+        "sha256": "a3134c4f9a59024590c1a43bea4f9184cc4befc11867cc8491b49863eeaa7899"
+      },
+      {
+        "path": "packages/tui/node_modules/@opentui/core/chunk-bun-ehr9v0n8.js",
+        "sha256": "b6df20c9ee7bbd07149312a4a075bcaf63896a48e044f65b5280f66b86bc7523"
+      },
+      {
+        "path": "packages/tui/node_modules/@opentui/core/parser.worker.js",
+        "sha256": "4fb9e5b49cfe515d3a862a59798011bb66982f72a04aeeba67e4545d8a74d9c3"
+      }
+    ]
+  },
+  {
+    "package": "@opentunnel/client",
+    "version": "0.4.1",
+    "scope": "Targeted review of filesystem/network helpers only; not a complete dependency audit",
+    "files": [
+      {
+        "path": "packages/cli/node_modules/@opentunnel/client/dist/effect/storage.js",
+        "sha256": "9117eb689e802542931e5398fe9a7ab678611dab57413f4dc1412ae3dcfb3a85"
+      },
+      {
+        "path": "packages/cli/node_modules/@opentunnel/client/dist/effect/client.js",
+        "sha256": "89ab181c771437c03d36879dbf643bbeaea8e232bf419e1211ce748d61d53349"
+      }
+    ]
+  },
+  {
+    "package": "@npmcli/config",
+    "version": "10.8.1",
+    "scope": "Targeted review of filesystem/network helpers only; not a complete dependency audit",
+    "files": [
+      {
+        "path": "packages/util/node_modules/@npmcli/config/lib/definitions/definitions.js",
+        "sha256": "6d1a21868e9f46538c1e4999c73987325a516f03e3b7fe8f986df932325e3b83"
+      }
+    ]
+  }
+]

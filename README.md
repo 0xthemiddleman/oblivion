@@ -1,3 +1,19 @@
+# Oblivion — OpenCode v2 privacy fork
+
+This fork is pinned to OpenCode **v2.1.4** (`68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`).
+Phase 0 adds a privacy audit and reproducible synthetic probes; application code is unchanged.
+The planned live OS, per-session VMs, LUKS2 volumes and network controls are **not implemented yet**.
+Do not treat this branch as a private or hardened distribution.
+
+- [Product and architecture plan (Italian)](PLAN.md)
+- [Privacy audit and findings (Italian)](docs/oblivion/phase-0/AUDIT.md)
+- [Reproduce the audit](docs/oblivion/phase-0/REPRODUCE.md)
+- [Networking and file transfers](docs/oblivion/NETWORK-AND-FILES.md)
+
+The upstream README follows. Its installation instructions install upstream OpenCode.
+
+---
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>

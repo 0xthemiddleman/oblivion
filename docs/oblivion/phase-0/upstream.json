@@ -1,0 +1,56 @@
+{
+  "upstream": "https://github.com/anomalyco/opencode",
+  "tag": "v2.1.4",
+  "commit": "68bc26b7da1990ce10ffecfbc1e09eb13aa5d824",
+  "license": "MIT",
+  "packageManager": "bun@1.4.4",
+  "lockfile_sha256": "47359ba0731b02d14b9a93a6b71b2db104cf9b9716ab0b6371fe96f02c6d71b2",
+  "catalog_sha256": "1ac2ae15da5a9015ed44aef1456f8ebe9ea6e3c9019788a6f416232cfb93e1f4",
+  "runtime_workspaces": [
+    "@opencode/ai",
+    "@opencode/cli",
+    "@opencode/client",
+    "@opencode/codemode",
+    "@opencode/core",
+    "@opencode/latex",
+    "@opencode/merman",
+    "@opencode/plugin",
+    "@opencode/plugin-browser",
+    "@opencode/protocol",
+    "@opencode/schema",
+    "@opencode/server",
+    "@opencode/simulation",
+    "@opencode/theme",
+    "@opencode/tui",
+    "@opencode/ui",
+    "@opencode/util"
+  ],
+  "files_by_scope": {
+    "build-install": 141,
+    "cli-runtime": 1725,
+    "other-product": 1846,
+    "tests-excluded": 1438
+  },
+  "runtime_candidates_by_category": {
+    "database": 392,
+    "environment": 193,
+    "filesystem": 259,
+    "logging-dumps": 265,
+    "network": 1439,
+    "process": 419
+  },
+  "patterns": {
+    "filesystem": "\\b(?:writeFile\\w*|appendFile\\w*|appendText\\w*|createWriteStream|writeWithDirs|writeJson\\w*|writeText\\w*|mkdir\\w*|makeDirectory\\w*|mkdtemp\\w*|makeTemp\\w*|copyFile\\w*|rename\\w*|unlink\\w*|truncate\\w*|chmod\\w*|utimes\\w*|symlink\\w*|openSync)\\s*\\(|\\b(?:Bun|fs|filesystem|file|handle|writer)\\.(?:write|writeAll|open|remove|rm|copy|sink)\\s*\\(",
+    "database": "\\b(?:db|tx|database|kv|storage|sql|native)\\.(?:insert|update|delete|set|remove|run|exec|execute|transaction|prepare|unsafe)\\s*\\(|\\b(?:new Database\\w*|sqliteLayer|SqliteClient\\.layer)|\\b(?:INSERT INTO|UPDATE |DELETE FROM|PRAGMA|CREATE TABLE|ALTER TABLE)",
+    "network": "\\bfetch\\s*\\(|\\b(?:HttpClient\\w*|WebSocket|EventSource|Socket|net|https?|dns|tls|dgram|Bonjour|WebSocketServer)\\b|\\.(?:listen|connect|createConnection|sendBeacon)\\s*\\(|\\bBun\\.serve\\s*\\(",
+    "process": "\\b(?:ChildProcess\\w*|spawn\\w*|execFile\\w*|execSync|fork|Worker|importModule|resolveModule)\\b|\\b(?:Npm|npm)\\.(?:add|install)\\s*\\(|\\$`",
+    "logging-dumps": "\\b(?:logInfo|logDebug|logWarning|logError|logFatal|fileLogger|writeHeapSnapshot|generateHeapSnapshot|startCpuProfiling|OtlpLogger|OTLPTraceExporter|Logger\\.toFile)\\b|console\\.(?:log|error|warn)|\\.cpuprofile|\\.heapsnapshot",
+    "environment": "process\\.env|\\b(?:Env|env)\\.(?:all|get)|OTEL_|XDG_|TMPDIR|os\\.tmpdir|os\\.homedir"
+  },
+  "limitations": [
+    "Static lexical candidates include false positives; line presence is not runtime reachability.",
+    "Arbitrary tools, plugins, native code, dynamic endpoints and external dependencies require runtime tracing and separate review.",
+    "No claim that an absent pattern proves absence of I/O. All selected source files have a manifest entry.",
+    "Tracked source, package manifests, lockfile and model catalog are required to match the pinned base; untracked files are not inventoried."
+  ]
+}
