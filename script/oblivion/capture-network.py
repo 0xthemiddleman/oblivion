@@ -68,7 +68,7 @@ syn = subprocess.run([
 destinations = Counter((ipv4 or ipv6, port) for ipv4, ipv6, port in csv.reader(io.StringIO(syn.stdout), delimiter="\t"))
 observed_provider_requests = sum(len(scenario["requests"]) for scenario in json.loads((OUT / "runtime-results.json").read_text()))
 assert len([request for request in requests if request["uri"] == "/v1/chat/completions"]) == observed_provider_requests > 0
-assert "0 packets dropped by kernel" in capture_log.read_text(), capture_log.read_text()
+assert "0 packets dropped by kernel" in capture_log.read_text().splitlines(), capture_log.read_text()
 for port in ("1234", "11434", "8000"):
     assert ("127.0.0.1", port) in destinations, (port, destinations)
 report = {
