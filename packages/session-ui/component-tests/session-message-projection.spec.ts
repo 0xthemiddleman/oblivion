@@ -76,6 +76,26 @@ story("folds the Steering label on delivery while preserving the hovered footer"
     await expect(timestamp).toHaveCSS("opacity", hover ? "1" : "0")
   }
 
+  await timeline.getByLabel("Delivery state").selectOption("steering")
+  await timeline.getByLabel("Grouped prompts", { exact: true }).check()
+  await expect(pending.first()).toHaveCSS("opacity", "1")
+  await expect(footer.first()).toBeHidden()
+  await page.clock.install()
+  await page.clock.pauseAt(new Date(Date.now() + 1000))
+  await timeline.getByLabel("Delivery state").selectOption("delivered")
+  await page.clock.runFor(32)
+  const opacity = await message.first().evaluate((element) => {
+    const label = element.querySelector('[data-slot="user-message-pending-label"]')
+    return label ? Number(getComputedStyle(label).opacity) : 0
+  })
+  // A folded footer must not make the run's Steering label disappear on its first delivery frame.
+  expect(opacity).toBeGreaterThan(0)
+  expect(opacity).toBeLessThan(1)
+  await page.clock.runFor(1200)
+  await expect(pending).toBeHidden()
+  await timeline.getByLabel("Grouped prompts", { exact: true }).uncheck()
+  await page.clock.resume()
+
   await page.emulateMedia({ reducedMotion: "reduce" })
   await expect(page.locator("html")).toHaveAttribute("data-motion", "reduce")
   await timeline.getByLabel("Delivery state").selectOption("steering")

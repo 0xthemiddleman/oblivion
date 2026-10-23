@@ -386,13 +386,12 @@ export function CurrentUserMessageDisplay(props: {
 
   const runPose = () => ({
     label: labelled() ? 1 : 0,
-    meta: folded() ? 0 : 1,
     top: meetsAbove() ? 1 : 0,
     bottom: folded() ? 1 : 0,
   })
 
   // The first paint is the resting pose; the spring's first write lands a frame later.
-  const restingPose = untrack(runPose)
+  const restingPose = untrack(() => ({ ...runPose(), meta: folded() ? 0 : 1 }))
 
   let root: HTMLDivElement | undefined
   springStyle(
@@ -401,9 +400,16 @@ export function CurrentUserMessageDisplay(props: {
     (el, value) => {
       el.style.setProperty("--user-run-label", `${value.label}`)
       if (value.label === 0 && !labelled()) setLabel("")
-      el.style.setProperty("--user-run-meta", `${value.meta}`)
       el.style.setProperty("--user-run-top", `${value.top}`)
       el.style.setProperty("--user-run-bottom", `${value.bottom}`)
+    },
+    userRunSpring,
+  )
+  springStyle(
+    () => root,
+    () => ({ meta: folded() ? 0 : 1 }),
+    (el, value) => {
+      el.style.setProperty("--user-run-meta", `${value.meta}`)
       el.toggleAttribute("data-run-meta-hidden", value.meta === 0)
     },
     // Folding a meta line away is instant; the next message's line takes its place as that message grows in.
