@@ -6,11 +6,11 @@ oblivion_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 oblivion_output="$oblivion_root/artifacts/oblivion-phase0"
 mkdir -p "$oblivion_output/temp-probe"
 
-docker run --rm --network none --log-driver none --cap-add SYS_PTRACE \
+docker run --rm --network none --log-driver none --cap-add SYS_PTRACE --cap-add NET_RAW \
   --mount "type=bind,source=$oblivion_root,target=/work,readonly" \
   --mount "type=bind,source=$oblivion_output,target=/out" \
   --workdir /work oblivion-audit:v2.1.4 \
-  python3 /work/script/oblivion/probe.py
+  python3 /work/script/oblivion/capture-network.py
 
 docker run --rm --network none --log-driver none --cap-add SYS_PTRACE \
   --mount "type=bind,source=$oblivion_root,target=/work,readonly" \

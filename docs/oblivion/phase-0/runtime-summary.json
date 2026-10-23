@@ -13,7 +13,7 @@
   "scenarios": [
     {
       "scenario": "help",
-      "artifact_directory": "help-1792777367675884792",
+      "artifact_directory": "help-1792778935457658463",
       "exit_code": 0,
       "timed_out": false,
       "requests": [],
@@ -26,7 +26,7 @@
       "created_file_count": 495,
       "canary_file_metadata": [],
       "raw_sha256": {
-        "syscalls.log": "1f25db6170b7a8bc5865334fd6b9eef0900f1e6cc358994f277f351619e77277",
+        "syscalls.log": "26f105be39bd088adfe5157bd0d73833e0e66d7fbf359cf5d4161050d9c06f0f",
         "stdout.txt": "fcbfb3e3220e806a3ecf4bbe002dc8dc835e8f676d68393ab22a0d32a3a4e619",
         "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
@@ -34,7 +34,7 @@
     },
     {
       "scenario": "persisted-chat",
-      "artifact_directory": "persisted-chat-1792777369835458668",
+      "artifact_directory": "persisted-chat-1792778938289381256",
       "exit_code": 0,
       "timed_out": false,
       "requests": [
@@ -92,7 +92,7 @@
       "canary_files": [
         "data/opencode/log/opencode-local.log",
         "data/opencode/opencode-local.db",
-        "data/opencode/shell/80eeb12eeede00bf2fce6f48e42c1e5bab8dab1d/sh_169dbcb2a001W4fJzDrFlzYLmE.out",
+        "data/opencode/shell/e6719b947525d043a22df74a8d442bcf47b98b57/sh_169f3c618001mctX5B4a6Q1V4H.out",
         "workspace/context-edited.txt"
       ],
       "stdout_has_reply": true,
@@ -105,15 +105,15 @@
         {
           "path": "data/opencode/log/opencode-local.log",
           "bytes": 3283,
-          "sha256": "73231091f404d17a0a9f5fe1a95bc714f7dd02a66ad25d3565104cb3427b360f"
+          "sha256": "a4aef3da571a7f2c1ac12621f8aa646adc437e9b64454925de10098aac3aba31"
         },
         {
           "path": "data/opencode/opencode-local.db",
           "bytes": 356352,
-          "sha256": "81a0c34dc7630fa0a5a0c15f681019987a8ee20057b70c2351e14dd004361cb9"
+          "sha256": "5531ee12c86a55ff4e9a193054a522bf68b3881705d8dcf4129c2963c0ada98b"
         },
         {
-          "path": "data/opencode/shell/80eeb12eeede00bf2fce6f48e42c1e5bab8dab1d/sh_169dbcb2a001W4fJzDrFlzYLmE.out",
+          "path": "data/opencode/shell/e6719b947525d043a22df74a8d442bcf47b98b57/sh_169f3c618001mctX5B4a6Q1V4H.out",
           "bytes": 112535,
           "sha256": "8fa7f927070421910585160755b9ed84c58e6e2f809f773b89ee81cf18eeb665"
         },
@@ -124,8 +124,8 @@
         }
       ],
       "raw_sha256": {
-        "syscalls.log": "1f4bcf1eb06b6403cad08ef33a8368637555bdf5c9069d7675e9cc426a82d9f6",
-        "stdout.txt": "6b86eb2694b9bb5dd3a91af5ccf42690e7dc5f82f216af07efdb07c549ac0bfe",
+        "syscalls.log": "ee1b737ecb73d4df79ad4c720651d7ffaa1ed8f53dcdf40216859de42775c95e",
+        "stdout.txt": "14e6b9df8f6013bd93639e5d45c565ab00d85f46c3791a9287c7e0bb1275af21",
         "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "ipv4_bind_connect_attempts": [
@@ -156,26 +156,26 @@
         {
           "operation": "connect",
           "address": "127.0.0.1",
-          "port": 36655,
+          "port": 37745,
           "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
         },
         {
           "operation": "connect",
           "address": "127.0.0.1",
-          "port": 36655,
+          "port": 46359,
+          "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
+        },
+        {
+          "operation": "connect",
+          "address": "127.0.0.1",
+          "port": 46359,
           "syscall_result": "unfinished; consult full trace"
-        },
-        {
-          "operation": "connect",
-          "address": "127.0.0.1",
-          "port": 37673,
-          "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
         }
       ]
     },
     {
       "scenario": "memory-db-chat",
-      "artifact_directory": "memory-db-chat-1792777374949650712",
+      "artifact_directory": "memory-db-chat-1792778946562542926",
       "exit_code": 0,
       "timed_out": false,
       "requests": [
@@ -232,7 +232,7 @@
       ],
       "canary_files": [
         "data/opencode/log/opencode-local.log",
-        "data/opencode/shell/db2a9d8d649b03b392bd27ba54c2b96fe0f96624/sh_169dbdef8001noghPZhtyunV09.out",
+        "data/opencode/shell/8868d22b896a0a18dfdd18560ba35badea1593d9/sh_169f3e486001yxFtAqr4rur0o8.out",
         "workspace/context-edited.txt"
       ],
       "stdout_has_reply": true,
@@ -244,11 +244,11 @@
       "canary_file_metadata": [
         {
           "path": "data/opencode/log/opencode-local.log",
-          "bytes": 3256,
-          "sha256": "cee06b4efc06ecad797f32ea6ec0a1a783650f2d0a180dee66db4e50dd0f7d0a"
+          "bytes": 3255,
+          "sha256": "8a27355a3206cc8b2fc589fab6af98498245b41ba1796b9bb8ad755ae5536390"
         },
         {
-          "path": "data/opencode/shell/db2a9d8d649b03b392bd27ba54c2b96fe0f96624/sh_169dbdef8001noghPZhtyunV09.out",
+          "path": "data/opencode/shell/8868d22b896a0a18dfdd18560ba35badea1593d9/sh_169f3e486001yxFtAqr4rur0o8.out",
           "bytes": 112535,
           "sha256": "8fa7f927070421910585160755b9ed84c58e6e2f809f773b89ee81cf18eeb665"
         },
@@ -259,8 +259,8 @@
         }
       ],
       "raw_sha256": {
-        "syscalls.log": "a42bd6f05311fbc4c0d408cdadd87c9818b77be20c632e9dbf2b8dbc7d3aa489",
-        "stdout.txt": "024e4e4664fe847cb24fd69121875b384ab21e90201bfb9b7f8e3cad8eda0064",
+        "syscalls.log": "fce34b1618f7febd0ff4962d7043c80a35f2f88b01390511fe56f20560b4217f",
+        "stdout.txt": "c469c18a45d1ae2dab29583091b477f880b9fffe5fd692cf2f46fdda244cfd3a",
         "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "ipv4_bind_connect_attempts": [
@@ -291,26 +291,26 @@
         {
           "operation": "connect",
           "address": "127.0.0.1",
-          "port": 36655,
+          "port": 32821,
           "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
         },
         {
           "operation": "connect",
           "address": "127.0.0.1",
-          "port": 36655,
+          "port": 46359,
+          "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
+        },
+        {
+          "operation": "connect",
+          "address": "127.0.0.1",
+          "port": 46359,
           "syscall_result": "unfinished; consult full trace"
-        },
-        {
-          "operation": "connect",
-          "address": "127.0.0.1",
-          "port": 38109,
-          "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
         }
       ]
     },
     {
       "scenario": "model-refresh-enabled",
-      "artifact_directory": "model-refresh-enabled-1792777379966027006",
+      "artifact_directory": "model-refresh-enabled-1792778954312357097",
       "exit_code": 0,
       "timed_out": false,
       "requests": [
@@ -368,7 +368,7 @@
       "canary_files": [
         "data/opencode/log/opencode-local.log",
         "data/opencode/opencode-local.db",
-        "data/opencode/shell/23b8281d485c0b8c666a387d8f68d91069579ac0/sh_169dbf1d7001niDfunedyJIxpv.out",
+        "data/opencode/shell/1134cc48ba6bef9124695bae9e96fc05be649a56/sh_169f4044f0013yUizU9XwIlzDF.out",
         "workspace/context-edited.txt"
       ],
       "stdout_has_reply": true,
@@ -381,15 +381,15 @@
         {
           "path": "data/opencode/log/opencode-local.log",
           "bytes": 3587,
-          "sha256": "dd82cf87632995d2d438d8155a36e501f4cab5771303ffb882b3c92ecb073ce7"
+          "sha256": "cade5758d490a4de9d33f5e0c2e872f6422456be7da47cef13eb3f6f1f6b8be4"
         },
         {
           "path": "data/opencode/opencode-local.db",
           "bytes": 356352,
-          "sha256": "2b2553eadb2d09344e64e9c37a07d202d11ddefb48a4c9598bf1f17d75c7f02f"
+          "sha256": "2d26ac88be53387c7afcd85dcef87284f1c51832e8942a7d432d6f869432b702"
         },
         {
-          "path": "data/opencode/shell/23b8281d485c0b8c666a387d8f68d91069579ac0/sh_169dbf1d7001niDfunedyJIxpv.out",
+          "path": "data/opencode/shell/1134cc48ba6bef9124695bae9e96fc05be649a56/sh_169f4044f0013yUizU9XwIlzDF.out",
           "bytes": 112535,
           "sha256": "8fa7f927070421910585160755b9ed84c58e6e2f809f773b89ee81cf18eeb665"
         },
@@ -400,8 +400,8 @@
         }
       ],
       "raw_sha256": {
-        "syscalls.log": "b07d476e7a0f039d1adefd629135ea54bfc30b74045cf2a65708219862c3e9e3",
-        "stdout.txt": "965f0d297a9bc842eaf3c37e5b64338f5b21f87ff42dd19a60219b2eef180487",
+        "syscalls.log": "0b0f33aa1a4101718141d8e39f06c64414524fa77ccc745a626bd6a0a746c75e",
+        "stdout.txt": "d5f74a5573f2f1fd45f176399694e0058b1f3341409466332fbe90973bfe25c6",
         "stderr.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
       },
       "ipv4_bind_connect_attempts": [
@@ -432,19 +432,19 @@
         {
           "operation": "connect",
           "address": "127.0.0.1",
-          "port": 34545,
+          "port": 44973,
           "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
         },
         {
           "operation": "connect",
           "address": "127.0.0.1",
-          "port": 36655,
+          "port": 46359,
           "syscall_result": "-1 EINPROGRESS (Operation now in progress)"
         },
         {
           "operation": "connect",
           "address": "127.0.0.1",
-          "port": 36655,
+          "port": 46359,
           "syscall_result": "unfinished; consult full trace"
         },
         {
@@ -464,9 +464,9 @@
   ],
   "temporary_helpers": {
     "editor_suspend_failure_leaves_plaintext": true,
-    "editor_path": "/out/temp-probe/1792777386012.md",
+    "editor_path": "/out/temp-probe/1792778964102.md",
     "browser_capture_persists_after_helper_returns": true,
-    "browser_path": "/out/temp-probe/opencode-browser-1KZ0Ej/0/capture.txt"
+    "browser_path": "/out/temp-probe/opencode-browser-7cXWOP/0/capture.txt"
   },
-  "temporary_helpers_trace_sha256": "9229d3568af28ce2bc0af717dcc8f2fbe74fe4a9479e4dd95159c4b844e36e80"
+  "temporary_helpers_trace_sha256": "2d99e7b815cf939aea20c1e1a68a90565d2195e9a54b7ab58234a2ed6ad92ff8"
 }

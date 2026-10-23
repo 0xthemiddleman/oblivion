@@ -128,3 +128,18 @@ Questa fase consegna l'audit della base e le prove riproducibili; **non applica 
 - Il collaudo globale di fase 0 previsto dal piano resta aperto per TUI completa e Abliteration/Tor reali. È completato il pacchetto di audit iniziale del fork; non viene dichiarato completato il collaudo del prodotto.
 
 La proposta di VM e volumi indipendenti rimane coerente con i risultati. Il punto da correggere è l'aspettativa che il solo adapter o il solo LUKS forniscano il resto delle garanzie.
+
+## 8. Estensione: cattura pacchetti e modello multi-sessione
+
+Su richiesta dell'utente è stata aggiunta una cattura tcpdump su tutte le interfacce del container isolato, incluso loopback, analizzata con tshark e confrontata con la fixture HTTP e strace. [network-summary.json](network-summary.json) conserva hash e statistiche della cattura riuscita: **315 pacchetti, 33 richieste HTTP, zero pacchetti persi dal kernel e nessun pacchetto troncato**. Il PCAP completo rimane negli artefatti locali ignorati. I numeri descrivono questo campione, non il prodotto in ogni configurazione.
+
+| Flusso osservato                    | Evidenza                                                                                                                                | Trattamento proposto                                                                                                |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Client → server OpenCode locale     | 24 richieste `/api/...`: location, creazione sessione, eventi, prompt, permessi, form, attesa e lettura messaggi                        | Necessarie alle prove; restano nel guest e non sono traffico da mandare a Tor                                       |
+| Adapter → fixture del provider      | 9 POST `/v1/chat/completions`, coincidenti con le 9 richieste ricevute dalla fixture nelle tre conversazioni                            | Conservare il percorso applicativo verso il broker; abilitare l'uscita reale solo verso Abliteration secondo policy |
+| Discovery LM Studio / Ollama / vLLM | 3 tentativi TCP per porta su `127.0.0.1:1234`, `:11434`, `:8000`; nessuna risposta applicativa da tali provider                         | Disabilitare la discovery non richiesta nella build Oblivion                                                        |
+| Refresh catalogo                    | Tentativi DNS presenti in strace; nessun pacchetto DNS nella cattura, perché il kernel rifiuta l'instradamento nel container senza rete | Disabilitare refresh automatico; mantenere snapshot fissato                                                         |
+
+Non è stata osservata una conversazione HTTPS con il provider reale. Il contenuto HTTPS richiede osservazione prima della cifratura o decifratura autorizzata nel laboratorio; uno sniffer esterno al gateway Tor non rivela da solo URL e body. Il [metodo di audit rete](../NETWORK-AND-FILES.md) estende la matrice a cache vuote/calde, tool, plugin, parser, errori, retry, cambi sessione e chiusura. Restano aperte le prove non eseguite elencate nella sezione 7.
+
+La verifica del codice multi-sessione conferma che un client TUI può usare più conversazioni nello stesso server/database. Non sono ambienti cifrati indipendenti. La [proposta di integrazione](../SESSION-MODEL.md) distingue sessione Oblivion, conversazione principale e sottosessioni tecniche; descrive il selettore fidato e il cambio di VM senza riutilizzare il client della precedente. La proposta è da discutere prima di modificare il prodotto.

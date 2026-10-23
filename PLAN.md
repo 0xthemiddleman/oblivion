@@ -122,6 +122,8 @@ Il prodotto non conserva log diagnostici persistenti o cronologie di rete. Gli e
 
 **Ciclo di vita delle sessioni**
 
+Il [modello di integrazione delle sessioni](docs/oblivion/SESSION-MODEL.md) distingue il vault Oblivion dalle conversazioni multiple nel DB OpenCode. La proposta, da confermare, è una conversazione principale per ambiente protetto, con sottosessioni tecniche nello stesso vault e selettore fidato per cambiare ambiente. Le schede upstream non realizzano da sole isolamento o blocco. `/tmp` rimane in RAM e viene ricreato con la VM; riavviare soltanto OpenCode non lo svuota automaticamente.
+
 | Operazione                             | Comportamento da implementare                                                                                                                                                                                                                                                              |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Nuova sessione persistente             | Generale già sbloccato; password distinta nella UI fidata; nuovo contenitore e nuova chiave al suo interno; creazione atomica senza dati in chiaro sul supporto.                                                                                                                           |

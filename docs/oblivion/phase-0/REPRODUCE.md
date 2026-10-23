@@ -37,7 +37,7 @@ docker run --rm --log-driver none \
 
 Build e installazione richiedono rete per le dipendenze. `--ignore-scripts` è deliberato: le prove non necessitano dei lifecycle script dell'intero monorepo. Non sostituisce una revisione dei pacchetti eseguiti. Non passare al container credenziali, HOME dell'utente, socket Docker o configurazioni npm personali.
 
-Durante le prove il sorgente è in sola lettura; solo `artifacts/oblivion-phase0` è montato scrivibile dall'host. Il filesystem del container è effimero. Il container ha `--network none`, logging Docker disabilitato e `SYS_PTRACE` per osservare i suoi processi. Questi flag servono al laboratorio; non sono la sandbox di produzione proposta per Oblivion.
+Durante le prove il sorgente è in sola lettura; solo `artifacts/oblivion-phase0` è montato scrivibile dall'host. Il filesystem del container è effimero. Il container ha `--network none`, logging Docker disabilitato, `SYS_PTRACE` per osservare i suoi processi e `NET_RAW` per la cattura pacchetti. Il Dockerfile include tcpdump e tshark; ricostruire l'immagine se si usa la prima revisione del laboratorio. Questi flag servono al laboratorio; non sono la sandbox di produzione proposta per Oblivion.
 
 ## Prove dinamiche
 
@@ -45,7 +45,9 @@ Durante le prove il sorgente è in sola lettura; solo `artifacts/oblivion-phase0
 sh script/oblivion/run-probes.sh
 ```
 
-Il wrapper esegue `probe.py`, `temp-probe.mjs` e `summarize.py`. Non legge il profilo OpenCode dell'utente. Ogni scenario ha HOME, TMPDIR e radici XDG nuovi; il provider ascolta solo su loopback del container.
+Il wrapper esegue `capture-network.py` (che avvia `probe.py` sotto tcpdump), `temp-probe.mjs` e `summarize.py`. Non legge il profilo OpenCode dell'utente. Ogni scenario ha HOME, TMPDIR e radici XDG nuovi; il provider ascolta solo su loopback del container.
+
+tcpdump ascolta tutte le interfacce del solo container, incluso loopback, prima dell'avvio di OpenCode. La modalità immediata evita di lasciare l'ultimo blocco di pacchetti nel buffer di cattura alla chiusura; il PCAP viene scritto sul filesystem effimero locale del container e copiato negli artefatti alla fine, evitando la latenza del bind mount durante la cattura. tshark decodifica i protocolli e genera il riepilogo di richieste HTTP, nomi DNS, SNI e tentativi TCP. Gli assert confrontano il numero di richieste al provider decodificate dal PCAP con quelle ricevute dalla fixture, verificano i tentativi ai tre provider locali e richiedono zero pacchetti persi dal kernel e nessun pacchetto troncato. Il campione non comprende HTTPS o traffico Internet reale.
 
 Il provider fittizio usa il formato OpenAI-compatible previsto dall'adapter nativo `abliteration-ai`. La sola chiave è `audit-dummy-key`; il canary è `OBLIVION_AUDIT_SYNTHETIC_7c924e`. Il tool shell scrive un documento, un file con percorso assoluto `/tmp/oblivion-outside-xdg.txt` e output lungo; verifica se il figlio ha ricevuto la chiave fittizia. L'assert sul valore non registra segreti reali.
 
@@ -73,9 +75,15 @@ artifacts/oblivion-phase0/<scenario>-<timestamp>/stdout.txt
 artifacts/oblivion-phase0/<scenario>-<timestamp>/stderr.txt
 artifacts/oblivion-phase0/temp-results.json
 artifacts/oblivion-phase0/temp-syscalls.log
+artifacts/oblivion-phase0/network.pcap
+artifacts/oblivion-phase0/packet-capture.log
+artifacts/oblivion-phase0/packet-fields.tsv
+artifacts/oblivion-phase0/network-results.json
 ```
 
 Ogni esecuzione crea directory nuove; gli esiti dell'ultima vengono riassunti in `docs/oblivion/phase-0/runtime-summary.json`. PID, porte, timestamp, nomi e hash cambiano tra esecuzioni. Il riepilogo di rete estrae soltanto `bind`/`connect` IPv4: non è un parser esaustivo di strace e non dimostra assenza di altre syscall. Per approfondimenti consultare il trace intero.
+
+La cattura pacchetti dell'ultima esecuzione viene riassunta separatamente in `docs/oblivion/phase-0/network-summary.json`, con versione degli strumenti, hash del PCAP, conteggi e richieste sintetiche. I nomi `network.pcap` e `packet-fields.tsv` vengono sovrascritti dalla prova successiva. Il PCAP include anche body e credenziali del solo laboratorio: non pubblicarlo o usare la procedura su una sessione personale. Se una connessione fallisce nel kernel prima dell'invio, può comparire in strace e non nel PCAP; questa differenza è attesa.
 
 `dependency-review.json` registra versioni e hash dei file installati esaminati manualmente. I nomi dei chunk OpenTUI sono legati al lockfile fissato; una nuova versione richiede di aggiornare la revisione, non semplicemente di trovare un chunk con un nome simile.
 

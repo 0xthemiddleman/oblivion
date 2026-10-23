@@ -1,0 +1,264 @@
+{
+  "scope": "All interfaces including loopback of the offline synthetic container; not host interfaces or live internet",
+  "tcpdump_version": "tcpdump version 4.99.5",
+  "tshark_version": "TShark (Wireshark) 4.4.19.",
+  "pcap_sha256": "d501cf241e8a85ef2a7c434e67a5ccde2008db31a47abccc57a1ea44f3c6ec79",
+  "pcap_bytes": 558918,
+  "packets": 315,
+  "capture_statistics": [
+    "tcpdump: listening on any, link-type LINUX_SLL2 (Linux cooked v2), snapshot length 262144 bytes",
+    "315 packets captured",
+    "630 packets received by filter",
+    "0 packets dropped by kernel"
+  ],
+  "protocol_counts": {
+    "TCP": 252,
+    "HTTP": 30,
+    "HTTP/JSON": 33
+  },
+  "tcp_syn_destinations": [
+    {
+      "address": "127.0.0.1",
+      "port": 11434,
+      "attempts": 3
+    },
+    {
+      "address": "127.0.0.1",
+      "port": 1234,
+      "attempts": 3
+    },
+    {
+      "address": "127.0.0.1",
+      "port": 32821,
+      "attempts": 3
+    },
+    {
+      "address": "127.0.0.1",
+      "port": 37745,
+      "attempts": 3
+    },
+    {
+      "address": "127.0.0.1",
+      "port": 44973,
+      "attempts": 3
+    },
+    {
+      "address": "127.0.0.1",
+      "port": 46359,
+      "attempts": 9
+    },
+    {
+      "address": "127.0.0.1",
+      "port": 8000,
+      "attempts": 3
+    }
+  ],
+  "http_requests": [
+    {
+      "frame": 4,
+      "method": "GET",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/location?location%5Bdirectory%5D=%2Fout%2Fpersisted-chat-1792778938289381256%2Fworkspace"
+    },
+    {
+      "frame": 8,
+      "method": "POST",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/session"
+    },
+    {
+      "frame": 17,
+      "method": "GET",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/event"
+    },
+    {
+      "frame": 25,
+      "method": "POST",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/session/ses_e960c3be0ffe5kufvktSmad2Xw/prompt"
+    },
+    {
+      "frame": 29,
+      "method": "GET",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/session/ses_e960c3be0ffe5kufvktSmad2Xw/permission"
+    },
+    {
+      "frame": 34,
+      "method": "GET",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/session/ses_e960c3be0ffe5kufvktSmad2Xw/form"
+    },
+    {
+      "frame": 39,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 52,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 66,
+      "method": "POST",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/experimental/session/ses_e960c3be0ffe5kufvktSmad2Xw/wait"
+    },
+    {
+      "frame": 83,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 93,
+      "method": "GET",
+      "host": "127.0.0.1:37745",
+      "uri": "/api/session/ses_e960c3be0ffe5kufvktSmad2Xw/message?limit=200&order=desc"
+    },
+    {
+      "frame": 109,
+      "method": "GET",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/location?location%5Bdirectory%5D=%2Fout%2Fmemory-db-chat-1792778946562542926%2Fworkspace"
+    },
+    {
+      "frame": 113,
+      "method": "POST",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/session"
+    },
+    {
+      "frame": 122,
+      "method": "GET",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/event"
+    },
+    {
+      "frame": 129,
+      "method": "POST",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/session/ses_e960c1da6ffeCGIJujMUsRpGw1/prompt"
+    },
+    {
+      "frame": 134,
+      "method": "GET",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/session/ses_e960c1da6ffeCGIJujMUsRpGw1/permission"
+    },
+    {
+      "frame": 139,
+      "method": "GET",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/session/ses_e960c1da6ffeCGIJujMUsRpGw1/form"
+    },
+    {
+      "frame": 144,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 157,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 169,
+      "method": "POST",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/experimental/session/ses_e960c1da6ffeCGIJujMUsRpGw1/wait"
+    },
+    {
+      "frame": 188,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 200,
+      "method": "GET",
+      "host": "127.0.0.1:32821",
+      "uri": "/api/session/ses_e960c1da6ffeCGIJujMUsRpGw1/message?limit=200&order=desc"
+    },
+    {
+      "frame": 214,
+      "method": "GET",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/location?location%5Bdirectory%5D=%2Fout%2Fmodel-refresh-enabled-1792778954312357097%2Fworkspace"
+    },
+    {
+      "frame": 218,
+      "method": "POST",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/session"
+    },
+    {
+      "frame": 227,
+      "method": "GET",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/event"
+    },
+    {
+      "frame": 234,
+      "method": "POST",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/session/ses_e960bfe43ffe4Uo3TCOvbZhDrS/prompt"
+    },
+    {
+      "frame": 239,
+      "method": "GET",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/session/ses_e960bfe43ffe4Uo3TCOvbZhDrS/permission"
+    },
+    {
+      "frame": 244,
+      "method": "GET",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/session/ses_e960bfe43ffe4Uo3TCOvbZhDrS/form"
+    },
+    {
+      "frame": 249,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 262,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 276,
+      "method": "POST",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/experimental/session/ses_e960bfe43ffe4Uo3TCOvbZhDrS/wait"
+    },
+    {
+      "frame": 293,
+      "method": "POST",
+      "host": "127.0.0.1:46359",
+      "uri": "/v1/chat/completions"
+    },
+    {
+      "frame": 303,
+      "method": "GET",
+      "host": "127.0.0.1:44973",
+      "uri": "/api/session/ses_e960bfe43ffe4Uo3TCOvbZhDrS/message?limit=200&order=desc"
+    }
+  ],
+  "dns_names": [],
+  "tls_sni": [],
+  "limits": [
+    "No cloud provider, Tor or external HTTPS was exercised.",
+    "Blocked connect calls may produce no packets; correlate with strace.",
+    "Packet capture alone does not reveal encrypted HTTPS request bodies.",
+    "The raw capture contains synthetic HTTP content and stays in ignored artifacts; never enable in production."
+  ]
+}

@@ -52,6 +52,7 @@ summary = {
     "temporary_helpers_trace_sha256": digest(RAW / "temp-syscalls.log"),
 }
 (OUT / "runtime-summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+(OUT / "network-summary.json").write_text((RAW / "network-results.json").read_text())
 
 review = []
 for package, directory, files in [
@@ -70,4 +71,4 @@ for package, directory, files in [
         "files": [{"path": str((root / file).relative_to(ROOT)), "sha256": digest(root / file)} for file in files],
     })
 (OUT / "dependency-review.json").write_text(json.dumps(review, indent=2) + "\n")
-print("Wrote runtime-summary.json and dependency-review.json")
+print("Wrote runtime-summary.json, network-summary.json and dependency-review.json")
