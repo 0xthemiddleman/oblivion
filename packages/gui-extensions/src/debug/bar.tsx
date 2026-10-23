@@ -578,6 +578,7 @@ export default function DebugBar(props: {
 
   return (
     <aside
+      data-component="debug-bar"
       aria-label={ctx.t(props.diagnostics ? "ariaLabel" : "providerAriaLabel")}
       classList={{
         "pointer-events-auto hidden overflow-hidden text-text-strong md:block": true,

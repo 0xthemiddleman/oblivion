@@ -83,6 +83,7 @@ export default function Motion(props: { title: string; onClose: () => void }) {
     <Portal>
       <div
         ref={container}
+        data-component="debug-knobs"
         class="pointer-events-auto fixed bottom-10 right-3 z-50 max-h-[calc(100vh-6rem)] w-[320px] overflow-auto [&_.knobs-panel>header]:cursor-grab [&_.knobs-panel>header]:touch-none"
         onPointerDown={grab}
       />
