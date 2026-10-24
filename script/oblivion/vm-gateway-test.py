@@ -198,7 +198,7 @@ try:
     target.parent.mkdir(parents=True)
     target.symlink_to(BUNDLE / "oblivion-api-lab")
     (target.parent / "oblivion-egress").symlink_to(BUNDLE / "oblivion-egress-lab")
-    for executable, expected in [("gateway-tests", 20), ("activation-tests", 8)]:
+    for executable, expected in [("gateway-tests", 28), ("activation-tests", 8)]:
         result = subprocess.run(["setpriv", "--reuid=1000", "--regid=1000", "--clear-groups",
             "--no-new-privs", "--", str(BUNDLE / executable)],
             capture_output=True, text=True, timeout=120, env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})

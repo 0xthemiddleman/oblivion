@@ -10,6 +10,7 @@ publish = false
 lab-emulation = []
 
 [dependencies]
+base64 = "0.22"
 oblivion-tor-state = { path = "../oblivion-tor-state" }
 oblivion-transport = { path = "../oblivion-transport" }
 bytes = "1"

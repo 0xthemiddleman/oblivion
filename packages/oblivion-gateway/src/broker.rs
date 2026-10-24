@@ -1,3 +1,4 @@
+use crate::dns::NoDns;
 use crate::request;
 use bytes::Bytes;
 use futures_util::stream;
@@ -11,7 +12,6 @@ use hyper::{
 use hyper_util::rt::{TokioIo, TokioTimer};
 use reqwest::{
     Client, ClientBuilder, Proxy,
-    dns::{Name, Resolve, Resolving},
     header::{AUTHORIZATION, CONTENT_TYPE, HeaderValue},
 };
 use serde::Deserialize;
@@ -252,14 +252,6 @@ struct StreamState {
     cancelled: CancellationToken,
     bytes: usize,
     _permit: OwnedSemaphorePermit,
-}
-
-struct NoDns;
-
-impl Resolve for NoDns {
-    fn resolve(&self, _name: Name) -> Resolving {
-        Box::pin(async { Err(io::Error::other("local_dns_denied").into()) })
-    }
 }
 
 fn error(status: StatusCode, code: &'static str) -> Response<Body> {
