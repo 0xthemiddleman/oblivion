@@ -21,6 +21,10 @@ immagine del laboratorio e cattura pacchetti.
 - Il server CLI non carica configurazione dal progetto o integrazioni `.claude`,
   anche se le variabili d'ambiente provano a riabilitarle. Un documento importato
   non può cambiare il provider attraverso il file di configurazione del progetto.
+- `ModelRetry` non ripete automaticamente richieste al modello fallite. Dopo
+  la perdita del gateway, errori transitori o rate limit, l'utente decide un
+  nuovo invio. Il [collaudo attraverso il broker](ADAPTER-BROKER.md) verifica
+  questo comportamento con una risposta realmente iniziata e poi revocata.
 
 ## Prove eseguite sul Mac
 
@@ -75,8 +79,10 @@ configurazioni amministrative e percorsi TUI residui richiedono ancora intervent
 Le opzioni CLI avanzate, compreso un endpoint server esplicito, non sono ancora tutte eliminate dalla distribuzione. Il launcher del laboratorio usa soltanto il server standalone dentro il guest. Filtrare il catalogo non costituisce una policy che impedisce qualsiasi altro
 provider; quella garanzia richiede il gateway esterno.
 
-La chiave fittizia del laboratorio è ancora nell'ambiente del processo; la
-chiave reale dovrà stare soltanto nel broker, fuori dal guest e dalla shell.
-Non sono state inviate richieste reali ad Abliteration o a Tor.
+Nella prova originale descritta qui, la chiave fittizia era nell'ambiente del
+processo. Il [collaudo successivo](ADAPTER-BROKER.md) usa la chiave del provider
+solo nel broker e un token locale nel client, con SOCKS/TLS sintetici. La rete
+di sessione e il bootstrap Tor reale sono verificati separatamente nelle
+relative prove di laboratorio; manca ancora la chiamata autorizzata al provider reale.
 Lo sviluppo su Mac non rende privato macOS: l'immagine live, il manager fidato,
 il completamento del guest e le verifiche su hardware Linux/KVM restano da completare.

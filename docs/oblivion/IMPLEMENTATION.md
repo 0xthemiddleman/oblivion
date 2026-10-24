@@ -14,8 +14,8 @@ rilascio, non un blocco allo sviluppo sul Mac.
 | Privilegi                | Client UID limitato e socket con credenziali del peer; [unità systemd](HOST-SERVICES.md) con manager senza capability, dispositivi e rete separati                            | Integrazione nell'immagine live e revisione del controller privilegiato               |
 | VM della sessione        | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md); recupero dopo crash manager/controller e VM non responsiva             | KVM/hardware x86, OOM, shutdown completo e power loss                                 |
 | Console e manager        | [Prototipo Rust](MANAGER.md): password nascoste, IPC, console filtrata, TUI interattiva e stato di recupero persistente fra riavvii dei servizi                               | Paste esteso/resize, guasti I/O e console fisica                                      |
-| Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest          | Altri download/plugin, credenziale esterna e rifinitura della TUI                     |
-| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | Streaming/provider reale, proxy e shutdown completo                                   |
+| Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest          | Altri download/plugin, immagini aggiornate e rifinitura della TUI                     |
+| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | Provider reale, revoca stream nel ciclo VM, proxy e shutdown                          |
 | Credenziale API          | [Gestione nella TUI fidata](CREDENTIALS.md), file root 0600 nel generale, aggiornamento atomico e blocchi readonly/recupero/sessione aperta                                   | Provider reale e configurazione Wi-Fi                                                 |
 | Documenti                | Flussi concordati                                                                                                                                                             | USB, copie A→B, OnionShare, quote e annullamento                                      |
 | Effimero                 | Solo sblocco RO del profilo implementato                                                                                                                                      | Guest RAM completo e zero scritture end-to-end                                        |
@@ -50,3 +50,10 @@ I [canali privati host](CHANNEL-DEADLINES.md) ora usano scadenze complessive
 per frame e scambi, inclusi token e QMP. Le richieste storage incomplete vengono
 rifiutate; un errore sul canale gateway provoca la distruzione della sua VM.
 Le prove e i limiti della copertura sono nel [report dedicato](channel-deadlines-evidence.json).
+
+L'[adapter compilato](ADAPTER-BROKER.md) completa ora streaming, strumento e
+ripresa attraverso il broker reale con SOCKS/TLS sintetici. La revoca durante
+lo stream chiude la connessione del provider e termina il client con errore;
+il profilo Oblivion disabilita i retry automatici di `ModelRetry`. Questa prova
+gira nella singola VM di laboratorio: la revoca di stream attivi attraverso
+controller e due VM, oltre al provider remoto reale, rimane un gate distinto.

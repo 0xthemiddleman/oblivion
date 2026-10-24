@@ -2,13 +2,18 @@
 """Gateway component tests in disposable, swap-free Debian; no external NIC."""
 import fcntl
 import hashlib
+import ipaddress
 import json
 import os
 import re
+import select
 import signal
 import socket
 import subprocess
+import struct
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 BUNDLE = Path("/run/oblivion-lab-bundle")
@@ -18,6 +23,31 @@ TOKEN = "c" * 64
 
 def check(label):
     print("PASS: " + label, flush=True)
+
+
+def capture(packets, finished):
+    # Inspect packets in RAM; retain counters only, never HTTP bodies or tokens.
+    counts = dict(packets=0, tcp=0, udp=0, ipv4=0, ipv6=0, other=0, non_loopback=0, truncated=0)
+    while True:
+        if not select.select([packets], [], [], 0 if finished.is_set() else 0.1)[0]:
+            if finished.is_set():
+                return counts
+            continue
+        packet, _, flags, _ = packets.recvmsg(262144)
+        counts["packets"] += 1
+        counts["truncated"] += bool(flags & socket.MSG_TRUNC)
+        if packet[12:14] == b"\x08\x00":
+            counts["ipv4"] += 1
+            protocol, source, destination = packet[23], packet[26:30], packet[30:34]
+        elif packet[12:14] == b"\x86\xdd":
+            counts["ipv6"] += 1
+            protocol, source, destination = packet[20], packet[22:38], packet[38:54]
+        else:
+            counts["other"] += 1
+            continue
+        counts["tcp"] += protocol == 6
+        counts["udp"] += protocol == 17
+        counts["non_loopback"] += not (ipaddress.ip_address(source).is_loopback and ipaddress.ip_address(destination).is_loopback)
 
 
 def wait(pid):
@@ -137,6 +167,58 @@ try:
             check(executable + ": " + test)
     production(False)
     production(True)
+    # Only public executable bytes cross this read-only virtual block device.
+    # Application state stays in guest RAM; there is no host filesystem share.
+    guest = Path("/run/oblivion-adapter")
+    if (guest / "manifest.json").exists():
+        manifest = json.loads((guest / "manifest.json").read_text())
+        binary = guest / "oblivion"
+        with Path("/dev/disk/by-id/virtio-oblivion-adapter").open("rb") as source, binary.open("xb") as target:
+            remaining = manifest["bytes"]
+            while remaining:
+                chunk = source.read(min(remaining, 1024 * 1024))
+                assert chunk
+                target.write(chunk)
+                remaining -= len(chunk)
+        binary.chmod(0o555)
+        expected = manifest["sha256"]
+        subprocess.run(["mount", "-o", "remount,ro", str(guest)], check=True)
+    else:
+        guest = Path("/run/oblivion-adapter-image")
+        guest.mkdir()
+        subprocess.run(["mount", "-t", "squashfs", "-o", "loop,ro,nodev,nosuid",
+            "/usr/lib/oblivion/vm/guest.squashfs", str(guest)], check=True)
+        binary = guest / "usr/bin/oblivion"
+        expected = json.loads((guest / "usr/lib/oblivion/build-evidence.json").read_text())["binary_sha256"]
+    try:
+        with binary.open("rb") as file:
+            actual = hashlib.file_digest(file, "sha256").hexdigest()
+        assert actual == expected
+        print("OBLIVION_ADAPTER_BINARY_SHA256 " + actual, flush=True)
+        finished = threading.Event()
+        with socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(3)) as packets, ThreadPoolExecutor(max_workers=1) as pool:
+            packets.bind(("lo", 0))
+            packets.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8 * 1024 * 1024)
+            captured = pool.submit(capture, packets, finished)
+            try:
+                result = subprocess.run(["setpriv", "--reuid=1000", "--regid=1000", "--clear-groups",
+                    "--no-new-privs", "--", str(BUNDLE / "gateway-tests"), "broker::tests::adapter::",
+                    "--ignored", "--test-threads=1"], capture_output=True, text=True, timeout=480,
+                    env={"PATH": "/usr/bin:/bin", "HOME": "/tmp", "OBLIVION_ADAPTER_BIN": str(binary)})
+            finally:
+                finished.set()
+            counters = captured.result(timeout=10)
+            counters["kernel_packets"], counters["dropped"] = struct.unpack("II", packets.getsockopt(263, 6, 8))
+        print("OBLIVION_ADAPTER_CAPTURE " + json.dumps(counters, sort_keys=True), flush=True)
+        assert counters["tcp"] > 0 and counters["tcp"] == counters["ipv4"] + counters["ipv6"], counters
+        assert not any(counters[key] for key in ["udp", "other", "non_loopback", "truncated", "dropped"]), counters
+        assert result.returncode == 0, result.stdout + result.stderr
+        passed = re.findall(r"^test (.+) \.\.\. ok$", result.stdout, re.M)
+        assert len(passed) == 2, result.stdout
+        for test in passed:
+            check("compiled adapter: " + test)
+    finally:
+        subprocess.run(["umount", str(guest)], check=True)
     print("OBLIVION_VM_LAB_PASS", flush=True)
 except BaseException:
     print("OBLIVION_VM_LAB_FAIL", flush=True)

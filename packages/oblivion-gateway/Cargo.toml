@@ -26,6 +26,7 @@ tokio-util = { version = "0.7", features = ["rt"] }
 zeroize = { version = "1.9.1", features = ["serde"] }
 
 [dev-dependencies]
+tokio = { version = "1", features = ["process"] }
 rcgen = { version = "0.13", default-features = false, features = ["ring"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }

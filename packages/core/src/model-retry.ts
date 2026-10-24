@@ -1,6 +1,7 @@
 export * as ModelRetry from "./model-retry.js"
 
 import { AIError, isRetryable } from "@opencode/ai"
+import { Oblivion } from "@opencode/util/oblivion"
 import { Clock, Duration, Effect, Pull, Schedule } from "effect"
 
 interface Input {
@@ -45,6 +46,9 @@ export const policy = Effect.gen(function* () {
   let timeouts = 0
   return (input: Input) =>
     Effect.gen(function* () {
+      // A lost gateway may mean that its grant was revoked. Oblivion requires
+      // a new user request instead of replaying prompts or partial generations.
+      if (Oblivion.enabled) return undefined
       const now = yield* Clock.currentTimeMillis
       const next = yield* step(now, input).pipe(Pull.catchDone(() => Effect.succeed(undefined)))
       if (!next) return undefined

@@ -33,6 +33,9 @@ use tokio::{
     time::timeout,
 };
 use tokio_rustls::TlsAcceptor;
+use tokio_util::sync::CancellationToken;
+
+mod adapter;
 
 const KEY: &str = "synthetic-provider-key-never-in-guest";
 const TOKEN: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -43,6 +46,7 @@ struct Observed {
     uri: String,
     body: Value,
     reply: oneshot::Sender<Reply>,
+    ended: CancellationToken,
 }
 
 struct Reply {
@@ -138,13 +142,16 @@ impl Fixture {
                             sockets.send((String::from_utf8(domain).unwrap(), port, String::from_utf8(user).unwrap(), String::from_utf8(password).unwrap())).await.unwrap();
                             socket.write_all(&[5, 0, 0, 1, 127, 0, 0, 1, 0, 0]).await.unwrap();
                             if let Ok(socket) = tls.accept(socket).await {
+                                let ended = CancellationToken::new();
+                                let _ended = ended.clone().drop_guard();
                                 let service = service_fn(move |request: Request<Incoming>| {
                                     let observed = observed.clone();
+                                    let ended = ended.clone();
                                     async move {
                                         let (parts, body) = request.into_parts();
                                         let body = body.collect().await.unwrap().to_bytes();
                                         let (reply, receive) = oneshot::channel();
-                                        observed.send(Observed { headers: parts.headers, uri: parts.uri.to_string(), body: serde_json::from_slice(&body).unwrap(), reply }).await.unwrap();
+                                        observed.send(Observed { headers: parts.headers, uri: parts.uri.to_string(), body: serde_json::from_slice(&body).unwrap(), reply, ended }).await.unwrap();
                                         let reply = receive.await.unwrap();
                                         let body = stream::unfold(reply.chunks, |mut chunks| async move {
                                             chunks.recv().await.map(|chunk| (Ok::<_, io::Error>(Frame::data(chunk)), chunks))

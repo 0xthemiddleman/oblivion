@@ -49,9 +49,11 @@ Lo schema del broker deriva da `packages/ai/src/protocols/openai-chat.ts`.
 Le prove iniziali del componente costruiscono richieste di quel formato. La
 [suite della sessione](SESSION-NETWORK.md) ora avvia anche il vero OpenCode
 attraverso il broker, verificando autenticazione e ammissione del payload con
-Tor disabilitato; non verifica ancora una risposta del provider. Reasoning strutturato, cache control e
-altre estensioni non incluse vengono rifiutati: la compatibilità completa, inclusi
-titoli e compaction, rimane da verificare con risposte complete e streaming.
+Tor disabilitato. La nuova [prova dell'adapter compilato](ADAPTER-BROKER.md)
+verifica anche risposte SSE, chiamata allo strumento, ripresa e revoca con SOCKS/TLS
+sintetici. Reasoning strutturato, cache control e altre estensioni non incluse
+vengono rifiutati: provider reale, titoli e compaction come casi dedicati restano
+da verificare.
 
 ## Attivazione e chiusura
 
@@ -93,7 +95,9 @@ richiesta, 64 MiB per risposta, 4.096 messaggi e 256 tool/call per array. Gli
 header hanno dieci secondi; il body trenta; il provider quindici per la
 connessione, 120 per una lettura e 600 totali. Una connessione al guest ha un
 limite complessivo di 650 secondi, anche se il client smette di leggere.
-Nessuna coda illimitata o riapertura automatica dopo revoca.
+Nessuna coda illimitata o riapertura automatica dopo revoca. Il nuovo profilo
+Oblivion disabilita anche i retry automatici di `ModelRetry` nel client:
+un errore richiede un nuovo invio dell'utente, inclusi errori transitori e 429.
 
 ## Prove riproducibili
 
@@ -145,7 +149,8 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
    automaticamente tramite il [riferimento al processo](SESSION-NETWORK.md).
 3. Proxy dei tool con allow/deny/ask, quote e revoca dei tunnel; nessun traffico
    o DNS prima dell'autorizzazione.
-4. Adapter reale, catture PCAP/tracing e guasti end-to-end, inclusi risposta
+4. Estendere la [prova dell'adapter compilato](ADAPTER-BROKER.md) al ciclo delle VM,
+   catture PCAP/tracing e guasti end-to-end, inclusi risposta
    eccessiva, TLS con hostname errato, client lento, cancellazione e cambio A→B.
 5. Abliteration via Tor con una credenziale autorizzata e dati sintetici, poi
    collaudo della live e dell'isolamento su hardware di destinazione.

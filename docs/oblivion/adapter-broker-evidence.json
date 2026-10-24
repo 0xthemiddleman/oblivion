@@ -1,0 +1,239 @@
+{
+  "scope": "Compiled Oblivion CLI and standalone server through the real broker implementation, loopback SOCKS5 and verified synthetic TLS inside a swap-free Debian ARM VM on Mac/HVF.",
+  "external_provider_contacted": false,
+  "production_kvm_tested": false,
+  "production_change": {
+    "file": "packages/core/src/model-retry.ts",
+    "sha256": "1b5135f279487b1a7b880b3957ac38409a5c2570b802c4211efc10f57b7a1beb",
+    "behavior": "The compile-time Oblivion profile returns no automatic ModelRetry decision. Lost gateway, transient provider failures and rate limits require a new user submission. Normal tool steps and other planned conversation operations are not disabled. Upstream retry behavior is unchanged outside the profile."
+  },
+  "cli_build": {
+    "binary": "artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/bin/opencode",
+    "sha256": "4b701ecfa2fd2eaec592b1ef2aa4b68448dbb4c6ec2676628f8e10d613351398",
+    "bytes": 211733496,
+    "version": "2.1.4-oblivion.0",
+    "arguments": [
+      "--single",
+      "--skip-install",
+      "--skip-web-ui",
+      "--oblivion",
+      "--outdir=/work/artifacts/oblivion-adapter-broker/cli-01"
+    ],
+    "environment": {
+      "OPENCODE_CHANNEL": "oblivion",
+      "OPENCODE_VERSION": "2.1.4-oblivion.0"
+    },
+    "builder": "oblivion-tui-tests:v2.1.4, Bun 1.4.4 on the Mac Docker Linux ARM runtime",
+    "log": "artifacts/oblivion-adapter-broker/build-cli-01.log",
+    "log_sha256": "a140e05abed249b92ea285c4d7907c55aaed50c835263f3854a161a5d8aa983d",
+    "build_script_sha256": "06536db9b30e150b858019f792e0bd14794e39a34a78d483f4a55ec456336b92"
+  },
+  "broker_bundle": {
+    "directory": "artifacts/oblivion-adapter-broker/bundle-01",
+    "manifest_sha256": "b6345ca51086be0ee3686c091ba3d75e065ce5416d0d099e3d600f367dd308ff",
+    "source_manifest_sha256": "4d0d1af9c4465f4660ac8eeaeb9bf536d2a64ee3959639a90308dcae54a1033a",
+    "log_sha256": "bdd49c6b583fb547b89e8f015cb910d2fcba3c0eadd9499825205ca53f260398",
+    "production_origin_and_trust_unchanged": true,
+    "test_trust": "Only the in-crate Fixture adds its generated certificate to its client. No production CLI, environment or activation override was added."
+  },
+  "failed_initial_run": {
+    "artifacts": "artifacts/oblivion-adapter-broker/run-01",
+    "summary_sha256": "755002e6319afc23515fd7da947a4abc7e74369d952c769eb6b62181feaf1336",
+    "guest_pass": false,
+    "qemu_exit": 0,
+    "seconds": 63.96,
+    "checks": [
+      "PASS: Debian ARM laboratory has no swap, no external network interface and verified gateway binaries",
+      "PASS: gateway-tests: broker::tests::denies_auth_endpoints_and_encoding_without_network",
+      "PASS: gateway-tests: broker::tests::client_disconnect_cancels_upstream_inference",
+      "PASS: gateway-tests: broker::tests::accepts_inline_images_pdf_and_normalizes_duplicate_keys",
+      "PASS: gateway-tests: broker::tests::rejects_provider_features_and_remote_media_before_contacting_socks",
+      "PASS: gateway-tests: broker::tests::rejects_untrusted_tls_and_does_not_fall_back_when_proxy_is_down",
+      "PASS: gateway-tests: broker::tests::limits_concurrency_and_revokes_requests_waiting_for_response_headers",
+      "PASS: gateway-tests: broker::tests::refuses_oversized_and_malformed_requests_before_socks",
+      "PASS: gateway-tests: broker::tests::refuses_redirects_and_sanitizes_provider_errors",
+      "PASS: gateway-tests: broker::tests::streams_native_tool_history_through_remote_dns_and_replaces_credentials",
+      "PASS: gateway-tests: broker::tests::revocation_closes_streams_and_old_token_is_rejected_by_next_grant",
+      "PASS: activation-tests: missing_inherited_sockets_fail_before_runtime_allocates_descriptors",
+      "PASS: activation-tests: inherited_control_grants_once_and_eof_revokes_without_logs",
+      "PASS: activation-tests: control_byte_and_sigterm_both_revoke_the_process",
+      "PASS: activation-tests: invalid_startup_has_no_credential_or_payload_diagnostics",
+      "PASS: production binary rejects execution as root",
+      "PASS: production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero",
+      "PASS: production API rejects a wrong token and fails closed with SOCKS unavailable",
+      "PASS: production controller disconnect removes the listener and exits without stdout or stderr"
+    ],
+    "opencode_sha256": "31e23f46019d921b47c3fb6fe2f28af9477eaaa274d711354ea436275a25bd15",
+    "adapter_verified": true,
+    "adapter_override": null,
+    "adapter_capture": null,
+    "runtime_fixture_override": {
+      "file": "vm-gateway-test.py",
+      "sha256": "f955977eed06885eb3734e757d8df620396b25a1bfbbc2e71dc2556c1d8f51e7"
+    },
+    "fixture_verified": true,
+    "gateway_bundle_verified": true
+  },
+  "initial_failure": "Tool round trip and resume passed with the older CLI. Active-stream revocation closed the provider TLS connection and listener, but the CLI exceeded its 60-second completion deadline due to the upstream retry allowance (ten retries, about 84 seconds nominal wait). The failed run is retained.",
+  "corrected_run": {
+    "artifacts": "artifacts/oblivion-adapter-broker/run-02",
+    "summary_sha256": "6a400c66d6fdc3a7c954f4111b2ee5379693949c9bd90e4b734ef54dd795af57",
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "seconds": 3.81,
+    "checks": [
+      "PASS: Debian ARM laboratory has no swap, no external network interface and verified gateway binaries",
+      "PASS: gateway-tests: broker::tests::denies_auth_endpoints_and_encoding_without_network",
+      "PASS: gateway-tests: broker::tests::client_disconnect_cancels_upstream_inference",
+      "PASS: gateway-tests: broker::tests::accepts_inline_images_pdf_and_normalizes_duplicate_keys",
+      "PASS: gateway-tests: broker::tests::rejects_provider_features_and_remote_media_before_contacting_socks",
+      "PASS: gateway-tests: broker::tests::rejects_untrusted_tls_and_does_not_fall_back_when_proxy_is_down",
+      "PASS: gateway-tests: broker::tests::limits_concurrency_and_revokes_requests_waiting_for_response_headers",
+      "PASS: gateway-tests: broker::tests::refuses_redirects_and_sanitizes_provider_errors",
+      "PASS: gateway-tests: broker::tests::refuses_oversized_and_malformed_requests_before_socks",
+      "PASS: gateway-tests: broker::tests::revocation_closes_streams_and_old_token_is_rejected_by_next_grant",
+      "PASS: gateway-tests: broker::tests::streams_native_tool_history_through_remote_dns_and_replaces_credentials",
+      "PASS: activation-tests: missing_inherited_sockets_fail_before_runtime_allocates_descriptors",
+      "PASS: activation-tests: inherited_control_grants_once_and_eof_revokes_without_logs",
+      "PASS: activation-tests: control_byte_and_sigterm_both_revoke_the_process",
+      "PASS: activation-tests: invalid_startup_has_no_credential_or_payload_diagnostics",
+      "PASS: production binary rejects execution as root",
+      "PASS: production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero",
+      "PASS: production API rejects a wrong token and fails closed with SOCKS unavailable",
+      "PASS: production controller disconnect removes the listener and exits without stdout or stderr",
+      "PASS: compiled adapter: broker::tests::adapter::compiled_adapter_observes_revocation_of_active_stream",
+      "PASS: compiled adapter: broker::tests::adapter::compiled_adapter_streams_tools_and_resumes"
+    ],
+    "opencode_sha256": "4b701ecfa2fd2eaec592b1ef2aa4b68448dbb4c6ec2676628f8e10d613351398",
+    "adapter_verified": true,
+    "adapter_override": {
+      "sha256": "4b701ecfa2fd2eaec592b1ef2aa4b68448dbb4c6ec2676628f8e10d613351398",
+      "bytes": 211733496
+    },
+    "adapter_capture": null,
+    "runtime_fixture_override": {
+      "file": "vm-gateway-test.py",
+      "sha256": "e00665b75eeffdd37ce7ab033909df3c6b060eeb80ea94095062534340389a5d"
+    },
+    "fixture_verified": true,
+    "gateway_bundle_verified": true
+  },
+  "captured_run": {
+    "artifacts": "artifacts/oblivion-adapter-broker/run-03",
+    "summary_sha256": "69c5acca89c6a1fa55d913a712facaac5a1d3de632d8e49d144812a45cbff066",
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "seconds": 3.85,
+    "checks": [
+      "PASS: Debian ARM laboratory has no swap, no external network interface and verified gateway binaries",
+      "PASS: gateway-tests: broker::tests::denies_auth_endpoints_and_encoding_without_network",
+      "PASS: gateway-tests: broker::tests::client_disconnect_cancels_upstream_inference",
+      "PASS: gateway-tests: broker::tests::accepts_inline_images_pdf_and_normalizes_duplicate_keys",
+      "PASS: gateway-tests: broker::tests::rejects_provider_features_and_remote_media_before_contacting_socks",
+      "PASS: gateway-tests: broker::tests::limits_concurrency_and_revokes_requests_waiting_for_response_headers",
+      "PASS: gateway-tests: broker::tests::rejects_untrusted_tls_and_does_not_fall_back_when_proxy_is_down",
+      "PASS: gateway-tests: broker::tests::refuses_redirects_and_sanitizes_provider_errors",
+      "PASS: gateway-tests: broker::tests::refuses_oversized_and_malformed_requests_before_socks",
+      "PASS: gateway-tests: broker::tests::revocation_closes_streams_and_old_token_is_rejected_by_next_grant",
+      "PASS: gateway-tests: broker::tests::streams_native_tool_history_through_remote_dns_and_replaces_credentials",
+      "PASS: activation-tests: missing_inherited_sockets_fail_before_runtime_allocates_descriptors",
+      "PASS: activation-tests: inherited_control_grants_once_and_eof_revokes_without_logs",
+      "PASS: activation-tests: control_byte_and_sigterm_both_revoke_the_process",
+      "PASS: activation-tests: invalid_startup_has_no_credential_or_payload_diagnostics",
+      "PASS: production binary rejects execution as root",
+      "PASS: production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero",
+      "PASS: production API rejects a wrong token and fails closed with SOCKS unavailable",
+      "PASS: production controller disconnect removes the listener and exits without stdout or stderr",
+      "PASS: compiled adapter: broker::tests::adapter::compiled_adapter_observes_revocation_of_active_stream",
+      "PASS: compiled adapter: broker::tests::adapter::compiled_adapter_streams_tools_and_resumes"
+    ],
+    "opencode_sha256": "4b701ecfa2fd2eaec592b1ef2aa4b68448dbb4c6ec2676628f8e10d613351398",
+    "adapter_verified": true,
+    "adapter_override": {
+      "sha256": "4b701ecfa2fd2eaec592b1ef2aa4b68448dbb4c6ec2676628f8e10d613351398",
+      "bytes": 211733496
+    },
+    "adapter_capture": {
+      "dropped": 0,
+      "ipv4": 776,
+      "ipv6": 0,
+      "kernel_packets": 776,
+      "non_loopback": 0,
+      "other": 0,
+      "packets": 776,
+      "tcp": 776,
+      "truncated": 0,
+      "udp": 0
+    },
+    "runtime_fixture_override": {
+      "file": "vm-gateway-test.py",
+      "sha256": "4223147163fb1a0903f650476d6c2bb02541fc146281776e04033ce0f1a1bcbd"
+    },
+    "fixture_verified": true,
+    "gateway_bundle_verified": true
+  },
+  "assertions": [
+    "An actual compiled CLI, using its normal standalone server, sends native Abliteration chat requests to the broker with a local token.",
+    "The broker validates and reserializes payloads, substitutes the synthetic provider credential and contacts api.abliteration.ai:443 via SOCKS with the API role and session token.",
+    "The provider emits shell arguments in two SSE events. The actual shell writes a synthetic document, reads the attached context and returns it in the next native request.",
+    "Text arrives in multiple SSE events. A second CLI execution reopens the same session ID and sends previous context and response through the broker.",
+    "State files contain neither synthetic provider key nor local token, and no .log, .heapsnapshot or .cpuprofile files.",
+    "Revocation waits until the actual CLI emits step_start after provider output. The provider has sent no finish, DONE or EOF for that request.",
+    "Broker shutdown awaits HTTP task cancellation; the specific provider TLS connection closes, the response producer loses its receiver, the listener is gone and the CLI ends with an error.",
+    "During integrated CLI tests, the raw loopback sniffer observes only TCP IPv4, with zero UDP, IPv6, non-loopback endpoints, drops or truncation. Payloads are not persisted."
+  ],
+  "verification": {
+    "native_rust": {
+      "exit_code": 0,
+      "broker_tests": 10,
+      "activation_tests": 4,
+      "compiled_cli_tests_ignored": 2,
+      "reason": "The compiled Linux CLI is exercised explicitly in the Debian VM, not silently counted as a native pass.",
+      "log": "artifacts/oblivion-adapter-broker/native-tests.log",
+      "sha256": "086e2a968e8e623a988d961da8ae5feb4ce5c2236c5beb64f2b2e0b91c1678be"
+    },
+    "native_clippy": {
+      "exit_code": 0,
+      "arguments": "--locked --all-targets --features lab-emulation -- -D warnings",
+      "log": "artifacts/oblivion-adapter-broker/native-clippy.log",
+      "sha256": "7aeb04539e4033ab93d37058a275534efe07ceed6d573f3c079eadd63bf50c3d"
+    },
+    "upstream_retry_tests": {
+      "passed": 2,
+      "failed": 0,
+      "log": "artifacts/oblivion-adapter-broker/upstream-retry-tests.log",
+      "sha256": "93ecfb1bdc78763b179d153d7e4d1a2fc1ad2d18c17ef908652d525ced15fba4"
+    },
+    "canonical_root_check": {
+      "exit_code": 0,
+      "lint_warnings": 1225,
+      "lint_errors": 0,
+      "typecheck_tasks": 34,
+      "cached_typecheck_tasks": 28,
+      "log": "artifacts/oblivion-adapter-broker/root-check.log",
+      "sha256": "0ab1b46ec4d02142ed0c56b0038df13832925d96683e6a319e85cb12c91d0700"
+    },
+    "rust_format": "passed",
+    "python_syntax": "passed"
+  },
+  "limits": [
+    "Single VM component integration: direct Broker::revoke, not the LUKS controller/supervisor/two-VM active-stream path.",
+    "The generated test certificate and SOCKS endpoint replace remote infrastructure only inside the test; no live Tor/Abliteration compatibility claim.",
+    "Title-like requests are serviced if observed; dedicated titles, compaction and complete attachment cases remain open.",
+    "Application-state marker scans and packet counters are not a complete filesystem syscall audit or evidence of absent pre-transmission network attempts.",
+    "The base guest image retains the older CLI. Updated full images must include the new compiled profile; the successful run uses the verified read-only binary override.",
+    "Hardware KVM/x86, fault injection, full shutdown and independent security audit remain open."
+  ],
+  "artifact_retention": [
+    {
+      "artifact": "artifacts/oblivion-channel-deadlines/services-01/data.raw",
+      "sha256": "6103b64503447d35c7c8d86518c4b943e760e3889d85c6d2a77a8e3fe6a4ee25",
+      "reason": "completed synthetic regression disk; report and logs retained"
+    },
+    {
+      "artifact": "artifacts/oblivion-channel-deadlines/session-01/data.raw",
+      "sha256": "4edafd45d61b4f04898010886177e24daeff8a0d564c4586c1c3d249084f5b1c",
+      "reason": "completed synthetic regression disk; report and logs retained"
+    }
+  ]
+}

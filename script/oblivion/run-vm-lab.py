@@ -65,6 +65,8 @@ parser.add_argument("--services-bundle", type=Path,
     help="Load compiled host binaries, service units and the crash fixture into laboratory RAM")
 parser.add_argument("--gateway-bundle", type=Path,
     help="Run gateway component tests in a swap-free Debian VM with loopback only")
+parser.add_argument("--adapter-binary", type=Path,
+    help="With --gateway-bundle, copy a compiled Linux ARM CLI into verified read-only laboratory RAM")
 parser.add_argument("--gateway-image", type=Path,
     help="With --services-bundle, exercise the real host owner and a nested gateway VM")
 parser.add_argument("--session-image", type=Path,
@@ -72,6 +74,15 @@ parser.add_argument("--session-image", type=Path,
 parser.add_argument("--tor-state", action="store_true", help="Exercise selective Tor state persistence in real LUKS")
 parser.add_argument("--tor-online", action="store_true", help="With --tor-state, allow Tor bootstrap and capture the outer uplink")
 args = parser.parse_args()
+if args.adapter_binary and not args.gateway_bundle:
+    parser.error("--adapter-binary requires --gateway-bundle")
+adapter = args.adapter_binary.resolve() if args.adapter_binary else None
+adapter_manifest = None
+if adapter:
+    if "," in str(adapter):
+        parser.error("Adapter path contains a QEMU option separator")
+    with adapter.open("rb") as file:
+        adapter_manifest = {"sha256": hashlib.file_digest(file, "sha256").hexdigest(), "bytes": adapter.stat().st_size}
 if args.tor_state and not args.gateway_image:
     parser.error("--tor-state requires --gateway-image")
 if args.tor_online and not args.tor_state:
@@ -167,6 +178,11 @@ if args.refresh_tui_test or bundle:
                 f'cp -a /scripts/{role}-image/. /run/oblivion-{role}-image/\n')
         if args.tor_online:
             bundle_hook += "touch /run/oblivion-tor-online\n"
+        if adapter_manifest:
+            (root / "scripts/adapter.json").write_text(json.dumps(adapter_manifest))
+            bundle_hook += ('mkdir /run/oblivion-adapter\n'
+                'mount -t tmpfs -o mode=0755,nodev,nosuid,size=512m tmpfs /run/oblivion-adapter\n'
+                'cp /scripts/adapter.json /run/oblivion-adapter/manifest.json\n')
         hook = root / "scripts/init-bottom/zz-oblivion-lab-fixture"
         hook.write_text('#!/bin/sh\nset -eu\ncase "${1:-}" in prereqs) exit 0;; esac\n'
             'mount --bind /scripts/oblivion-lab-test.py "${rootmnt:-/root}/usr/libexec/oblivion-vm-test"\n' + bundle_hook)
@@ -186,7 +202,7 @@ started = time.monotonic()
 with (output / "serial.log").open("xb") as log:
     command = [
         "qemu-system-aarch64", "-machine", "virt", "-accel", "hvf", "-cpu", "host",
-        "-m", "1024" if args.gateway_bundle else "4096", "-smp", "4", "-nodefaults", "-no-reboot", "-display", "none",
+        "-m", "2048" if args.gateway_bundle else "4096", "-smp", "4", "-nodefaults", "-no-reboot", "-display", "none",
         "-monitor", "none", "-serial", "stdio", "-nic", "none",
         "-kernel", str(image / "kernel"), "-initrd", str(initrd),
         "-append", "console=ttyAMA0 root=/dev/vda rootfstype=squashfs ro panic=-1 systemd.getty_auto=no systemd.show_status=false",
@@ -202,6 +218,9 @@ with (output / "serial.log").open("xb") as log:
         "-drive", f"file={session_image / 'session.squashfs'},format=raw,if=none,id=session-image,readonly=on",
         "-device", "virtio-blk-pci,drive=session-image,serial=oblivion-ss-image",
     ] if session_image else []) + ([
+        "-drive", f"file={adapter},format=raw,if=none,id=adapter,readonly=on",
+        "-device", "virtio-blk-pci,drive=adapter,serial=oblivion-adapter",
+    ] if adapter else []) + ([
         "-netdev", "user,id=uplink,ipv6=off", "-device", "virtio-net-pci,netdev=uplink,mac=52:54:00:6f:00:04",
         "-object", f"filter-dump,id=uplink-capture,netdev=uplink,file={output / 'uplink.pcap'}",
     ] if args.tor_online else [])
@@ -212,6 +231,9 @@ fixture_prefix = "OBLIVION_TOR_STATE_FIXTURE_SHA256 " if args.tor_state else "OB
 fixture_verified = fixture is None or (fixture_prefix + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
 bundle_prefix = "OBLIVION_GATEWAY_BUNDLE_SHA256 " if args.gateway_bundle else "OBLIVION_HOST_BUNDLE_SHA256 "
 bundle_verified = bundle_manifest is None or (bundle_prefix + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
+adapter_digest = adapter_manifest["sha256"] if adapter_manifest else (image / "opencode.sha256").read_text().split()[0] if (image / "opencode.sha256").exists() else None
+adapter_verified = not args.gateway_bundle or ("OBLIVION_ADAPTER_BINARY_SHA256 " + str(adapter_digest)) in serial.splitlines()
+adapter_capture = next((json.loads(line.removeprefix("OBLIVION_ADAPTER_CAPTURE ")) for line in serial.splitlines() if line.startswith("OBLIVION_ADAPTER_CAPTURE ")), None)
 markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVION_VM_TEMP_CANARY_d9ae",
            b"OBLIVION_API_KEY_CANARY_5c91", b"OBLIVION_API_NEXT_CANARY_86ab",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
@@ -246,7 +268,10 @@ summary = {
     "guest_pass": "OBLIVION_VM_LAB_PASS" in serial, "plaintext_markers_on_disk": sorted(found),
     "disk_sha256": digest.hexdigest() if disk else None, "image_manifest": (image / "SHA256SUMS").read_text(),
     "compiled_sources": (image / "sources.sha256").read_text(),
-    "opencode_sha256": (image / "opencode.sha256").read_text().split()[0] if (image / "opencode.sha256").exists() and not args.gateway_bundle else None,
+    "opencode_sha256": adapter_digest,
+    "adapter_override": adapter_manifest,
+    "adapter_verified": adapter_verified if args.gateway_bundle else None,
+    "adapter_capture": adapter_capture,
     "lab_initrd_sha256": hashlib.sha256(initrd.read_bytes()).hexdigest(),
     "runtime_fixture_override": {"file": fixture_name, "sha256": hashlib.sha256(fixture).hexdigest()} if fixture is not None else None,
     "runtime_host_bundle": {"manifest": bundle_manifest, "sources": (bundle / "sources.sha256").read_text(), "verified_in_guest": bundle_verified} if args.services_bundle else None,
@@ -259,7 +284,7 @@ summary = {
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 print(json.dumps(summary, indent=2))
-if result.returncode or not summary["guest_pass"] or found or not fixture_verified or not bundle_verified:
+if result.returncode or not summary["guest_pass"] or found or not fixture_verified or not bundle_verified or not adapter_verified:
     raise SystemExit(1)
 if captures:
     assert captures["before_enable"] is not None
