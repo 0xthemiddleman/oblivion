@@ -1,0 +1,612 @@
+{
+  "date": "2026-10-24",
+  "status": "local-storage-and-network-verified",
+  "implementation_commit": "29b62966f1546dde30e801387117e00ce01ea577",
+  "storage_fixture_commit": "6ca47cacaf42af45ba4b54157c68d5994d758686",
+  "environment": {
+    "host": "macOS ARM64",
+    "outer_accelerator": "hvf",
+    "inner_accelerator": "tcg",
+    "qemu": "10.2.0",
+    "docker_server": "29.1.3",
+    "bun": "1.4.4"
+  },
+  "client": {
+    "source_commit": "bff2090eb9b515ed2cc2e698bf57f165c3088a9d",
+    "profile": "oblivion",
+    "binary_sha256": "a32ecfeacc2fc8d22952dfaac425d2bb57ed245e36779406fc5b7e0337b4f107",
+    "scope": "CI laboratory build, not a signed release"
+  },
+  "client_reuse": "The CI ARM64 client is unchanged by the subsequent Rust host and Python laboratory changes; this is not a current-commit client rebuild.",
+  "local_checks": {
+    "linux_host_tests_passed": 32,
+    "canonical_check_tasks_passed": 34,
+    "canonical_check_cached_tasks": 31,
+    "official_typescript_tasks_passed": 34,
+    "official_typescript_cached_tasks": 0
+  },
+  "storage": {
+    "passed": true,
+    "checks": [
+      "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+      "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+      "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+      "PASS: fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request",
+      "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+      "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+      "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+      "PASS: trusted network menu saves hidden proxy credentials only in the root-owned encrypted profile; offline policy refuses external proxies",
+      "PASS: temporary transport stays in RAM; saved selection restores it; unknown fields, aliases and corrupt profiles never trigger a fallback",
+      "PASS: full-disk transport update preserves the prior profile; retry replaces the interrupted private staging file",
+      "PASS: trusted web rules menu saves a root-owned policy, cancellation preserves it and temporary removal restores from the encrypted profile",
+      "PASS: unknown fields, reserved destinations, staging aliases and a corrupt saved policy fail closed even with a RAM override",
+      "PASS: full-disk policy replacement preserves both the saved file and RAM selection; retry publishes and clears the override",
+      "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+      "PASS: legacy key is read without migration; ENOSPC preserves it and retry publishes the versioned archive before deleting the legacy file",
+      "PASS: full-disk replacement preserves the archive; published archives take precedence over leftover legacy secrets and malformed archives fail closed",
+      "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+      "PASS: trusted manager adds and renames a second hidden key, saves its default and selects another key only in RAM",
+      "PASS: active chat blocks persistent, temporary and saved-profile transport changes",
+      "PASS: an active chat blocks every saved or temporary web policy change",
+      "PASS: key picker chooses the opening credential; an active session blocks key mutations and identity changes",
+      "PASS: removing the selected key never rotates to the remaining account; explicit default and selection restore access",
+      "PASS: read-only web policy overrides use only RAM, clear on lock and leave the encrypted profile byte-identical",
+      "PASS: read-only transport choices use RAM, clear on lock and leave the entire encrypted image byte-identical",
+      "PASS: read-only profile exposes key metadata and permits RAM selection, rejects all key mutations and pending deletion, and remains byte-identical",
+      "PASS: exhausted RAM filesystem quota refuses ephemeral allocation without a disk fallback or VM; lock removes the partial RAM file and leaves the general image unchanged",
+      "PASS: trusted ephemeral boot opens a read-only profile and a fresh RAM-backed LUKS VM; the compiled TUI executes the real document-writing shell tool",
+      "PASS: closing an ephemeral chat removes its RAM disk; the next VM has a distinct LUKS identity, no prior document, temporary files or conversation",
+      "PASS: manager death destroys the ephemeral VM and RAM disk before restart, closes both mappings and leaves the complete encrypted general image byte-identical",
+      "PASS: interrupted session formatting survives restart, cannot open, and is discarded only after confirmation",
+      "PASS: disk exhaustion is explicit, preserves existing archives and permits reopening after pending cleanup",
+      "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+      "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+      "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+      "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+      "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+      "PASS: synthetic passwords, API keys and proxy credentials never appear on the managed console"
+    ],
+    "seconds": 315.87,
+    "fixture": {
+      "file": "vm-services-test.py",
+      "sha256": "4a066e6087fab8f92b863e166203652f6c2dcbd72f8e7900e34ca99ee0e07f29"
+    },
+    "fixture_verified": true,
+    "host_bundle_verified": true,
+    "host_bundle_sources_sha256": "8394f6a63a3a723657154dad1da3d940760abff09b2d15fb467c68071b6ab456",
+    "plaintext_markers_on_disk": [],
+    "disk_scan_canaries": [
+      "OBLIVION_VM_A_CANARY_4d02",
+      "OBLIVION_VM_B_CANARY_b0ca",
+      "OBLIVION_VM_TEMP_CANARY_d9ae",
+      "OBLIVION_API_KEY_CANARY_5c91",
+      "OBLIVION_API_NEXT_CANARY_86ab",
+      "OBLIVION_PROXY_USER_CANARY_31d2",
+      "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+      "synthetic-general-password",
+      "synthetic-session-password-a",
+      "synthetic-session-password-b",
+      "OBLIVION_GUEST_CHAT_CANARY_7eaf",
+      "OBLIVION_TUI_CANARY_8ac4"
+    ]
+  },
+  "limits": [
+    "The byte-identical assertion covers the general LUKS image during the ephemeral workload, not the entire USB.",
+    "The quota test forces tmpfs ENOSPC; it does not test physical-memory OOM or power loss.",
+    "The TUI uses a synthetic provider; no real Abliteration request.",
+    "The host runs under Mac HVF and the nested guest under TCG; production x86/KVM isolation is not tested.",
+    "Temporary new API credentials, live USB integration and real Tor ephemeral use remain open.",
+    "The ephemeral network workload uses an external synthetic SOCKS/provider; actual Tor bootstrap, tool circuit isolation and real provider behavior remain separate gates."
+  ],
+  "retained_files": [
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-services-02/summary.json",
+      "sha256": "9f3dd80a606f0dfd041c916a89b2cf2c59869bb43b00b3edbb8313de0cdb6c73"
+    },
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-services-02/serial.log",
+      "sha256": "2a64d95a0ad3938b181d89bd166c832a6621b432e5aae250ed76325ad761ac92"
+    },
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-validation-checks/ephemeral-host-build.log",
+      "sha256": "df1c1dfd7b0962e3240a3a9d23bef8c584993196fdbd00d5e0b2c1ced3409b4f"
+    },
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-validation-checks/mac-check.log",
+      "sha256": "1513176f9e6e04aa64aa322b74fa82d3bdf227cd5f87a9774577e7a2a4ed5284"
+    },
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-validation-checks/mac-typecheck-tsc.log",
+      "sha256": "b63cd2f47ebac73a39eeae9bed8e372fe4779f58b55a0cca4d0b7d615c8a707d"
+    },
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-stream-01/summary.json",
+      "sha256": "54e40a3200053487c8fa16912ea2aaf1e95ff6ee6e189292a012ece2560fdce2"
+    },
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-stream-01/serial.log",
+      "sha256": "6ffabf3ceae2019596378e6940a2bb03a5dc9efefb4ee07512100b48c9820a4f"
+    },
+    {
+      "path": "artifacts/oblivion-vm/ephemeral-stream-01/webtools-outside.pcap",
+      "sha256": "454f95df2b6b810afb866359936bc534eefbf1c97780a07a6b5b819614e4fcbd"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-65112f3/x64-evidence/ci/host-results/summary.json",
+      "sha256": "47abfbe92253010853e4778d98f962504bfa7282d598afee9d79ee99cf9e2cb6"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-65112f3/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "441eea2f6ca2987252c12287b7f8b1feea3231ef148698c6fc154c7b22de6c9e"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-65112f3/x64-evidence/ci/tui-boot/summary.json",
+      "sha256": "b7543783d78e65bc51ad3150c60f0a0d497a3e4d96db21bc5f104801ff0e2c2d"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-65112f3/x64-evidence/ci/stream-results/webtools-outside.pcap",
+      "sha256": "da8ad2c2aee3aa9d053d9e64e2ed2c2cbad6c7db4e7312c22b359c033d5a35af"
+    }
+  ],
+  "network_fixture_commit": "df52c8661b13b2ca5c8141e6017b79573103b66f",
+  "network": {
+    "passed": true,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: encrypted external SOCKS profile is selected before the key starts the gateway",
+      "PASS: a scoped web policy is saved in the encrypted profile without restarting an idle gateway",
+      "PASS: reselecting the current key records the RAM choice without restarting its gateway or Tor bootstrap",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and reports the synthetic provider's offline probe",
+      "PASS: the host grant activates the actual tools listener; invalid tokens, denied/unknown targets and private addresses fail closed, and policy changes are blocked while open",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+      "PASS: compiled OpenCode webfetch and a shell client use the local proxy for HTTP and verified HTTPS; redirected, unknown and wrong-port targets fail without external contact or a direct fallback",
+      "PASS: compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker",
+      "PASS: active streaming blocks a transport change without interrupting or replacing its gateway",
+      "PASS: controller revocation closes the provider TLS stream and the adapter reports failure while QEMU and its LUKS mapping are still open",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: the laboratory captures A's compiled-client traffic outside the gateway, without a cleartext provider key or local capability",
+      "PASS: B cannot use A's allowed web destinations and the external fixture receives no request",
+      "PASS: explicit key selection replaces the gateway VM; the real compiled adapter sends the alternate key only through the broker",
+      "PASS: session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure",
+      "PASS: B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: unlock restores the persisted SOCKS route and credentials without reading or changing Tor state",
+      "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+      "PASS: normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes",
+      "PASS: SOCKS-to-Tor imports its saved guard and replaces the gateway; absent bootstrap still rejects opening before any session mapping or VM, with no SOCKS fallback",
+      "PASS: restoring the saved SOCKS profile closes the Tor gateway and completes its selective state checkpoint before replacement",
+      "PASS: restored SOCKS serves a fresh-token client stream, rejects the prior token and revokes without mutating the saved Tor checkpoint",
+      "PASS: fragmented private requests expire despite continued progress; the owner destroys its gateway VM and leaves storage state explicit",
+      "PASS: an ephemeral VM receives a fresh private token and cannot inherit A's session-scoped web permissions",
+      "PASS: closing a streaming ephemeral session revokes its provider connection and removes its RAM disk without writing the general image or Tor state",
+      "PASS: a second ephemeral VM rejects the previous token; global lock terminates its active stream, gateway and RAM volume while leaving the general image byte-identical",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ],
+    "seconds": 498.32,
+    "fixture": {
+      "file": "vm-session-network-test.py",
+      "sha256": "927ea8d4d1e3a21ce41d3b25209ca135bcd038aeb113916972088b9b041e554a"
+    },
+    "fixture_verified": true,
+    "host_bundle_verified": true,
+    "plaintext_markers_on_disk": [],
+    "disk_scan_canaries": [
+      "OBLIVION_VM_A_CANARY_4d02",
+      "OBLIVION_VM_B_CANARY_b0ca",
+      "OBLIVION_VM_TEMP_CANARY_d9ae",
+      "OBLIVION_API_KEY_CANARY_5c91",
+      "OBLIVION_API_NEXT_CANARY_86ab",
+      "OBLIVION_PROXY_USER_CANARY_31d2",
+      "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+      "synthetic-general-password",
+      "synthetic-session-password-a",
+      "synthetic-session-password-b",
+      "OBLIVION_STREAM_REQUEST",
+      "Synthetic open stream",
+      "OBLIVION_WEB_TOOLS_REQUEST",
+      "OBLIVION_WEB_TOOLS_VERIFIED",
+      "OBLIVION_WEB_HTTP",
+      "OBLIVION_WEB_HTTPS",
+      "OBLIVION_GUEST_CHAT_CANARY_7eaf",
+      "OBLIVION_TUI_CANARY_8ac4"
+    ],
+    "opencode_sha256": "a32ecfeacc2fc8d22952dfaac425d2bb57ed245e36779406fc5b7e0337b4f107",
+    "webtools_outside_capture": {
+      "packets": 438,
+      "ipv4": 436,
+      "ipv6": 0,
+      "udp": 0,
+      "tcp": 436,
+      "tcp_ports": [
+        9050,
+        33474,
+        42396,
+        42404,
+        42408,
+        42410,
+        42412,
+        42420,
+        42426,
+        49150,
+        49164,
+        49178,
+        52044,
+        52052
+      ],
+      "udp_ports": [],
+      "tcp_flows": [
+        [
+          "10.0.2.15",
+          33474,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          42396,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          42404,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          42408,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          42410,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          42412,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          42420,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          42426,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          49150,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          49164,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          49178,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          52044,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          52052,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          33474
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          42396
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          42404
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          42408
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          42410
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          42412
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          42420
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          42426
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          49150
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          49164
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          49178
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          52044
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          52052
+        ]
+      ],
+      "ipv4_fragments": 0,
+      "sha256": "454f95df2b6b810afb866359936bc534eefbf1c97780a07a6b5b819614e4fcbd"
+    },
+    "capture_scope": "First persistent A session: compiled webfetch HTTP/HTTPS, denied redirects/destinations/port, shell request, API stream and revocation. The later ephemeral sessions are outside this capture."
+  },
+  "ci": {
+    "source_commit": "65112f32f77feae31c9764b890ecc5f7d3f55b80",
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40120765668",
+    "run_id": 40120765668,
+    "host_job": 120952201063,
+    "conclusion": "success",
+    "jobs_succeeded": 29,
+    "jobs_total": 29,
+    "architecture": "x86_64",
+    "outer_accelerator": "kvm",
+    "inner_accelerator": "tcg",
+    "storage_checks": 36,
+    "storage_seconds": 427.18,
+    "stream_checks": 26,
+    "stream_seconds": 589.44,
+    "tui_boot_seconds": 6.19,
+    "storage_plaintext_markers_on_disk": [],
+    "stream_plaintext_markers_on_disk": [],
+    "stream_scan_canaries": 18,
+    "compiled_client": {
+      "source_commit": "65112f32f77feae31c9764b890ecc5f7d3f55b80",
+      "profile": "oblivion",
+      "binary_sha256": "ce16e71a49aab2ab7d39045af6b321c2e6f0c2a4588aac6f06faf6ccfac574b6",
+      "architecture": "x86_64",
+      "scope": "CI laboratory build, not a signed release"
+    },
+    "webtools_outside_capture": {
+      "packets": 453,
+      "ipv4": 451,
+      "ipv6": 0,
+      "udp": 0,
+      "tcp": 451,
+      "tcp_ports": [
+        9050,
+        36830,
+        36844,
+        50472,
+        52328,
+        52344,
+        52352,
+        60132,
+        60148,
+        60158,
+        60160,
+        60168,
+        60176,
+        60184
+      ],
+      "udp_ports": [],
+      "tcp_flows": [
+        [
+          "10.0.2.15",
+          36830,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          36844,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          50472,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          52328,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          52344,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          52352,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          60132,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          60148,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          60158,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          60160,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          60168,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          60176,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.15",
+          60184,
+          "10.0.2.2",
+          9050
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          36830
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          36844
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          50472
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          52328
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          52344
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          52352
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          60132
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          60148
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          60158
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          60160
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          60168
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          60176
+        ],
+        [
+          "10.0.2.2",
+          9050,
+          "10.0.2.15",
+          60184
+        ]
+      ],
+      "ipv4_fragments": 0,
+      "sha256": "da8ad2c2aee3aa9d053d9e64e2ed2c2cbad6c7db4e7312c22b359c033d5a35af"
+    },
+    "coverage": "Includes the initial three ephemeral storage checks and the fixed compiled tool test. The added RAM quota check and three ephemeral network checks are verified locally at the later fixture commits above, not in this CI run."
+  }
+}

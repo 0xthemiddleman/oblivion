@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.48 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.49 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
@@ -15,43 +15,52 @@ Si conservano grafica, componenti e interazioni della chat TUI upstream.
 | Parte | Evidenza disponibile | Lavoro ancora aperto |
 | --- | --- | --- |
 | Audit e profilo privacy | [Audit v2](docs/oblivion/phase-0/AUDIT.md), [profilo compilato](docs/oblivion/PRIVACY-PROFILE.md): scritture censite, log persistenti e discovery disabilitati, prove sintetiche del client | Provider reale, collaudo completo dei download e plugin residui |
-| Volumi, manager e chiavi | [33 controlli LUKS/manager](docs/oblivion/host-policy-evidence.json): chiavi multiple, regole web, readonly, ENOSPC, blocchi a chat aperta e recupero | Power loss, guasti I/O, header, cambio password, USB fisica |
-| Sessioni e rete API | [23 controlli del ciclo host](docs/oblivion/host-policy-evidence.json): profilo cifrato, token nuovi, revoca, grant tool, Tor↔SOCKS e guardie Tor preservate | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale |
-| Proxy degli strumenti | [Quattro scenari completi](docs/oblivion/tools-vm-evidence.json), 13 controlli ciascuno: HTTP, CONNECT/TLS, firewall, revoca e crash; tutti i 29 job CI passati | Client Bun/OpenCode e isolamento Tor dei flussi tool |
+| Volumi, manager e chiavi | [37 controlli LUKS/manager](docs/oblivion/ephemeral-evidence.json): chiavi multiple, regole web, readonly, ENOSPC su disco e RAM, chat effimere e recupero | Power loss, guasti I/O, header, cambio password, USB fisica |
+| Sessioni e rete API | [29 controlli del ciclo host sul Mac](docs/oblivion/ephemeral-evidence.json): token nuovi, revoca, regole A/B, Tor↔SOCKS e stream effimeri | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale del prodotto |
+| Proxy degli strumenti | [Client compilato e cattura esterna verificati](docs/oblivion/ephemeral-evidence.json): webfetch HTTP/HTTPS, shell, redirect e destinazioni vietate; anche [quattro scenari di revoca/crash](docs/oblivion/tools-vm-evidence.json) | Isolamento Tor dei flussi tool e provider reale |
 | Regole amministrate | [Menu, persistenza e grant host verificati](docs/oblivion/host-policy-evidence.json); 13 test delle regole sul Mac e in Debian ARM/x86 | Conferme interattive, scadenze e revoca di singoli permessi |
-| Documenti, effimero e live | [Flussi concordati](docs/oblivion/NETWORK-AND-FILES.md); [percorso effimero RAM implementato, prova VM preparata](docs/oblivion/EPHEMERAL.md) | Collaudo effimero completo, import/export USB, copie A→B, OnionShare e immagine Debian Live |
+| Documenti, effimero e live | [Flussi concordati](docs/oblivion/NETWORK-AND-FILES.md); [effimero con TUI, gateway, crash e quota RAM verificati](docs/oblivion/EPHEMERAL.md) | Credenziali temporanee, OOM, intera USB invariata, import/export USB, copie A→B, OnionShare e immagine Debian Live |
 
-La CI del commit `e642685` termina con **29 job passati**: compilazione Debian,
-controlli canonici e TypeScript ufficiali, 33 controlli del manager con LUKS,
-23 del ciclo host e 56 del gateway ARM. Nessuno dei 14 marcatori sintetici
-cercati viene trovato sul disco del ciclo host.
+La [CI del commit `65112f3`](docs/oblivion/ephemeral-evidence.json) termina con
+**29 job passati**: compilazione Debian, controlli del repository,
+36 controlli del manager con LUKS e 26 del ciclo host x86. Nessuno dei 18
+marcatori sintetici cercati viene trovato sul disco del ciclo di rete.
+I successivi test della quota RAM e degli stream effimeri portano le suite
+locali rispettivamente a 37 e 29 controlli; non fanno parte di quella CI.
 Le regole possono essere globali o per sessione, persistenti oppure temporanee
 fino al blocco generale. Senza profilo il servizio tool rimane spento;
 `ask` blocca finché non esiste una conferma fidata.
 
 Il launcher prepara ora le variabili proxy con il solo token locale, escludendo
-loopback e broker API. È pronta una prova con OpenCode compilato: `webfetch`
+loopback e broker API. Passa la prova con OpenCode compilato: `webfetch`
 HTTP/HTTPS, redirect vietato, dominio e porta non autorizzati, shell e regole
-separate A/B. I due test nativi della fixture passano; il primo tentativo nelle
-VM (`f2f7a1b`) si ferma nel subprocess degli strumenti con exit 1. Il vecchio
-assert mostrava solo stderr, vuoto, perdendo l'errore JSON su stdout: la causa
-resta da diagnosticare. I 33 controlli storage/manager passano nuovamente;
-questa esecuzione non valida il percorso Bun né le prove successive A/B.
-Le [evidenze del tentativo](docs/oblivion/compiled-tools-attempt.json) conservano
-il fallimento. La CI permette di proseguire mentre il Docker locale
-rimane fermo per spazio insufficiente ed errori I/O.
-È preparata anche la cattura esterna del traffico della prima apertura di A:
-attivazione esclusivamente nel laboratorio, controllo del percorso SOCKS e
-assenza di chiave API/token locali in chiaro. Il filtro QMP è provato sul Mac;
-la cattura con il client nelle VM resta pendente.
+separate A/B. Il [primo tentativo](docs/oblivion/compiled-tools-attempt.json)
+non conservava l'errore JSON su stdout. La [ripetizione con diagnostici](docs/oblivion/compiled-tools-diagnosis.json)
+identifica un errore nella fixture: cercava `Unable to fetch`, mentre OpenCode
+restituisce `Transport error (GET ...)`. HTTP, HTTPS e shell riescono e i tre
+tool vietati risultano in errore; il peer sintetico interrompeva poi la risposta
+per l'assert sbagliato. La correzione verifica anche gli stati JSON reali dei
+tool. Il ciclo completo sul Mac supera ora 29 controlli, comprese le prove
+successive A/B e quelle effimere con gateway attivo.
+Il Mac dispone nuovamente di spazio: build Debian locale e 32 test host passano,
+come lint, 34 task di typecheck e 34 del compilatore TypeScript ufficiale con
+Bun 1.4.4. Le prove VM sono nuovamente eseguibili anche localmente.
+La cattura esterna della prima apertura di A contiene 438 pacchetti: 436 TCP,
+nessun UDP, IPv6 o frammento IP; il solo percorso IP osservato è il SOCKS
+configurato. Chiave API e token locale non compaiono in chiaro. La cattura è
+esclusiva del laboratorio e non copre le successive aperture effimere.
 
 Il manager aggiunge E prima dello sblocco e N per una chat effimera. Il disco
 LUKS2 temporaneo sta solo in tmpfs, con segreto casuale non salvato, stessa
 VM e stessi interlock delle sessioni persistenti; viene rimosso dopo la chiusura.
-Passano 32 test nativi host e Clippy sul Mac. Sono preparati tre controlli VM
-aggiuntivi con scritture dalla TUI reale, nuova chat senza dati precedenti e
-recupero dopo crash; non sono ancora eseguiti. La verifica dell'intera USB
-invariata e del gateway nell'effimero rimane distinta.
+La [suite sul Mac](docs/oblivion/ephemeral-evidence.json) supera **37 controlli
+Linux**: TUI reale, nuova chat senza dati precedenti, recupero dopo crash e
+quota tmpfs esaurita senza fallback. Nessuno dei 12 marcatori sintetici cercati
+compare sul disco. La suite di rete verifica anche due aperture effimere,
+token distinti, mancata eredità dei permessi di A e revoca degli stream prima
+della rimozione dei dischi RAM, con generale invariato. Verifica dell'intera
+USB, OOM fisico, nuove credenziali solo in RAM e uso effimero con Tor reale
+restano aperti.
 
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
 limiti e incidenti precedenti, incluso il guasto di riapertura della console non

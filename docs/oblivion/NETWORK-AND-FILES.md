@@ -1,6 +1,6 @@
 # Oblivion — studio di networking e trasferimento file
 
-24 ottobre 2026. Documento di progettazione collegato al [piano principale](../../PLAN.md). Il [primo broker API](API-BROKER.md) è implementato e provato come componente separato con traffico sintetico sul Mac e in Debian ARM. Il [laboratorio Mac con due VM](NETWORK-LAB.md) prova firewall, Tor reale e guasti sintetici. La [rete della sessione](SESSION-NETWORK.md) collega il guest al broker con token locale e revoca; [stato e bootstrap Tor](TOR-STATE.md) sono integrati. Le [chiavi multiple](CREDENTIALS.md) sono implementate; il nuovo [trasporto Tor/SOCKS](transport-vm-evidence.json) supera 21 casi nelle VM di laboratorio. I [profili nel manager con LUKS](host-lifecycle-ci-evidence.json) superano 28 controlli. Restano il cambio effettivo di gateway Tor↔SOCKS nel ciclo completo, il proxy dei tool, i trasferimenti e il provider reale. Le proposte non autorizzano la pubblicazione di documenti, l'apertura di servizi di rete esterni o la formattazione di dispositivi.
+24 ottobre 2026. Documento di progettazione collegato al [piano principale](../../PLAN.md). Il [primo broker API](API-BROKER.md) è implementato e provato come componente separato con traffico sintetico sul Mac e in Debian ARM. Il [laboratorio Mac con due VM](NETWORK-LAB.md) prova firewall, Tor reale e guasti sintetici. La [rete della sessione](SESSION-NETWORK.md) collega il guest al broker con token locale e revoca; [stato e bootstrap Tor](TOR-STATE.md) sono integrati. Le [chiavi multiple](CREDENTIALS.md) sono implementate; il nuovo [trasporto Tor/SOCKS](transport-vm-evidence.json) supera 21 casi nelle VM di laboratorio. I [profili nel manager con LUKS](host-lifecycle-ci-evidence.json) superano 28 controlli. Il [ciclo completo aggiornato](ephemeral-evidence.json) verifica anche cambio Tor↔SOCKS con Tor offline, proxy dei tool con client compilato e stream effimeri. Restano Tor online nel percorso completo, isolamento dei flussi tool, trasferimenti e provider reale. Le proposte non autorizzano la pubblicazione di documenti, l'apertura di servizi di rete esterni o la formattazione di dispositivi.
 
 **Vincoli già decisi**
 
@@ -51,8 +51,8 @@ iniettato; il client globale corrispondente usa `FetchHttpClient.layer` in
 client SOCKS autonomo. La [documentazione Bun](https://bun.sh/docs/runtime/networking/fetch)
 descrive proxy HTTP tramite ambiente o opzione `proxy`, con CONNECT per HTTPS
 e richieste proxy HTTP per destinazioni HTTP. Questo identifica il punto di
-integrazione, senza provare il comportamento del binario fissato a Bun 1.4.4:
-occorre esercitare entrambi i protocolli con quel client, redirect compresi.
+integrazione; il comportamento del binario fissato a Bun 1.4.4 è ora
+verificato nel [ciclo completo sul Mac](ephemeral-evidence.json), redirect compresi.
 Il launcher `conversation.sh` ora esporta `HTTP_PROXY`, `HTTPS_PROXY`,
 `ALL_PROXY` e le varianti minuscole verso `10.88.0.1:8112`, con username
 `oblivion-tools` e il solo token locale revocabile. `NO_PROXY`/`no_proxy`
@@ -61,30 +61,32 @@ i loro percorsi. Le credenziali del proxy esterno restano fuori da ambiente
 e filesystem del guest. Il firewall è il confine anche per programmi che
 cambiano o ignorano queste variabili.
 
-È preparata una prova con OpenCode compilato e provider sintetico esterno:
+Passa la prova con OpenCode compilato e provider sintetico esterno:
 sei chiamate agli strumenti reali per HTTP, HTTPS, redirect a dominio vietato,
 dominio sconosciuto, porta non ammessa e programma Python lanciato dalla shell.
 La fixture controlla risultati, credenziali e assenza di contatti non ammessi;
-la sessione B deve poi rifiutare le destinazioni autorizzate solo per A.
+la sessione B rifiuta poi le destinazioni autorizzate solo per A.
 Il solo subprocess di prova aggiunge il certificato pubblico della fixture
 tramite `NODE_EXTRA_CA_CERTS`; non si disabilita la verifica TLS e non cambia
 la fiducia dell'immagine di produzione. Due test nativi della fixture passano
 con socket e TLS reali. Il [primo tentativo Bun/OpenCode nelle VM](compiled-tools-attempt.json)
 fallisce con exit 1 durante il subprocess degli strumenti. L'assert riportava
-solo stderr, vuoto, senza il JSON su stdout; la diagnosi rimane aperta.
-Il driver ora conserva stdout sintetico limitato e la posizione degli errori
-della fixture. Non aggiunge registrazione al client o al gateway di produzione.
+solo stderr, vuoto, senza il JSON su stdout. I nuovi diagnostici identificano
+un [assert errato sui messaggi dei tool bloccati](compiled-tools-diagnosis.json).
+Corretto l'assert e verificati gli stati JSON reali, il ciclo supera 29 controlli.
+Il driver conserva stdout sintetico limitato e la posizione degli errori della
+fixture; non aggiunge registrazione al client o al gateway di produzione.
 
-La prova host ora prepara anche una cattura esterna della prima apertura di A,
+La prova host acquisisce anche una cattura esterna della prima apertura di A,
 dalle richieste iniziali fino alla revoca e chiusura. Solo il driver di
 laboratorio attiva `filter-dump` tramite il QMP privato; nessuna opzione di
 cattura è aggiunta al controller o al launcher di produzione. Prima di
 esportare il PCAP sintetico, chiude il filtro e verifica che non contenga
 la chiave API o il token locale in chiaro. Il runner richiede esclusivamente
 TCP verso il SOCKS configurato, senza DNS/UDP, IPv6 o frammenti IP, e conserva
-il PCAP con il suo hash. La prova nativa su QEMU Mac conferma soltanto
-creazione/chiusura del filtro e flush del file; il traffico delle VM è ancora
-da collaudare. Questa finestra non copre da sola ogni apertura successiva o Tor.
+il PCAP con il suo hash. La cattura delle VM sul Mac contiene 438 pacchetti,
+di cui 436 TCP sul solo SOCKS configurato, senza UDP, IPv6 o frammenti IP.
+Questa finestra non copre le aperture successive, incluse quelle effimere, o Tor.
 
 **Motore delle regole: prima implementazione.**
 `packages/oblivion-transport/src/policy.rs` definisce il formato versionato e

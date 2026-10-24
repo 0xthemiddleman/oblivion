@@ -7,6 +7,16 @@ Lo sviluppo procede sul Mac ARM disponibile: Docker per build e prove del binari
 Debian/HVF e guest TCG per il laboratorio VM. L'hardware x86/KVM è un gate di
 rilascio, non un blocco allo sviluppo sul Mac.
 
+Ultima verifica locale: [37 controlli LUKS/manager e 29 del ciclo di rete](ephemeral-evidence.json)
+passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,
+webfetch/shell reali, cattura esterna e due chat effimere con stream revocati.
+Il generale resta invariato nel percorso effimero. Non prova l'intera USB,
+l'OOM fisico o il provider remoto reale.
+La CI `65112f3` termina inoltre con **29 job passati**, 36 controlli storage
+e 26 del ciclo di rete x86, senza i 18 marcatori cercati sul disco. I quattro
+controlli aggiunti successivamente sono coperti dalla verifica locale;
+il report distingue i commit e le due coperture.
+
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager fidato:
 archivio versionato, migrazione, scelta per apertura e nessuna rotazione
 automatica. Il [SOCKS5 globale](KEYS-AND-EGRESS.md) viene prima del proxy dei
@@ -79,13 +89,25 @@ della fixture passano; la nuova prova del client compilato, di `webfetch`,
 redirect, shell e regole distinte A/B è stata eseguita nelle VM, ma il
 [primo tentativo](compiled-tools-attempt.json) fallisce nel subprocess degli
 strumenti con exit 1 e stderr vuoto. Il vecchio assert non conservava stdout,
-dove il client JSON pubblica gli errori; la causa non è ancora determinata.
+dove il client JSON pubblica gli errori; quel tentativo non permette di
+diagnosticarne la causa.
 Sono aggiunti diagnostici limitati ai dati sintetici del laboratorio, senza
 log nel prodotto. I 33 controlli storage/manager passano ancora, ma la sequenza
 stream si ferma dopo sette controlli: né Bun/proxy né i successivi casi A/B
 sono validati da questo tentativo.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
+
+La [ripetizione con diagnostici](compiled-tools-diagnosis.json) individua
+l'assert errato della fixture sui messaggi dei tool bloccati: OpenCode produce
+`Transport error (GET ...)`. Il nuovo test controlla anche gli stati JSON dei
+cinque `webfetch`; il collaudo completo sul Mac supera ora 29 controlli,
+compresi A/B e stream effimeri. La cattura esterna della prima A verifica
+436 pacchetti TCP sul solo SOCKS configurato, senza UDP o IPv6.
+Dopo che l'utente ha liberato spazio, Docker sul Mac completa la build Linux
+del controller e i 32 test host. Ripristinate le dipendenze dal lockfile e Bun
+1.4.4, passano anche `bun run check` e `bun run typecheck:tsc`, 34 task ciascuno.
+Le prove LUKS/VM sono nuovamente eseguibili localmente.
 
 Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
 OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;
@@ -94,11 +116,13 @@ le nuove schermate amministrative rimangono nel manager host separato.
 Il [percorso effimero](EPHEMERAL.md) collega ora E prima dello sblocco, generale
 readonly e nuova VM con disco LUKS2 solo in RAM. Il segreto viene generato per
 apertura e non salvato; la chiusura rimuove il file dopo VM e mapping. Passano
-32 test host nativi e Clippy sul Mac. La suite servizi prepara tre controlli
-aggiuntivi con TUI reale, scritture, seconda chat pulita e recupero dopo crash.
-Questi controlli Linux non sono ancora eseguiti; non sono coperti dai report
-storici da 33 controlli. Gateway nell'effimero, credenziali temporanee, OOM e
-verifica dell'intera USB restano da completare.
+32 test host nativi e Clippy sul Mac. La [suite servizi aggiornata](ephemeral-evidence.json)
+supera **37 controlli Linux** sul Mac: TUI reale, scritture, seconda chat pulita,
+recupero dopo crash e quota tmpfs insufficiente senza fallback. Nessuno dei
+12 marcatori cercati compare sul disco. Passa anche la prova effimera con
+gateway attivo e SOCKS/provider sintetico: due token distinti, vecchio token
+rifiutato, stream chiusi e dischi RAM rimossi, generale invariato. Credenziali
+temporanee, Tor reale, OOM fisico e verifica dell'intera USB restano da completare.
 
 | Area                     | Stato ed evidenza                                                                                                                                                             | Gate ancora aperto                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -111,7 +135,7 @@ verifica dell'intera USB restano da completare.
 | Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | SOCKS5 globale, provider reale, proxy dei tool e shutdown                             |
 | Credenziali API          | [Chiavi nominate nella TUI fidata](CREDENTIALS.md), archivio root 0600 nel generale, migrazione atomica, selezione in RAM e blocchi readonly/recupero/sessione aperta         | Provider reale, power loss durante migrazione e Wi-Fi                                 |
 | Documenti                | Flussi concordati                                                                                                                                                             | USB, copie A→B, OnionShare, quote e annullamento                                      |
-| Effimero                 | [Manager e VM con disco RAM](EPHEMERAL.md) implementati; prova Linux preparata                                                                                               | Collaudo VM, gateway, credenziali temporanee e zero scritture sull'intera USB          |
+| Effimero                 | [Manager e VM con disco RAM](EPHEMERAL.md): TUI, seconda chat, gateway, crash e quota insufficiente verificati in Linux                                                      | Tor reale, OOM fisico, credenziali temporanee e zero scritture sull'intera USB          |
 | Live USB                 | Debian minimale scelta                                                                                                                                                        | Immagine x86, provisioning, boot fisico, firmware e periferiche                       |
 | Integrità e manutenzione | Requisiti nel piano                                                                                                                                                           | Firma/catena boot, backup, upgrade/recovery, revisione indipendente, matrice hardware |
 

@@ -1,8 +1,10 @@
 # Sessioni effimere
 
-Il percorso host e il comando nel manager sono implementati, ma la nuova
-prova Linux non è ancora eseguita. Il solo controllo nativo sul Mac non
-verifica device mapper, cryptsetup, systemd o la VM di sessione.
+Il percorso host e il comando nel manager superano la
+[suite Linux sul Mac](ephemeral-evidence.json): **37 controlli passati** con
+device mapper, cryptsetup, systemd e TUI compilata, oltre a **29 controlli
+di rete**, inclusi gli stream effimeri. L'host Debian usa HVF;
+la VM di sessione usa TCG. Non è una verifica dell'isolamento KVM del prodotto.
 
 Prima dello sblocco, **E** seleziona l'avvio effimero. La password generale
 apre il dispositivo e il filesystem in sola lettura, senza replay del journal
@@ -33,18 +35,27 @@ manager/controller usa lo stesso percorso. Un'apertura successiva crea una
 nuova immagine e un nuovo segreto; non esiste recupero della chat precedente.
 Il riuso di LUKS2 non rende il testo illeggibile durante l'elaborazione in RAM.
 
-La prova aggiunta a `vm-services-test.py` usa i servizi effettivi e la TUI
-OpenCode compilata con un provider sintetico locale. Deve verificare:
+La prova in `vm-services-test.py` usa i servizi effettivi e la TUI OpenCode
+compilata con un provider sintetico locale. Verifica:
 
 - scelta E nel manager, generale readonly e rifiuto dei vault persistenti;
 - file temporaneo su tmpfs, quota riservata, permessi e assenza di mount host;
+- quota tmpfs esaurita: rifiuto senza VM o fallback su disco, file parziale
+  interbloccato fino alla pulizia e nuova apertura dopo Blocca;
 - scrittura di un documento tramite lo strumento shell della chat;
 - chiusura effettiva di VM, mapping e loop device, rimozione del file RAM;
 - seconda chat senza documento, temporanei o conversazione della prima;
 - crash del manager, recupero e immagine generale interamente identica prima
   e dopo il percorso effimero.
 
-Restano aperti la prova con il gateway attivo, credenziali nuove solo in RAM,
-esaurimento della memoria, integrazione nel boot live e verifica dell'intera
+La suite di rete supera inoltre tre controlli con gateway e SOCKS/provider
+sintetico esterno: token nuovo senza ereditare le regole della sessione A,
+stream dal client compilato revocato alla chiusura e seconda chat terminata
+dal blocco generale. Controlla la rimozione del disco RAM e del loop device,
+il rifiuto del vecchio token e l'immagine generale invariata. La prova viene
+eseguita separatamente da quella TUI; non implica una conversazione Tor reale.
+
+Restano aperti credenziali nuove solo in RAM, OOM della memoria fisica,
+uso effimero con Tor reale, integrazione nel boot live e verifica dell'intera
 USB invariata. Il confronto dell'immagine LUKS generale non dimostra da solo
 che nessun altro settore del supporto sia stato modificato.

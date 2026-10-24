@@ -7,8 +7,9 @@ controller. Il [connettore](EGRESS-CONNECTOR.md), supervisore e firewall ora
 superano anche la [matrice con due VM](transport-vm-evidence.json): 12 casi
 SOCKS e 9 Tor offline. Storage e manager superano ora
 [28 controlli con LUKS in CI](host-lifecycle-ci-evidence.json), su host
-x86/KVM e sessione TCG di laboratorio. Il Docker del Mac restituisce ancora
-errori I/O; la CI usa un runner indipendente.
+x86/KVM e sessione TCG di laboratorio. Dopo la liberazione dello spazio,
+anche Docker sul Mac è nuovamente operativo: la [suite aggiornata](ephemeral-evidence.json)
+supera 37 controlli storage e 29 del ciclo di rete, incluse le chat effimere.
 Il [ciclo completo SOCKS](host-socks-stream-ci-evidence.json) supera inoltre
 18 controlli con client corrente, gateway e provider/proxy sintetico esterno:
 chiavi distinguibili, stream revocati, profilo ricaricato e stato Tor invariato.
@@ -67,8 +68,8 @@ automatica Tor-su-SOCKS.
 
 Le regole consenti/blocca/chiedi restano davanti a entrambi i trasporti.
 La VM della chat non accede al proxy grezzo, alle sue credenziali o alla LAN.
-Per SOCKS il firewall del gateway consentirà solo all'apposito servizio
-l'endpoint configurato, senza l'uscita generale oggi attribuita a Tor.
+Per SOCKS il firewall del gateway consente solo all'apposito servizio
+l'endpoint configurato. La cattura del client compilato verifica questo percorso.
 Un proxy su LAN richiede un'eccezione limitata al suo IP e porta, non l'apertura
 della rete locale all'agente.
 

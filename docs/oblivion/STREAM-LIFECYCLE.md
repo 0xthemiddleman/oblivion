@@ -1,5 +1,11 @@
 # Stream attivi nel ciclo delle VM
 
+La [suite locale aggiornata](ephemeral-evidence.json) supera **29 controlli**
+sul Mac con host HVF e guest TCG: strumenti web compilati, regole A/B,
+cattura esterna, revoca degli stream e due sessioni effimere successive.
+Nell'effimero i token sono distinti, i dischi RAM vengono rimossi e il
+generale resta byte-identico. Il provider rimane sintetico.
+
 La [suite CI x86](host-socks-stream-ci-evidence.json) supera ora 18 controlli
 attraverso profilo SOCKS cifrato, client compilato dal commit corrente e due
 VM. Il proxy/provider sintetico vive sul loopback dell'host di laboratorio,

@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "bff2090eb9b515ed2cc2e698bf57f165c3088a9d",
+  "status": "fixture-error-corrected-local-and-ci-vm-cycles-passed",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40114796852",
+    "run_id": 40114796852,
+    "host_job": 120934328023,
+    "conclusion": "failure",
+    "job_conclusions": {
+      "success": 28,
+      "failure": 1
+    }
+  },
+  "storage": {
+    "passed": true,
+    "checks": 33,
+    "seconds": 219.89
+  },
+  "stream": {
+    "passed": false,
+    "checks_completed": 7,
+    "seconds": 93.94,
+    "opencode_sha256": "41bcf6163ea22470b85424ead0885622278f49689b7a3c4ff2f484c5fbb24e08",
+    "plaintext_markers_on_disk": [],
+    "outside_capture_completed": false
+  },
+  "diagnosis": {
+    "fixture": "script/oblivion/vm-stream-provider.py",
+    "line": 85,
+    "exception": "AssertionError",
+    "incorrect_expectation": "Unable to fetch",
+    "observed_error": "Transport error (GET <requested URL>)",
+    "observed_successes": [
+      "webfetch HTTP",
+      "webfetch HTTPS",
+      "shell HTTP via proxy and denied direct TCP"
+    ],
+    "observed_tool_errors": [
+      "redirect to denied.example.com",
+      "unknown.example.com",
+      "api.abliteration.ai:4443"
+    ],
+    "fixture_counters": {
+      "http": 1,
+      "https": 1,
+      "redirect": 1,
+      "shell": 1,
+      "completed": 0
+    },
+    "consequence": "The synthetic model peer aborted its response after receiving the correct tool failures; the client then exited 1."
+  },
+  "correction": {
+    "source_commit": "65112f32f77feae31c9764b890ecc5f7d3f55b80",
+    "changes": [
+      "Match the actual transport errors for the three denied URLs.",
+      "Assert completed/error states from the compiled CLI JSON output in addition to the model-visible results."
+    ],
+    "native_fixture_tests_passed": 2,
+    "local_vm_followup": {
+      "report": "ephemeral-evidence.json",
+      "passed": true,
+      "checks": 29,
+      "capture_sha256": "454f95df2b6b810afb866359936bc534eefbf1c97780a07a6b5b819614e4fcbd"
+    },
+    "ci_followup": {
+      "report": "ephemeral-evidence.json",
+      "run_id": 40120765668,
+      "passed": true,
+      "jobs_succeeded": 29,
+      "stream_checks": 26
+    }
+  },
+  "limits": [
+    "This run stopped before A/B policy separation and the remaining streaming lifecycle.",
+    "The QMP capture was prepared but not exported before failure; no completed outside-traffic proof.",
+    "Synthetic provider and web peer only; no real Abliteration request.",
+    "Outer x86 KVM and inner TCG laboratory; not production session KVM verification.",
+    "Do not infer the precise cause of the earlier f2f7a1b failure, whose stdout was not retained."
+  ],
+  "retained_files": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-bff2090/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "aa07e60115548dc3f13f4b000ecb0bb29616627895d41bfada457ad261ab5145"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-bff2090/x64-evidence/ci/stream-results/serial.log",
+      "sha256": "a46fb5c6ef83f2d68d88c9e714895261f9d1751ef9fb513f7c5a9a51998a6d21"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-bff2090/x64-evidence/ci/host-results/summary.json",
+      "sha256": "e5e5378fdce44f77490bde1705f268f158cdd0f43687e7be999bfb628f2360b8"
+    }
+  ]
+}
