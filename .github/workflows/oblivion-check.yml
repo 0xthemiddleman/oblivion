@@ -42,6 +42,42 @@ jobs:
         run: bun run check
       - name: Official TypeScript compiler
         run: bun run typecheck:tsc
+      - name: Compile the real chat client with the Oblivion profile
+        working-directory: packages/cli
+        env:
+          OPENCODE_CHANNEL: oblivion-ci
+          TURBO_TELEMETRY_DISABLED: "1"
+        run: >-
+          bun run script/build.ts --single --skip-install --skip-web-ui --oblivion
+          --outdir="$GITHUB_WORKSPACE/artifacts/oblivion-build"
+      - name: Record and package the compiled client
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          root = Path("artifacts/oblivion-build")
+          with (root / "cli-linux-arm64/bin/opencode").open("rb") as binary:
+              digest = hashlib.file_digest(binary, "sha256").hexdigest()
+          (root / "build-evidence.json").write_text(json.dumps({
+              "source_commit": os.environ["GITHUB_SHA"], "profile": "oblivion",
+              "binary_sha256": digest, "scope": "CI laboratory build, not a signed release"
+          }, indent=2) + "\n")
+          PY
+          mkdir -p artifacts/ci
+          tar -czf artifacts/ci/cli.tar.gz -C artifacts/oblivion-build \
+            cli-linux-arm64/bin/opencode build-evidence.json
+          printf '%s\n' "$GITHUB_SHA" > artifacts/ci/source-commit.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oblivion-cli-arm64-${{ github.sha }}
+          path: |
+            artifacts/ci/cli.tar.gz
+            artifacts/ci/source-commit.txt
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
 
   linux:
     name: Debian ARM64 builds
@@ -105,6 +141,61 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           compression-level: 0
+
+  host:
+    name: Host LUKS and manager lifecycle
+    needs: [repository, linux]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: oblivion-cli-arm64-${{ github.sha }}
+          path: artifacts/ci/cli-input
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: oblivion-host-arm64-${{ github.sha }}
+          path: artifacts/ci/host-input
+      - name: Verify and unpack current-commit inputs
+        run: |
+          test "$(cat artifacts/ci/cli-input/source-commit.txt)" = "$GITHUB_SHA"
+          test "$(cat artifacts/ci/host-input/source-commit.txt)" = "$GITHUB_SHA"
+          mkdir -p artifacts/oblivion-build artifacts/ci/host
+          tar -xzf artifacts/ci/cli-input/cli.tar.gz -C artifacts/oblivion-build
+          tar -xzf artifacts/ci/host-input/host.tar.gz -C artifacts/ci/host
+          cd artifacts/ci/host
+          sha256sum --check SHA256SUMS
+      - name: Build the host and real chat guest laboratory
+        run: >-
+          docker buildx build --platform linux/arm64 --progress plain
+          -f script/oblivion/Dockerfile.vm-lab --target artifacts
+          --build-arg HOST=tui-host --build-arg GUEST=tui-guest
+          --build-arg OPENCODE_BUILD_EVIDENCE=artifacts/oblivion-build/build-evidence.json
+          --output type=local,dest=artifacts/ci/host-image .
+      - name: Install the VM laboratory tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-arm libarchive-tools
+      - name: Exercise protected profiles and trusted manager
+        run: >-
+          python3 -u script/oblivion/run-vm-lab.py --accelerator tcg
+          --image artifacts/ci/host-image --services-bundle artifacts/ci/host
+          --output artifacts/ci/host-results
+      - name: Retain synthetic host evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oblivion-host-evidence-${{ github.sha }}
+          path: |
+            artifacts/ci/host-results/summary.json
+            artifacts/ci/host-results/serial.log
+            artifacts/ci/host-image/SHA256SUMS
+            artifacts/ci/host-image/sources.sha256
+            artifacts/oblivion-build/build-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
 
   network:
     name: Network ${{ matrix.kind }} ${{ matrix.authentication }} ${{ matrix.fault }}

@@ -54,6 +54,7 @@ script/oblivion/*
 artifacts/*
 !artifacts/oblivion-build/
 artifacts/oblivion-build/*
+!artifacts/oblivion-build/build-evidence.json
 !artifacts/oblivion-build/cli-linux-arm64/
 artifacts/oblivion-build/cli-linux-arm64/*
 !artifacts/oblivion-build/cli-linux-arm64/bin/
