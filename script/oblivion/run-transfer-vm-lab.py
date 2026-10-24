@@ -129,6 +129,8 @@ def run(args, checks):
         resources.callback(sender.close)
         receiver = VM(args, sockets, "receive", "success")
         resources.callback(receiver.close)
+        sender.peer.sendall(b"G")
+        receiver.peer.sendall(b"G")
         limits = {"entries": 64, "bytes": 1024 * 1024}
         write_message(sender.peer, {"id": ID, "limits": limits, "paths": ["documents"]})
         assert read_exact(sender.peer, 8) == b"OBLVCP01"
@@ -164,6 +166,7 @@ def run(args, checks):
 
         cancelled = VM(args, sockets, "receive", "cancel")
         resources.callback(cancelled.close)
+        cancelled.peer.sendall(b"G")
         write_message(cancelled.peer, {"approval": approval, "limits": limits})
         cancelled.peer.sendall(b"OBLVCP01" + struct.pack(">I", len(encoded)) + encoded)
         assert read_exact(cancelled.peer, 8) == b"receive\n"

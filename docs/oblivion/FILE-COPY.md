@@ -159,8 +159,13 @@ Queste prove **non** completano USB → sessione di chat → USB. Servono ancora
 Il core accetta un `Read`/`Write` limitato dal chiamante e non apre socket o
 device di trasporto. L'endpoint dispone ora del canale con deadline; le porte
 provate in laboratorio restano separate da console, token API e controllo
-amministrativo. La nuova CI prevede la stessa prova VM su ARM64 e x86-64;
-il report locale non ne anticipa l'esito.
+amministrativo. La prima CI (`7ba0f97`) supera i 23 test su entrambe le
+architetture ma fallisce entrambe le prove VM: il mittente scade mentre il
+destinatario sta ancora facendo il boot in emulazione. Il laboratorio ora
+aspetta che entrambe le porte siano pronte e solo allora avvia gli endpoint.
+Il budget di copia rimane 30 secondi, separato dall'attesa di avvio. La
+correzione supera nuovamente i sei controlli su Mac, con HVF (6,43 secondi)
+e TCG (59,55 secondi complessivi). La nuova esecuzione CI resta da verificare.
 
 Riferimenti tecnici: [I/O e sincronizzazione Rust](https://doc.rust-lang.org/std/fs/struct.File.html),
 [SHA-256 incrementale RustCrypto](https://docs.rs/sha2/0.10.9/sha2/),

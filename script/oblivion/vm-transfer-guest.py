@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """One endpoint in a networkless VM. Fixed public fixture, never real devices."""
 import os
+import select
 import subprocess
 import time
 import traceback
@@ -42,6 +43,10 @@ def run():
     if fd != 3:
         os.close(fd)
     print("OBLIVION_COPY_READY", flush=True)
+    # VM boot is outside the endpoint's transfer budget. The laboratory starts
+    # both endpoints only after both private ports and filesystems are ready.
+    assert select.select([3], [], [], 120)[0], "missing laboratory start signal"
+    assert os.read(3, 1) == b"G", "invalid laboratory start signal"
     result = subprocess.run(["/usr/bin/oblivion-copy", role, root, "30000"], pass_fds=(3,), stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=35)
     os.close(3)
     assert result.returncode == (0 if case == "success" else 1), (role, case, result.returncode)

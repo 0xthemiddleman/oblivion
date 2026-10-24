@@ -65,7 +65,7 @@
     "Transport deadlines do not interrupt blocked filesystem I/O; supervision and storage-failure recovery remain open.",
     "A lost receipt can leave a completed private copy with uncertain sender status; no automatic retry or exactly-once claim.",
     "On macOS QEMU 10.2 cannot apply the Linux per-mapping dump flag. RLIMIT_CORE=0 is enforced; Linux keeps dump-guest-core=off and mem-merge=off.",
-    "The configured ARM64/x86 CI VM jobs have not yet run for this commit."
+    "The startup correction passes local HVF and TCG; its new CI execution is not yet available."
   ],
   "prior_attempts": [
     {
@@ -187,6 +187,66 @@
     {
       "path": "artifacts/oblivion-transfer-endpoints/linux-amd64/oblivion-copy",
       "sha256": "4cd815c288e78e56618ad1ae7cf4e4ed18cc1c6ffa68ca8f9833d2d042eba974"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-04/summary.json",
+      "sha256": "6c0020a8c73b03dbe14b697783dd3009808765365d6ef25b78edee5ca81d93af"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-05-tcg/summary.json",
+      "sha256": "5dc0681aebffc8c954eaca0b2abdb7ff7b236322170721009a68557fce52f43a"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-image-v3/SHA256SUMS",
+      "sha256": "1f6ef887c8a2f39ba92af6d21c102d35a16be8be17e9dc15476095011cd2245e"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-image-v3/sources.sha256",
+      "sha256": "a02df8e61af1994cfd7d6ded6cdb42674d16ab98720cf9c314f7263a3a15f1f4"
     }
-  ]
+  ],
+  "startup_fix": {
+    "reason": "Both original CI transfer jobs failed because the sender deadline ran during receiver boot. A laboratory start byte now releases each endpoint only after both VMs are ready; the endpoint budget remains 30000 ms.",
+    "prior_ci": {
+      "run_id": 40127693833,
+      "source_commit": "7ba0f9728fc506ee448317809b5bbfb91c6fc074",
+      "amd64_job": 120972546620,
+      "arm64_job": 120972546775,
+      "transfer_jobs": "failed; 23 component tests passed on each architecture"
+    },
+    "local_runs": [
+      {
+        "passed": true,
+        "architecture": "aarch64",
+        "accelerator": "hvf",
+        "seconds": 6.43,
+        "runner_sha256": "8fd784e412442741787b0fd950375b36a043ec32ae6c7b418b5cb2cc150353b6",
+        "endpoint_sha256": "4cf29bead971ed9fa30ee37095db7e5f5d25a362a1ec78a108c955dec135f8d5",
+        "checks": [
+          "Real compiled endpoints copy only selected files through separate virtio-serial ports and a bounded host relay; the receiver verifies bytes and the sender verifies its receipt.",
+          "Both guests verify readonly system images, no network interface beyond loopback, no swap and no shared filesystem mount.",
+          "The receiver publishes the verified tree inside its LUKS2 volume, flushes, unmounts and closes the mapping before normal VM shutdown.",
+          "The synthetic external source disk is passed readonly and remains byte-identical after the transfer.",
+          "Disconnecting a real virtio-serial transfer leaves no partial transaction; the receiver closes its encrypted volume and powers down.",
+          "The synthetic document canary is absent from both closed recipient disk images; the source copy intentionally remains on its original plaintext fixture disk."
+        ]
+      },
+      {
+        "passed": true,
+        "architecture": "aarch64",
+        "accelerator": "tcg",
+        "seconds": 59.55,
+        "runner_sha256": "8fd784e412442741787b0fd950375b36a043ec32ae6c7b418b5cb2cc150353b6",
+        "endpoint_sha256": "4cf29bead971ed9fa30ee37095db7e5f5d25a362a1ec78a108c955dec135f8d5",
+        "checks": [
+          "Real compiled endpoints copy only selected files through separate virtio-serial ports and a bounded host relay; the receiver verifies bytes and the sender verifies its receipt.",
+          "Both guests verify readonly system images, no network interface beyond loopback, no swap and no shared filesystem mount.",
+          "The receiver publishes the verified tree inside its LUKS2 volume, flushes, unmounts and closes the mapping before normal VM shutdown.",
+          "The synthetic external source disk is passed readonly and remains byte-identical after the transfer.",
+          "Disconnecting a real virtio-serial transfer leaves no partial transaction; the receiver closes its encrypted volume and powers down.",
+          "The synthetic document canary is absent from both closed recipient disk images; the source copy intentionally remains on its original plaintext fixture disk."
+        ]
+      }
+    ]
+  }
 }

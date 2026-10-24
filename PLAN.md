@@ -1,9 +1,15 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.52 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.53 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
+
+La prima CI della copia tra VM ha evidenziato un errore del laboratorio:
+il timeout del mittente iniziava durante il boot del destinatario. La
+[correzione verificata in HVF e TCG](docs/oblivion/FILE-COPY.md) separa i due
+momenti e conserva la scadenza di 30 secondi della copia. Il suo esito CI
+resta da verificare; i test dei componenti passano su entrambe le architetture.
 
 Sono implementati il generale LUKS2 e i volumi indipendenti delle sessioni,
 il controller Linux, una VM nuova per apertura, il manager fidato e il profilo
