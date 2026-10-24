@@ -38,12 +38,23 @@ impl Destination {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(try_from = "String")]
 pub struct Session(String);
 
 impl Session {
     pub fn new(id: &str) -> Result<Self, &'static str> {
         session(id)?;
         Ok(Self(id.to_owned()))
+    }
+}
+
+impl TryFrom<String> for Session {
+    type Error = &'static str;
+
+    fn try_from(id: String) -> Result<Self, Self::Error> {
+        session(&id)?;
+        Ok(Self(id))
     }
 }
 

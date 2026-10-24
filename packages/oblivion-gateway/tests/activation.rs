@@ -248,3 +248,71 @@ fn egress_invalid_configuration_and_missing_descriptors_fail_without_secrets() {
     assert!(output.stdout.is_empty());
     assert_eq!(output.stderr, b"oblivion-egress: service_failed\n");
 }
+
+#[test]
+fn egress_reads_a_full_private_policy_and_denies_unknown_tools_without_logs() {
+    let (mut process, mut control, address) = launch_binary(env!("CARGO_BIN_EXE_oblivion-egress"));
+    control
+        .set_write_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    let rules = (0..128)
+        .map(|index| {
+            json!({
+                "destination": format!("site-{index}.example.com"), "port": 443, "action": "deny"
+            })
+        })
+        .collect::<Vec<_>>();
+    let config = json!({
+        "transport": {"mode": "tor"}, "session_token": TOKEN,
+        "tools": {"session": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "policy": {"version": 1, "rules": rules}},
+    }).to_string();
+    assert!(config.len() > 4096 && config.len() < 128 * 1024);
+    writeln!(control, "{config}").unwrap();
+    let mut line = String::new();
+    BufReader::new(&mut control).read_line(&mut line).unwrap();
+    assert_eq!(line, "{\"ready\":true}\n");
+    let mut client = TcpStream::connect(address).unwrap();
+    client
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .unwrap();
+    client.write_all(&[5, 1, 2]).unwrap();
+    let mut reply = [0; 2];
+    client.read_exact(&mut reply).unwrap();
+    assert_eq!(reply, [5, 2]);
+    let mut auth = b"\x01\x0eoblivion-tools\x40".to_vec();
+    auth.extend_from_slice(TOKEN.as_bytes());
+    client.write_all(&auth).unwrap();
+    client.read_exact(&mut reply).unwrap();
+    assert_eq!(reply, [1, 0]);
+    client
+        .write_all(b"\x05\x01\x00\x03\x0bexample.com\x01\xbb")
+        .unwrap();
+    let mut reply = [0; 10];
+    client.read_exact(&mut reply).unwrap();
+    assert_eq!(reply[1], 2);
+    assert_eq!(client.read(&mut [0]).unwrap(), 0);
+    drop(control);
+    let output = process.finish();
+    assert!(output.status.success());
+    assert!(output.stdout.is_empty() && output.stderr.is_empty());
+}
+
+#[test]
+fn egress_rejects_an_oversized_private_frame_without_logs() {
+    let (mut process, mut control, _) = launch_binary(env!("CARGO_BIN_EXE_oblivion-egress"));
+    control
+        .set_write_timeout(Some(Duration::from_secs(10)))
+        .unwrap();
+    let result = control.write_all(&vec![b' '; 128 * 1024 + 1]);
+    assert!(
+        result.is_ok()
+            || result.is_err_and(|error| matches!(
+                error.kind(),
+                std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::ConnectionReset
+            ))
+    );
+    let output = process.finish();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr, b"oblivion-egress: service_failed\n");
+}

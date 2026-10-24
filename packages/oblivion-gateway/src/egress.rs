@@ -1,6 +1,12 @@
 use oblivion_transport::Transport;
+use oblivion_transport::policy::{Action, Destination, Policy, Session};
 use serde::Deserialize;
-use std::{io, sync::Arc, time::Duration};
+use std::{
+    io,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
+    sync::Arc,
+    time::Duration,
+};
 use subtle::ConstantTimeEq;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional},
@@ -12,6 +18,7 @@ use tokio_util::sync::CancellationToken;
 use zeroize::Zeroizing;
 
 const USER: &[u8] = b"oblivion-api";
+const TOOLS_USER: &[u8] = b"oblivion-tools";
 const HOST: &[u8] = b"api.abliteration.ai";
 const HANDSHAKE: Duration = Duration::from_secs(10);
 
@@ -20,11 +27,20 @@ const HANDSHAKE: Duration = Duration::from_secs(10);
 pub struct Credentials {
     pub transport: Transport,
     pub session_token: Zeroizing<String>,
+    #[serde(default)]
+    pub tools: Option<Tools>,
 }
 
-// One connector per grant. This first policy admits only the fixed API origin;
-// the future tools proxy must authorize its own destinations before adding a
-// separate channel. This is not a general SOCKS listener exposed to the guest.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Tools {
+    pub session: Session,
+    pub policy: Policy,
+}
+
+// One connector per grant. Tools admission requires explicit trusted
+// configuration; absent it, only the fixed API origin is available. This
+// loopback listener is never exposed to the session guest.
 pub struct Egress {
     credentials: Credentials,
     cancelled: CancellationToken,
@@ -109,7 +125,8 @@ impl Egress {
         let size = client.read_u8().await? as usize;
         let mut password = Zeroizing::new(vec![0; size]);
         client.read_exact(&mut password).await?;
-        if username.as_slice() != USER
+        let tools = username.as_slice() == TOOLS_USER && self.credentials.tools.is_some();
+        if (!tools && username.as_slice() != USER)
             || !bool::from(
                 password
                     .as_slice()
@@ -124,22 +141,53 @@ impl Egress {
         client.write_all(&[1, 0]).await?;
         let mut request = [0; 4];
         client.read_exact(&mut request).await?;
-        if request != [5, 1, 0, 3] {
+        if request[..3] != [5, 1, 0]
+            || !matches!(request[3], 1 | 3 | 4)
+            || (!tools && request[3] != 3)
+        {
             client.write_all(&[5, 7, 0, 1, 0, 0, 0, 0, 0, 0]).await?;
             return Err(io::Error::other("request_denied"));
         }
-        let size = client.read_u8().await? as usize;
-        let mut domain = vec![0; size];
-        client.read_exact(&mut domain).await?;
+        let host = match request[3] {
+            1 => {
+                let mut bytes = [0; 4];
+                client.read_exact(&mut bytes).await?;
+                Ipv4Addr::from(bytes).to_string()
+            }
+            4 => {
+                let mut bytes = [0; 16];
+                client.read_exact(&mut bytes).await?;
+                Ipv6Addr::from(bytes).to_string()
+            }
+            _ => {
+                let mut bytes = vec![0; client.read_u8().await? as usize];
+                client.read_exact(&mut bytes).await?;
+                String::from_utf8(bytes).map_err(|_| io::Error::other("invalid_destination"))?
+            }
+        };
         let port = client.read_u16().await?;
-        if domain != HOST || port != 443 {
+        let destination = Destination::new(&host, port).ok();
+        let allowed = match (&destination, tools) {
+            (Some(destination), true) => self.credentials.tools.as_ref().is_some_and(|tools| {
+                tools.policy.decision(&tools.session, destination) == Action::Allow
+            }),
+            (Some(_), false) => host.as_bytes() == HOST && port == 443,
+            _ => false,
+        };
+        // Ask is closed until the trusted manager approval channel is wired.
+        // No DNS or upstream TCP connection precedes this decision.
+        if !allowed {
             client.write_all(&[5, 2, 0, 1, 0, 0, 0, 0, 0, 0]).await?;
             return Err(io::Error::other("destination_denied"));
         }
+        let destination = destination.ok_or_else(|| io::Error::other("invalid_destination"))?;
         // All local admission precedes even connecting to the upstream proxy.
         let mut upstream = TcpStream::connect(self.credentials.transport.endpoint()).await?;
         let authentication = match &self.credentials.transport {
-            Transport::Tor {} => Some((USER, self.credentials.session_token.as_bytes())),
+            Transport::Tor {} => Some((
+                if tools { TOOLS_USER } else { USER },
+                self.credentials.session_token.as_bytes(),
+            )),
             Transport::Socks5 { authentication, .. } => authentication
                 .as_ref()
                 .map(|auth| (auth.username.as_bytes(), auth.password.as_bytes())),
@@ -165,9 +213,22 @@ impl Egress {
                 return Err(io::Error::other("proxy_authentication_failed"));
             }
         }
-        let mut request = vec![5, 1, 0, 3, HOST.len() as u8];
-        request.extend_from_slice(HOST);
-        request.extend_from_slice(&443u16.to_be_bytes());
+        let mut request = vec![5, 1, 0];
+        match destination.host().parse::<IpAddr>() {
+            Ok(IpAddr::V4(ip)) => {
+                request.push(1);
+                request.extend_from_slice(&ip.octets());
+            }
+            Ok(IpAddr::V6(ip)) => {
+                request.push(4);
+                request.extend_from_slice(&ip.octets());
+            }
+            Err(_) => {
+                request.extend_from_slice(&[3, destination.host().len() as u8]);
+                request.extend_from_slice(destination.host().as_bytes());
+            }
+        }
+        request.extend_from_slice(&destination.port().to_be_bytes());
         upstream.write_all(&request).await?;
         let mut reply = [0; 4];
         upstream.read_exact(&mut reply).await?;

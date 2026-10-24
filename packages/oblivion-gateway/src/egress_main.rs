@@ -10,6 +10,9 @@ use tokio::{
 };
 use zeroize::Zeroizing;
 
+// Includes the bounded destination policy, supplied only on the private FD.
+const FRAME_LIMIT: u64 = 128 * 1024;
+
 fn main() {
     let result = activation::harden().and_then(|()| {
         tokio::runtime::Builder::new_multi_thread()
@@ -36,10 +39,12 @@ async fn run() -> io::Result<()> {
     let mut bytes = Zeroizing::new(Vec::new());
     timeout(
         Duration::from_secs(5),
-        (&mut control).take(4097).read_until(b'\n', &mut bytes),
+        (&mut control)
+            .take(FRAME_LIMIT + 1)
+            .read_until(b'\n', &mut bytes),
     )
     .await??;
-    if bytes.len() > 4096 || !bytes.ends_with(b"\n") {
+    if bytes.len() as u64 > FRAME_LIMIT || !bytes.ends_with(b"\n") {
         return Err(io::Error::other("invalid_control"));
     }
     let credentials: Credentials =

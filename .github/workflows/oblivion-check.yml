@@ -184,7 +184,7 @@ jobs:
 
   host:
     name: ARM64 compiled chat boot
-    needs: repository
+    needs: [repository, linux]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
@@ -196,11 +196,19 @@ jobs:
         with:
           name: oblivion-cli-arm64-${{ github.sha }}
           path: artifacts/ci/cli-input
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: oblivion-gateway-arm64-${{ github.sha }}
+          path: artifacts/ci/gateway-input
       - name: Verify and unpack current-commit inputs
         run: |
           test "$(cat artifacts/ci/cli-input/source-commit.txt)" = "$GITHUB_SHA"
+          test "$(cat artifacts/ci/gateway-input/source-commit.txt)" = "$GITHUB_SHA"
           mkdir -p artifacts/oblivion-build
           tar -xzf artifacts/ci/cli-input/cli.tar.gz -C artifacts/oblivion-build
+          mkdir -p artifacts/ci/gateway
+          tar -xzf artifacts/ci/gateway-input/gateway.tar.gz -C artifacts/ci/gateway
+          (cd artifacts/ci/gateway && sha256sum --check SHA256SUMS)
       - name: Build the host and real chat guest laboratory
         run: >-
           docker buildx build --platform linux/arm64 --progress plain
@@ -214,6 +222,11 @@ jobs:
         run: >-
           python3 -u script/oblivion/run-tui-boot-lab.py
           --image artifacts/ci/host-image --output artifacts/ci/tui-boot
+      - name: Exercise gateway policies and private activation in a swap-free VM
+        run: >-
+          python3 -u script/oblivion/run-vm-lab.py
+          --image artifacts/ci/host-image --gateway-bundle artifacts/ci/gateway
+          --output artifacts/ci/gateway-results
       - name: Retain synthetic ARM64 boot evidence, including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -222,6 +235,10 @@ jobs:
           path: |
             artifacts/ci/tui-boot/summary.json
             artifacts/ci/tui-boot/serial.log
+            artifacts/ci/gateway-results/summary.json
+            artifacts/ci/gateway-results/serial.log
+            artifacts/ci/gateway/SHA256SUMS
+            artifacts/ci/gateway/sources.sha256
             artifacts/ci/host-image/SHA256SUMS
             artifacts/ci/host-image/sources.sha256
             artifacts/oblivion-build/build-evidence.json
