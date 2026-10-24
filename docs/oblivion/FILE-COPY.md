@@ -115,6 +115,45 @@ errore e la copia completa può restare nel deposito privato del destinatario.
 Non si ripete automaticamente la copia e non si presenta l'esito come certo;
 il recupero del servizio deve riconciliare questi casi prima della consegna.
 
+## Relay host e revoca
+
+`oblivion-copy-relay <budget-ms>` riceve dal controller tre descrittori:
+sorgente FD3, destinazione FD4 e controllo fidato FD5. Ogni processo gestisce
+una sola copia, senza listener, riapertura di socket o tentativi automatici.
+Il controller deve scegliere le porte QEMU della coppia autorizzata e mantenere
+privato il controllo. Il relay non decide quali sessioni o dispositivi ammettere.
+
+Su Linux, `SO_PEERPIDFD` fornisce il riferimento ai processi che hanno creato
+le due connessioni Unix. Questi handle restano legati a quelle istanze, senza
+cercare un PID numerico o riaprire il percorso del socket. Servono Linux 6.5+
+e l'ABI x86-64/ARM64 supportata; l'assenza del meccanismo provoca errore. Il
+binario rifiuta l'esecuzione su Mac; i test della libreria sul Mac usano canali
+espliciti per simulare la durata dei proprietari e non attestano i pidfd Linux.
+
+Il controllo invia selezione e quote, riceve il manifest validato e deve
+approvare identificatore e digest esatti. Il relay inoltra l'autorizzazione
+solo dopo questa conferma. Ricontrolla i file durante l'inoltro e trasmette il
+marcatore finale solo con tutti gli hash corretti. Verifica ricevuta e risposta
+del mittente; il controllo riceve metadati, non il contenuto dei documenti.
+Il buffer del contenuto rimane limitato a 64 KiB e non viene scritto su disco host.
+
+I tre canali condividono una scadenza assoluta. Morte di una VM, chiusura del
+controllo o dati di annullamento interrompono l'attesa e chiudono entrambe le
+porte, anche se l'operazione era bloccata sull'altra VM. La revoca ha precedenza
+sui dati pronti nello stesso `poll`. Il controller deve attendere la fine del
+worker prima di smontare o cambiare sessione: questo collegamento al ciclo
+`close`/`lock` non è ancora implementato. Non si annulla retroattivamente una
+copia già pubblicata nel deposito privato; valgono i limiti della ricevuta persa.
+
+Le [evidenze del relay](file-copy-relay-evidence.json) registrano **31 test sul
+Mac e 34 in Debian ARM64/x86-64**, compresi tre test Linux con il binario reale
+e processi reali. Il laboratorio Linux ARM64/TCG sul Mac supera **nove controlli
+in 164,73 secondi**: copia con relay compilato, controllo separato dai byte,
+annullamento prima dell'approvazione e `SIGKILL` della VM destinataria mentre
+il mittente è ancora attivo. Il marcatore sintetico è assente dai quattro
+dischi destinatari dopo l'uscita delle VM. Nel caso `SIGKILL` il guest non
+smonta il volume; gli altri ricevitori verificano la normale chiusura LUKS.
+
 ## Verifiche e integrazione ancora necessaria
 
 Le [evidenze di componente](file-copy-evidence.json) registrano **12 test passati**
@@ -149,8 +188,9 @@ Queste prove **non** completano USB → sessione di chat → USB. Servono ancora
 1. Identità e unità isolate del ricevitore, con deposito LUKS/tmpfs e recupero.
 2. Ambiente di importazione senza rete e device autorizzato readonly; export
    con autorizzazione di scrittura distinta e smontaggio verificato.
-3. Collegamento del canale dedicato al controller, con capacità monouso
-   vincolata a VM, manifest, quota e scadenza; gestione dei guasti del filesystem.
+3. Collegamento del relay al controller, con emissione della capacità monouso
+   per la coppia autorizzata e aggancio della revoca a chiusura/blocco;
+   gestione dei guasti del filesystem e recupero delle copie orfane.
 4. Selezione e conferma nel manager fidato, consegna alla chat e revoca su
    blocco/cambio sessione; una sola sessione aperta resta obbligatoria.
 5. Prove VM con ENOSPC, USB rimossa, crash, nomi ostili, flush fallito e scansione

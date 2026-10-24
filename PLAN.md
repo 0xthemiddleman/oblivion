@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.53 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.54 — 25 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
@@ -87,12 +87,14 @@ quota RAM esaurita e provider TLS sintetico, con generale readonly invariato.
 Il primo [motore di copia dei documenti](docs/oblivion/FILE-COPY.md) trasferisce
 selezioni di file e cartelle come stream, verificando dimensioni e SHA-256.
 Rifiuta link e percorsi esterni, non sovrascrive copie già presenti e pubblica
-solo transazioni complete in un deposito privato. Passano 23 test del core,
-canale e binari sul Mac e in Debian ARM64/x86-64. Il canale virtio-serial supera
-inoltre sei controlli fra VM separate: sorgente virtuale readonly invariata,
-destinazione LUKS, ricevuta e cancellazione senza file parziali. Non completa
-l'import/export USB: autorizzazione nel manager, supervisione e revoca nel
-controller, dispositivi fisici e consegna alla chat restano da collegare.
+solo transazioni complete in un deposito privato. Il [relay host compilato](docs/oblivion/file-copy-relay-evidence.json)
+lega le porte ai processi VM e interrompe la copia su annullamento o morte
+di una VM. Passano 31 test sul Mac, 34 in Debian ARM64/x86-64 e nove controlli
+fra VM separate con relay Linux: sorgente readonly invariata, destinazione
+LUKS, ricevuta, cancellazione e arresto forzato della VM destinataria.
+Non completa l'import/export USB: autorizzazione nel manager, aggancio del
+relay al controller e a chiusura/blocco, dispositivi fisici e consegna alla
+chat restano da collegare.
 
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
 limiti e incidenti precedenti, incluso il guasto di riapertura della console non

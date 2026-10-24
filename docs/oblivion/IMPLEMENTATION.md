@@ -10,11 +10,15 @@ rilascio, non un blocco allo sviluppo sul Mac.
 Il lavoro sui documenti parte dal [motore di copia](FILE-COPY.md), con file
 selezionati, quote, hash, percorsi risolti da descrittori e ricezione privata.
 Il componente non apre device o reti e non monta filesystem. Gli endpoint
-compilati sono ora provati su porte virtio-serial di VM separate: sei controlli
-con sorgente virtuale readonly, destinazione LUKS e cancellazione. Passano 23
-test sul Mac e in Debian ARM64/x86-64. Selezione e conferma nel manager,
-autorizzazione/revoca nel controller, consegna alla chat e USB fisica restano
-da integrare: la prova di laboratorio non sostituisce quei gate.
+compilati sono provati su porte virtio-serial di VM separate, con sorgente
+virtuale readonly e destinazione LUKS. Il nuovo [relay host](file-copy-relay-evidence.json)
+interrompe la copia su annullamento o morte dei processi VM, tramite pidfd
+Linux. Passano 31 test sul Mac, 34 in Debian ARM64/x86-64 e nove controlli
+fra VM con relay compilato. Selezione e conferma nel manager, emissione delle
+autorizzazioni e aggancio a chiusura/blocco nel controller, consegna alla chat
+e USB fisica restano da integrare. La CI precedente passa 29 job ma fallisce
+i due nuovi test VM per un errore di avvio del laboratorio, ora corretto e
+verificato localmente in HVF/TCG. La nuova CI non è ancora verificata.
 
 Ultima verifica locale: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
 passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,

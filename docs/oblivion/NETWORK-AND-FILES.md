@@ -192,7 +192,9 @@ Il [motore di copia iniziale](FILE-COPY.md) è ora implementato in
 stream con hash e ricezione in una transazione privata nuova. Rifiuta link,
 percorsi esterni e sovrascritture; le prove usano filesystem e socket reali.
 Gli endpoint con conferma, deadline e ricevuta sono ora provati fra VM con
-porte virtio-serial, sorgente virtuale readonly e destinazione LUKS. Il flusso
+porte virtio-serial, sorgente virtuale readonly e destinazione LUKS. Il relay
+Linux lega le due porte ai processi QEMU e interrompe la copia su annullamento
+o morte della VM; la prova comprende il suo binario compilato. Il flusso
 di prodotto non è completo: controller, autorizzazioni, manager e dispositivi
 fisici non sono ancora collegati. I flussi seguenti restano il risultato da ottenere.
 

@@ -1,0 +1,229 @@
+{
+  "date": "2026-10-25",
+  "status": "relay-component-and-vm-lifecycle-verified",
+  "implementation_commit": "623e9b646be145fed2d56c46a92ac8d644c7675d",
+  "tests": {
+    "macos_arm64": {
+      "passed": 31,
+      "clippy": "passed",
+      "owner_lifetime": "Explicit local lifetime sockets, not Linux pidfds"
+    },
+    "debian_arm64": {
+      "passed": 34,
+      "host": "Docker Desktop on macOS ARM64",
+      "pidfd_tests": 3
+    },
+    "debian_amd64": {
+      "passed": 34,
+      "host": "Docker Desktop on macOS ARM64 with x86 emulation",
+      "pidfd_tests": 3
+    },
+    "canonical_repository_check": {
+      "passed": 34,
+      "cached": 34
+    }
+  },
+  "vm": {
+    "passed": true,
+    "architecture": "aarch64",
+    "accelerator": "tcg",
+    "scope": "Synthetic virtual disks and separate VM endpoints; no physical USB, trusted manager, production controller grant or chat delivery tested.",
+    "endpoint_sha256": "8234b84bf4c739b611e855b655ac05086b94f221994dc0b6d4b6d1fffc8d6e42",
+    "bundle_manifest": "8f33a3387f6ba38b6f4a49d6fed01aafd2388bd974351cc96bd88b34baa69588  build.log\n8234b84bf4c739b611e855b655ac05086b94f221994dc0b6d4b6d1fffc8d6e42  oblivion-copy\nc75c0e66ffba355db3938fd799c13581e06d5aca2f0bb9cda190f9335a6b2a8d  oblivion-copy-relay\n6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88  rustc.txt\n6efe7f5290974fe140cb8b66bd364bce71ef5c18a742a37b01d95608d45c36a1  sources.sha256\n95c1c4ff89b928db9c3f821f07539aa9c1e5c356f151d0c5489762bab9b0c137  tests.log\n",
+    "image_manifest": "dc75b0799b3d3f7d2c2455a24ed4074eb9ae9112820d5db9df637a1f416bfed1  endpoint.sha256\neb393327616705ddef3b9aa9ed018b46751bea7fa8191161264cd2bc30083b51  guest.squashfs\n738affacf87280e0e23d3832050b0bf6241022d97a69d86bce3d178cef678312  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n188e1f5f039df63ea4876312b15b0ce5d0cd5f7bfe6f7a00aa6c6b82793a052b  source.raw\n2e66338b0ec2d7e946f839e8c0d177f01dd312bfd044234e972eb3dab2bc8b80  sources.sha256\n",
+    "relay": {
+      "kind": "compiled-linux",
+      "sha256": "c75c0e66ffba355db3938fd799c13581e06d5aca2f0bb9cda190f9335a6b2a8d"
+    },
+    "source_manifest": "3bd7f90d1c20c7ca5136728a79e444547c60010e3fa6227db2a27468d6714bb6  Cargo.lock\neceb162a545ee91cb557a3097a63d1422b3ef64e7f41e2d50164ffc89026afa7  Cargo.toml\n9cd15a9086d3cf7985e1ea182c5ce157c1292d4b36935b05bcd0cbc0675c6460  src/channel.rs\n9fa066f3dd702257ebf67fb7294cef5e2c7fb9f2a5c83a60b1a7180f7ddd454e  src/directory.rs\n197a468aba90f17c4de7bdf84b57b7879851bfed96b276df8641781a38720aaa  src/endpoint.rs\nc39404f840f6fa104a38085025560e8a146f1a096323f84fa1fbf4c29980c2c2  src/lib.rs\n52fcbd63c4d335137c25e103e37abdde4042221dd1551c05e87426d8d4ca4ad4  src/main.rs\n011e4a9208755cd121ecb236f5a3f0a3a07914e591ccbacd8559789edd072ab5  src/relay-main.rs\n19c859cecf8d9b5da035121f812cd92803d684c9577f493bb83bece22a6add16  src/relay.rs\ne135eb90b605f3d3d166b03abf4ae66d70e8f7fe6df3a62978745692a18607ba  src/runtime.rs\nb08580339fdf026398b64861806f7f108096ab3b7d8879c4e9174321bafb2060  tests/channel.rs\n4762090a117c3933a17d546b5b9848678a884eb2a2a9a62aeda40796734ca45d  tests/endpoint.rs\nd9651cf832f5abe0038c19b061ada9c35b69677639f35f07412548cb127a24db  tests/relay.rs\n9ec10d9c13d32ab44d884d732f9a2009c38d96259e233b9550716a163d2f966f  tests/relay_process.rs\n928d8331b226650d976714c59a5a94f02df925532942fc0d7f065446075f1b54  tests/support/mod.rs\ne981e72e3930c86997d6f9a5386969643e22a3ca403648b5b77bcc20178d7fb9  tests/transfer.rs\n",
+    "runner_sha256": "7f46ab9ffd7f58aa13d0b0c99fade84d363b32059b2360dc7daebe9746004b6e",
+    "checks": [
+      "Real compiled endpoints copy only selected files through separate virtio-serial ports and a bounded host relay; the receiver verifies bytes and the sender verifies its receipt.",
+      "Both guests verify readonly system images, no network interface beyond loopback, no swap and no shared filesystem mount.",
+      "The receiver publishes the verified tree inside its LUKS2 volume, flushes, unmounts and closes the mapping before normal VM shutdown.",
+      "The synthetic external source disk is passed readonly and remains byte-identical after the transfer.",
+      "Disconnecting a real virtio-serial transfer leaves no partial transaction; the receiver closes its encrypted volume and powers down.",
+      "The compiled Linux relay transfers only metadata on its control channel and verifies hashes and receipts before reporting success.",
+      "Closing the control connection before approval disconnects both real VM ports; neither endpoint reports a completed copy.",
+      "SIGKILL of the destination QEMU revokes the relay through its socket-bound pidfd while the source VM remains live; the source endpoint fails and shuts down normally.",
+      "The synthetic document canary is absent from every recipient disk image after its VM exits; the source fixture intentionally retains its plaintext original."
+    ],
+    "seconds": 164.73,
+    "disks": {
+      "receive-owner-death.luks": "da0bf2f762e068f19186bc18813f2a5dc6cfa855204ddc2614abc9060d70670c",
+      "receive-cancel.luks": "18bbb58bd105f840a073ce8ad50d9acff0a9ccae89838d735579695987f30391",
+      "receive-control-cancel.luks": "bbb602344cacf4273f16d74ade3153723ae9b7588222de0d8a9c83753a3367b1",
+      "receive-success.luks": "3b89b4fe8031220ce16d3f5a20c87ac31ecd7888f29674344b650d679aeaff46"
+    }
+  },
+  "prior_ci": {
+    "run_id": 40127693833,
+    "source_commit": "7ba0f9728fc506ee448317809b5bbfb91c6fc074",
+    "status": "completed",
+    "conclusion": "failure",
+    "passed_jobs": 29,
+    "failed_jobs": [
+      {
+        "name": "File copy engine amd64",
+        "id": 120972546620
+      },
+      {
+        "name": "File copy engine arm64",
+        "id": 120972546775
+      }
+    ],
+    "reason": "Only the two new transfer VM jobs failed: sender deadline included receiver boot. The explicit laboratory start gate was added in 760cf8c and has now also passed with the compiled relay under Linux/TCG. No new CI result claimed yet."
+  },
+  "limits": [
+    "No physical USB selection, manager confirmation, production controller capability issuance, close/lock hook or delivery into the chat is integrated.",
+    "The controller must choose the authorized private QEMU ports and keep the control connection private. The relay pins their real process owners, but does not authenticate a user or choose sessions.",
+    "Cancellation before the final marker prevents publication; cancellation or lost receipt after publication can leave a completed private copy. The service must reconcile it before chat delivery.",
+    "Transport revocation cannot interrupt blocked filesystem calls inside an endpoint. Supervisor escalation and orphan recovery remain open.",
+    "The VM proof uses synthetic disks, Debian ARM64 with QEMU TCG inside Docker on Mac. It does not prove x86/KVM hardware isolation.",
+    "The document canary scan covers the four recipient virtual disks only. The source fixture intentionally retains its plaintext original.",
+    "The owner-death case kills the destination VM before approval; its process exits without guest unmount. The other receiver cases flush, unmount and close LUKS normally.",
+    "The product relay requires Linux 6.5+ SO_PEERPIDFD on supported x86_64/aarch64 and fails when unavailable. The Mac relay binary refuses execution; its library remains testable."
+  ],
+  "retained_files": [
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/relay-amd64-build.log",
+      "sha256": "44821bb423ca90704fe58ede810d71a1366a60e36cb592867c2d4a5d356082ba"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/relay-arm64-build.log",
+      "sha256": "3cac7199913e3a7d90c7baeceb49652e03ab6c4609ffe886dd13a4c77f01210a"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/relay-mac-clippy.log",
+      "sha256": "966213a154b1361538a7134f5edd0471b75f5b7158f065a3c33697b1c037b6cb"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/relay-mac-tests.log",
+      "sha256": "1bc0eafd916ffde15f37a055cff399373a16baeb60427eff39d63e12d77d93ef"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/relay-runner-build.log",
+      "sha256": "ebb52b925aedc194a8f48bc9ef1b01b2d27e3edac5ee493d534a96bdc7e57611"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/relay-vm-image-build.log",
+      "sha256": "1bf619b1a925ccaa8c4c7a571159c3155057cc561d2e8785ee204d2275f34069"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/check.log",
+      "sha256": "14f0d5f231b14ded21daa6a839f67a7a1a9638fff2a7be7cf50affcbc195e402"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/receive-cancel.log",
+      "sha256": "b7cefdfc0494ae12ae5707ba6fb2bcc232e3f614648839a8243e5f2fb894ff7b"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/receive-control-cancel.log",
+      "sha256": "49347e22052dbe2df2d89b81b97bf5e8ae65fa1b0d29d4dfa839b28f31ffeeeb"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/receive-owner-death.log",
+      "sha256": "f75355c4d159c87de705115e389cf2674f3c2748f2473851bb296c358f751b7d"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/receive-success.log",
+      "sha256": "38e2c4c5fd02bfe9ea4f59207efd1d85266c862e441461ac293497eadb522219"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/relay-control-cancel.log",
+      "sha256": "b3bd82542c075cd212d5e8e6644b40f0f4789ad1388fbfe565b6e6f0fc3207d8"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/relay-owner-death.log",
+      "sha256": "b3bd82542c075cd212d5e8e6644b40f0f4789ad1388fbfe565b6e6f0fc3207d8"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/relay-success.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/send-control-cancel.log",
+      "sha256": "09dbbc0b33f7857a80c3641da1bd1b240e838169bf50131b6e447fe7a05e186f"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/send-owner-death.log",
+      "sha256": "b32f62f6e1957e2d13b241ecdf49ccbf8f3db5782312854f11393674e86fa8f2"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/send-success.log",
+      "sha256": "bca66b88d5baf3fd5e5d2a3a6dbe1b30894b6053200e426e18df976405e4697b"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/lab-output/vm-01/summary.json",
+      "sha256": "48658d965f4da8a956aad083ed15431169a85d30a89a7d28fb8023ab8f7457a0"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-amd64/SHA256SUMS",
+      "sha256": "d84c99db4add6f6515ffc95c4a5883a7e693033d0e5b6e85d8f5a2877b5c4755"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-amd64/build.log",
+      "sha256": "4c2621918259796d7e5cb20f7478cfd43da48e7d3710a83e774cad588dcab997"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-amd64/oblivion-copy",
+      "sha256": "7337f82a8d2ab3696f4ff1b1ae617c4c9504d0b4f10c9c88cbc8fe1c8c1d3543"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-amd64/oblivion-copy-relay",
+      "sha256": "9acf78a09507727a2c7a4b68dc234489dde2484dab6e87c6fde24c43b0f9dc87"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-amd64/rustc.txt",
+      "sha256": "6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-amd64/sources.sha256",
+      "sha256": "6efe7f5290974fe140cb8b66bd364bce71ef5c18a742a37b01d95608d45c36a1"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-amd64/tests.log",
+      "sha256": "5ad2339586ec784fb68e67d06da6f185b0e53f508ed73f33d1441238053f8279"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-arm64/SHA256SUMS",
+      "sha256": "d18168927bc3d4d40247de30823e333ab9f2641915ea371b7779dbc90223bf33"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-arm64/build.log",
+      "sha256": "8f33a3387f6ba38b6f4a49d6fed01aafd2388bd974351cc96bd88b34baa69588"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-arm64/oblivion-copy",
+      "sha256": "8234b84bf4c739b611e855b655ac05086b94f221994dc0b6d4b6d1fffc8d6e42"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-arm64/oblivion-copy-relay",
+      "sha256": "c75c0e66ffba355db3938fd799c13581e06d5aca2f0bb9cda190f9335a6b2a8d"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-arm64/rustc.txt",
+      "sha256": "6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-arm64/sources.sha256",
+      "sha256": "6efe7f5290974fe140cb8b66bd364bce71ef5c18a742a37b01d95608d45c36a1"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/linux-arm64/tests.log",
+      "sha256": "95c1c4ff89b928db9c3f821f07539aa9c1e5c356f151d0c5489762bab9b0c137"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/vm-01.log",
+      "sha256": "c4535ba3ed50ee3485be77a92d2228711c9e04117ef20d1c80e851bb98316a5c"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/vm-image/SHA256SUMS",
+      "sha256": "f60855b63695c8e66bf5198690a93bc99e7815cc15c55a9c725a8533576aa996"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-relay/vm-image/sources.sha256",
+      "sha256": "2e66338b0ec2d7e946f839e8c0d177f01dd312bfd044234e972eb3dab2bc8b80"
+    }
+  ]
+}
