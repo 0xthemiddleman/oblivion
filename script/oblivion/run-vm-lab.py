@@ -21,6 +21,8 @@ parser.add_argument("--refresh-tui-test", action="store_true",
     help="Load the current synthetic TUI test into the lab initramfs, without rebuilding Debian")
 parser.add_argument("--services-bundle", type=Path,
     help="Load compiled host binaries, service units and the crash fixture into laboratory RAM")
+parser.add_argument("--gateway-bundle", type=Path,
+    help="Run gateway component tests in a swap-free Debian VM with loopback only")
 args = parser.parse_args()
 if (platform.system(), platform.machine()) != ("Darwin", "arm64"):
     raise SystemExit("This laboratory runner currently requires macOS ARM64/HVF.")
@@ -32,19 +34,20 @@ output.mkdir(parents=True, exist_ok=False)
 initrd = image / "initrd"
 fixture = None
 bundle_manifest = None
-fixture_name = "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
-if args.refresh_tui_test and args.services_bundle:
+bundle = args.services_bundle or args.gateway_bundle
+fixture_name = "vm-gateway-test.py" if args.gateway_bundle else "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
+if sum(bool(option) for option in (args.refresh_tui_test, args.services_bundle, args.gateway_bundle)) > 1:
     raise SystemExit("Choose one laboratory fixture override.")
-if args.refresh_tui_test or args.services_bundle:
+if args.refresh_tui_test or bundle:
     if not (image / "tui-lab").exists():
         raise SystemExit("The fixture override requires a tui-host laboratory image.")
     fixture = Path(__file__).with_name(fixture_name).read_bytes()
-    if args.services_bundle:
-        bundle_manifest = (args.services_bundle / "SHA256SUMS").read_text()
+    if bundle:
+        bundle_manifest = (bundle / "SHA256SUMS").read_text()
         for line in bundle_manifest.splitlines():
             digest, name = line.split()
-            if Path(name).name != name or hashlib.sha256((args.services_bundle / name).read_bytes()).hexdigest() != digest:
-                raise SystemExit("Host bundle integrity check failed.")
+            if Path(name).name != name or hashlib.sha256((bundle / name).read_bytes()).hexdigest() != digest:
+                raise SystemExit("Laboratory bundle integrity check failed.")
     # Debian's initramfs-tools executes its generated ORDER file, not every
     # executable in init-bottom. Preserve that order and append the lab hook.
     order = None
@@ -64,19 +67,20 @@ if args.refresh_tui_test or args.services_bundle:
         (root / "scripts/init-bottom").mkdir(parents=True)
         (root / "scripts/oblivion-lab-test.py").write_bytes(fixture)
         bundle_hook = ""
-        if args.services_bundle:
+        if bundle:
             (root / "scripts/oblivion-host").mkdir()
             # Copy only manifest-covered inputs; a previous export may have left
             # stale units in the output directory after a source file was removed.
             for name in [line.split()[1] for line in bundle_manifest.splitlines()] + ["SHA256SUMS"]:
-                shutil.copy2(args.services_bundle / name, root / "scripts/oblivion-host" / name)
+                shutil.copy2(bundle / name, root / "scripts/oblivion-host" / name)
             bundle_hook = ('mkdir /run/oblivion-lab-bundle\n'
-                'mount -t tmpfs -o mode=0755,nodev,nosuid,size=16m tmpfs /run/oblivion-lab-bundle\n'
+                'mount -t tmpfs -o mode=0755,nodev,nosuid,size=64m tmpfs /run/oblivion-lab-bundle\n'
                 'cp -a /scripts/oblivion-host/. /run/oblivion-lab-bundle/\n'
-                'mount -o remount,ro /run/oblivion-lab-bundle\n'
-                'for binary in oblivion-storage oblivion-storage-lab oblivion-control oblivion-manager; do\n'
-                ' mount --bind "/run/oblivion-lab-bundle/$binary" "${rootmnt:-/root}/usr/bin/$binary"\n'
-                'done\n')
+                'mount -o remount,ro /run/oblivion-lab-bundle\n')
+            if args.services_bundle:
+                bundle_hook += ('for binary in oblivion-storage oblivion-storage-lab oblivion-control oblivion-manager; do\n'
+                    ' mount --bind "/run/oblivion-lab-bundle/$binary" "${rootmnt:-/root}/usr/bin/$binary"\n'
+                    'done\n')
         hook = root / "scripts/init-bottom/zz-oblivion-lab-fixture"
         hook.write_text('#!/bin/sh\nset -eu\ncase "${1:-}" in prereqs) exit 0;; esac\n'
             'mount --bind /scripts/oblivion-lab-test.py "${rootmnt:-/root}/usr/libexec/oblivion-vm-test"\n' + bundle_hook)
@@ -88,25 +92,29 @@ if args.refresh_tui_test or args.services_bundle:
     # Linux accepts concatenated compressed initramfs archives. Only the
     # test and optional host bundle are overlaid; guest filesystems stay fixed.
     initrd.write_bytes((image / "initrd").read_bytes() + gzip.compress(archive, mtime=0))
-disk = output / "data.raw"
-with disk.open("xb") as stream:
-    stream.truncate(1024 * 1024 * 1024)
+disk = None if args.gateway_bundle else output / "data.raw"
+if disk:
+    with disk.open("xb") as stream:
+        stream.truncate(1024 * 1024 * 1024)
 started = time.monotonic()
 with (output / "serial.log").open("xb") as log:
     result = subprocess.run([
         "qemu-system-aarch64", "-machine", "virt", "-accel", "hvf", "-cpu", "host",
-        "-m", "4096", "-smp", "4", "-nodefaults", "-no-reboot", "-display", "none",
+        "-m", "1024" if args.gateway_bundle else "4096", "-smp", "4", "-nodefaults", "-no-reboot", "-display", "none",
         "-monitor", "none", "-serial", "stdio", "-nic", "none",
         "-kernel", str(image / "kernel"), "-initrd", str(initrd),
         "-append", "console=ttyAMA0 root=/dev/vda rootfstype=squashfs ro panic=-1 systemd.getty_auto=no systemd.show_status=false",
         "-drive", f"file={image / 'host.squashfs'},format=raw,if=none,id=root,readonly=on",
         "-device", "virtio-blk-pci,drive=root",
+    ] + ([
         "-drive", f"file={disk},format=raw,if=none,id=data,cache=none",
         "-device", "virtio-blk-pci,drive=data",
-    ], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+    ] if disk else []), stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
 serial = (output / "serial.log").read_text(errors="replace")
-fixture_verified = fixture is None or (("OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 ") + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
-bundle_verified = bundle_manifest is None or ("OBLIVION_HOST_BUNDLE_SHA256 " + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
+fixture_prefix = "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
+fixture_verified = fixture is None or (fixture_prefix + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
+bundle_prefix = "OBLIVION_GATEWAY_BUNDLE_SHA256 " if args.gateway_bundle else "OBLIVION_HOST_BUNDLE_SHA256 "
+bundle_verified = bundle_manifest is None or (bundle_prefix + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
 markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVION_VM_TEMP_CANARY_d9ae",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
 if (image / "opencode.sha256").exists():
@@ -121,25 +129,27 @@ if (image / "tui-lab").exists():
         (output / f"{name}.png").write_bytes(base64.b64decode(data, validate=True))
 found = set()
 digest = hashlib.sha256()
-with disk.open("rb") as stream:
-    overlap = b""
-    while chunk := stream.read(4 * 1024 * 1024):
-        digest.update(chunk)
-        found.update(marker.decode() for marker in markers if marker in overlap + chunk)
-        overlap = chunk[-128:]
+if disk:
+    with disk.open("rb") as stream:
+        overlap = b""
+        while chunk := stream.read(4 * 1024 * 1024):
+            digest.update(chunk)
+            found.update(marker.decode() for marker in markers if marker in overlap + chunk)
+            overlap = chunk[-128:]
 summary = {
-    "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
-    "workload": "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
-    "outer_accelerator": "hvf", "inner_accelerator": "tcg", "production_kvm_tested": False,
+    "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
+    "workload": "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
+    "outer_accelerator": "hvf", "inner_accelerator": None if args.gateway_bundle else "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
     "checks": [line.strip() for line in serial.splitlines() if line.startswith("PASS:")],
     "guest_pass": "OBLIVION_VM_LAB_PASS" in serial, "plaintext_markers_on_disk": sorted(found),
-    "disk_sha256": digest.hexdigest(), "image_manifest": (image / "SHA256SUMS").read_text(),
+    "disk_sha256": digest.hexdigest() if disk else None, "image_manifest": (image / "SHA256SUMS").read_text(),
     "compiled_sources": (image / "sources.sha256").read_text(),
-    "opencode_sha256": (image / "opencode.sha256").read_text().split()[0] if (image / "opencode.sha256").exists() else None,
+    "opencode_sha256": (image / "opencode.sha256").read_text().split()[0] if (image / "opencode.sha256").exists() and not args.gateway_bundle else None,
     "lab_initrd_sha256": hashlib.sha256(initrd.read_bytes()).hexdigest(),
     "runtime_fixture_override": {"file": fixture_name, "sha256": hashlib.sha256(fixture).hexdigest()} if fixture is not None else None,
-    "runtime_host_bundle": {"manifest": bundle_manifest, "sources": (args.services_bundle / "sources.sha256").read_text(), "verified_in_guest": bundle_verified} if bundle_manifest else None,
+    "runtime_host_bundle": {"manifest": bundle_manifest, "sources": (bundle / "sources.sha256").read_text(), "verified_in_guest": bundle_verified} if args.services_bundle else None,
+    "runtime_gateway_bundle": {"manifest": bundle_manifest, "sources": (bundle / "sources.sha256").read_text(), "verified_in_guest": bundle_verified} if args.gateway_bundle else None,
     "fixture_verified": fixture_verified,
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

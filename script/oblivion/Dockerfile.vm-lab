@@ -88,3 +88,26 @@ RUN sh /pack
 
 FROM scratch AS artifacts
 COPY --from=pack /out/ /
+
+# Component-only gateway bundle. Reuse the compiler layers without exporting a
+# large development image; run the inherited-FD tests in the swap-free VM.
+FROM compiler AS gateway-compiler
+WORKDIR /gateway
+ENV CARGO_TARGET_DIR=/tmp/target
+COPY packages/oblivion-gateway/ ./
+RUN cargo fetch --locked
+RUN --network=none cargo test --locked --offline --lib --features lab-emulation \
+    && cargo test --locked --offline --no-run --features lab-emulation \
+    && mkdir /gateway-bundle \
+    && cp /tmp/target/debug/oblivion-api /gateway-bundle/oblivion-api-lab \
+    && cp $(find /tmp/target/debug/deps -type f -name 'oblivion_gateway-*' -executable) /gateway-bundle/gateway-tests \
+    && cp $(find /tmp/target/debug/deps -type f -name 'activation-*' -executable) /gateway-bundle/activation-tests \
+    && cargo build --locked --offline --bin oblivion-api \
+    && cp /tmp/target/debug/oblivion-api /gateway-bundle/oblivion-api \
+    && strip /gateway-bundle/* \
+    && find Cargo.toml Cargo.lock .cargo src tests -type f -print0 | sort -z | xargs -0 sha256sum > /gateway-bundle/sources.sha256 \
+    && rustc --version > /gateway-bundle/compiler.txt \
+    && cd /gateway-bundle && sha256sum * > SHA256SUMS
+
+FROM scratch AS gateway-artifacts
+COPY --from=gateway-compiler /gateway-bundle/ /

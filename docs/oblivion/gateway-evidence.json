@@ -1,0 +1,154 @@
+{
+  "date": "2026-10-24",
+  "scope": "API broker component only; synthetic SOCKS5/TLS and credentials; no real provider, Tor, VM-to-VM network or guest adapter integration",
+  "sources": {
+    "packages/oblivion-gateway/.cargo/config.toml": "aabd2af12e26033cb8de9b63841b54574718406e4479b47e41bc0d92fc6f14e0",
+    "packages/oblivion-gateway/Cargo.lock": "52db2e02e3a398a0111f88ef1c80f1d255d36ef7588938ddf1e151cefa523c9a",
+    "packages/oblivion-gateway/Cargo.toml": "65b7fee5a5e2b0fffdc25182941fd598032d6b0db5ef90a2cae8b54d62947cd5",
+    "packages/oblivion-gateway/src/broker/tests.rs": "c5bf4cdcdbcfbb03f755850316544d52ac882744a3abf56dd5d19facff487be6",
+    "packages/oblivion-gateway/src/broker.rs": "07aa5ef007032add91dc2a12200f4164c62080de45ace048baf45f4018dd3d32",
+    "packages/oblivion-gateway/src/lib.rs": "e05e5159a7f08d0f74b8be9c8e30e5c35a7716c859b84508d2671cdbfd8502ac",
+    "packages/oblivion-gateway/src/main.rs": "d4321f3abc3f3a86a921bba2b07cb83f2d241a2f5c1680bbf794a8512f82168b",
+    "packages/oblivion-gateway/src/request.rs": "b74e8927bd78e8378a164e37f1d5fa2a461bc93bee1075d4a2c896592252c2c0",
+    "packages/oblivion-gateway/tests/activation.rs": "a1dbc53394a45f7142970829f2e4bb4d54b778b58959089158c86a43d1e6d47a"
+  },
+  "macos": {
+    "architecture": "arm64",
+    "compiler": "rustc 1.92.0 (ded5c06cf 2025-12-08)",
+    "unit_and_process_tests": 14,
+    "repeated_under_cpu_load": {
+      "platform": "macOS ARM64",
+      "cpu_load_processes": 2,
+      "proxy_environment": "conflicting proxies plus NO_PROXY=*",
+      "runs": [
+        {
+          "run": 1,
+          "passed": 14,
+          "seconds": 2.403,
+          "output_sha256": "ae1ab6e53d0b20d43d340c681128bdae59b2ea54b83748625d8a461686a7c0f9"
+        },
+        {
+          "run": 2,
+          "passed": 14,
+          "seconds": 0.336,
+          "output_sha256": "25e27e44c683d60f7c21310a396cd5ca5bdb12943b3b38d775214629809be569"
+        },
+        {
+          "run": 3,
+          "passed": 14,
+          "seconds": 0.347,
+          "output_sha256": "8a79f1b8b8db3af259fc9a7824b33727adb6b6d01e4d804ea71ccf2f3220879e"
+        },
+        {
+          "run": 4,
+          "passed": 14,
+          "seconds": 0.367,
+          "output_sha256": "6ff6041024c7e65e15c625b73ee4be9b23413b9e956deff9368715654cbc20c8"
+        },
+        {
+          "run": 5,
+          "passed": 14,
+          "seconds": 0.356,
+          "output_sha256": "2eb5539226c9146383b2513d06d2b8d448150f2cb2ab452069fe9bd5a4c83df9"
+        },
+        {
+          "run": 6,
+          "passed": 14,
+          "seconds": 0.367,
+          "output_sha256": "cf76709271c89317275a812f7015ba050eb67f3ae94914e9afbde95d59ffd37e"
+        },
+        {
+          "run": 7,
+          "passed": 14,
+          "seconds": 0.494,
+          "output_sha256": "b64cc58505103449260e83b60c927680f5eba0b64e4efe64174fd69bcddd0992"
+        },
+        {
+          "run": 8,
+          "passed": 14,
+          "seconds": 0.54,
+          "output_sha256": "066be86e5dafb785b1376a8a11893d30ae09eb8b9de6c55243b9789cf24b165e"
+        },
+        {
+          "run": 9,
+          "passed": 14,
+          "seconds": 0.642,
+          "output_sha256": "9a9c53d2cfa8401ce05ea6099cdca12932d392103735cddc13b7c84c8da1da70"
+        },
+        {
+          "run": 10,
+          "passed": 14,
+          "seconds": 0.53,
+          "output_sha256": "da64f137212e20a733640c4b8893b938f16563688f13463c8fd9cc09f6921597"
+        }
+      ]
+    },
+    "clippy": "passed with -D warnings",
+    "format": "passed"
+  },
+  "debian_arm": {
+    "compiler": "rustc 1.85.1 (4eb161250 2025-03-15) (built from a source tarball)",
+    "base_image_manifest_sha256": "60745c1fb4fa9f27174a4d22c7bbf36eaef87cbd56e8044fbf99bd5a24eabff2",
+    "outer_accelerator": "hvf",
+    "nested_vm": false,
+    "swap": false,
+    "interfaces": ["lo"],
+    "data_disk_attached": false,
+    "seconds": 2.27,
+    "checks": [
+      "PASS: Debian ARM laboratory has no swap, no external network interface and verified gateway binaries",
+      "PASS: gateway-tests: broker::tests::denies_auth_endpoints_and_encoding_without_network",
+      "PASS: gateway-tests: broker::tests::client_disconnect_cancels_upstream_inference",
+      "PASS: gateway-tests: broker::tests::accepts_inline_images_pdf_and_normalizes_duplicate_keys",
+      "PASS: gateway-tests: broker::tests::rejects_provider_features_and_remote_media_before_contacting_socks",
+      "PASS: gateway-tests: broker::tests::rejects_untrusted_tls_and_does_not_fall_back_when_proxy_is_down",
+      "PASS: gateway-tests: broker::tests::limits_concurrency_and_revokes_requests_waiting_for_response_headers",
+      "PASS: gateway-tests: broker::tests::refuses_oversized_and_malformed_requests_before_socks",
+      "PASS: gateway-tests: broker::tests::refuses_redirects_and_sanitizes_provider_errors",
+      "PASS: gateway-tests: broker::tests::revocation_closes_streams_and_old_token_is_rejected_by_next_grant",
+      "PASS: gateway-tests: broker::tests::streams_native_tool_history_through_remote_dns_and_replaces_credentials",
+      "PASS: activation-tests: missing_inherited_sockets_fail_before_runtime_allocates_descriptors",
+      "PASS: activation-tests: inherited_control_grants_once_and_eof_revokes_without_logs",
+      "PASS: activation-tests: control_byte_and_sigterm_both_revoke_the_process",
+      "PASS: activation-tests: invalid_startup_has_no_credential_or_payload_diagnostics",
+      "PASS: production binary rejects execution as root",
+      "PASS: production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero",
+      "PASS: production API rejects a wrong token and fails closed with SOCKS unavailable",
+      "PASS: production controller disconnect removes the listener and exits without stdout or stderr"
+    ],
+    "bundle_manifest": "547755c7388d32a8fc6da9fe5ed9373793f2b654214df7ca6be06b412efe8faf  activation-tests\n6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88  compiler.txt\nd7e69c837dbd51e51ca4e1524ad9773912f6afc0f66ca3e0c100680082079972  gateway-tests\nbb6b3b418bad56f6cf8020902ac354438fc77d8bc9c1f47d6215253453454360  oblivion-api\n9461326eada03bd043a2fe8cb2dce8d3c86f96d7962c6a7f9fc07f051f6b2362  oblivion-api-lab\n75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  sources.sha256\n",
+    "bundle_sources": "aabd2af12e26033cb8de9b63841b54574718406e4479b47e41bc0d92fc6f14e0  .cargo/config.toml\n52db2e02e3a398a0111f88ef1c80f1d255d36ef7588938ddf1e151cefa523c9a  Cargo.lock\n65b7fee5a5e2b0fffdc25182941fd598032d6b0db5ef90a2cae8b54d62947cd5  Cargo.toml\n07aa5ef007032add91dc2a12200f4164c62080de45ace048baf45f4018dd3d32  src/broker.rs\nc5bf4cdcdbcfbb03f755850316544d52ac882744a3abf56dd5d19facff487be6  src/broker/tests.rs\ne05e5159a7f08d0f74b8be9c8e30e5c35a7716c859b84508d2671cdbfd8502ac  src/lib.rs\nd4321f3abc3f3a86a921bba2b07cb83f2d241a2f5c1680bbf794a8512f82168b  src/main.rs\nb74e8927bd78e8378a164e37f1d5fa2a461bc93bee1075d4a2c896592252c2c0  src/request.rs\na1dbc53394a45f7142970829f2e4bb4d54b778b58959089158c86a43d1e6d47a  tests/activation.rs\n",
+    "fixture_verified": true,
+    "bundle_verified": true,
+    "fixture_sha256": "5adcb915f5111a5e2af8f34d1a70c78b356d89eea9c8a33ccfb7a55562af5945",
+    "runner_sha256": "512249f9eb63c8222e7b29ad726a3f9fc729bd32eefe1ae6fd361c1983a9dd07",
+    "initrd_sha256": "2c2470c83e795715f5317fe01a6c684e73a556b6c43e3c9a234792e3ca03333d",
+    "serial_sha256": "d1690675d50087249172e14d164e58a5b2eaf5753831146b50942e0406036fab",
+    "local_artifacts": "artifacts/oblivion-gateway/run-02"
+  },
+  "repository_check": {
+    "result": "lint passed; 34 typecheck tasks passed from cache",
+    "log_sha256": "a748094bc1864aae5b94e2e8c1019bed15761addb38b58ff0c39cc4e6ce140d0"
+  },
+  "previous_attempts": [
+    {
+      "environment": "Docker Desktop Debian ARM",
+      "result": "library tests passed; process activation refused because /proc/swaps contains an active swap file; not disabled or bypassed"
+    },
+    {
+      "environment": "Debian HVF run-01",
+      "result": "14 Rust tests and root rejection passed; fixture failed on trailing spaces in /proc/PID/limits, corrected before run-02"
+    }
+  ],
+  "remaining_gates": [
+    "gateway VM and externally enforced networking",
+    "Tor and DNS/private-address policy",
+    "tool destination authorization and revocation",
+    "controller lifecycle and LUKS credential delivery",
+    "real OpenCode adapter through broker",
+    "full filesystem and packet tracing",
+    "slow peers, oversized response and hostname-mismatch fault tests",
+    "real Abliteration via Tor",
+    "target hardware and independent review"
+  ]
+}

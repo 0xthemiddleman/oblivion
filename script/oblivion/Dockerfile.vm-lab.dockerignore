@@ -15,6 +15,16 @@ packages/oblivion-host/*
 !packages/oblivion-host/guest/**
 !packages/oblivion-host/host/
 !packages/oblivion-host/host/**
+!packages/oblivion-gateway/
+packages/oblivion-gateway/*
+!packages/oblivion-gateway/Cargo.toml
+!packages/oblivion-gateway/Cargo.lock
+!packages/oblivion-gateway/.cargo/
+!packages/oblivion-gateway/.cargo/**
+!packages/oblivion-gateway/src/
+!packages/oblivion-gateway/src/**
+!packages/oblivion-gateway/tests/
+!packages/oblivion-gateway/tests/**
 !script/
 script/*
 !script/oblivion/
