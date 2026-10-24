@@ -2,6 +2,7 @@ use crate::storage::{Error, Result, lock_named, require};
 use crate::vm::{self, Role};
 use oblivion_host::channel::Channel;
 use oblivion_transport::Transport;
+use oblivion_transport::policy::Tools;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -18,7 +19,11 @@ const SOCKET: &str = "/run/oblivion/gateway-control.sock";
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "operation", rename_all = "kebab-case", deny_unknown_fields)]
 enum Request<'a> {
-    Grant { token: &'a str },
+    Grant {
+        token: &'a str,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tools: Option<Tools>,
+    },
     Revoke {},
     Check {},
     Stop {},
@@ -103,8 +108,8 @@ pub fn prepare() -> Result<Zeroizing<String>> {
     Ok(token)
 }
 
-pub fn grant(token: &str) -> Result<()> {
-    request(&Request::Grant { token }, true)
+pub fn grant(token: &str, tools: Option<Tools>) -> Result<()> {
+    request(&Request::Grant { token, tools }, true)
 }
 
 pub fn revoke() -> Result<()> {
@@ -261,7 +266,7 @@ fn connected(key: Zeroizing<Vec<u8>>, transport: Transport, network: bool) -> Re
                     return Ok(());
                 }
                 let next = match request {
-                    Request::Grant { token } => {
+                    Request::Grant { token, .. } => {
                         require(
                             !active
                                 && token.len() == 64

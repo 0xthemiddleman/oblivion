@@ -1,5 +1,6 @@
 use crate::storage::{Error, Result, require};
 use oblivion_host::channel::Channel;
+use oblivion_transport::policy::Tools;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fs::{self, OpenOptions};
@@ -117,13 +118,13 @@ impl Config {
         Ok(())
     }
 
-    pub fn start(&self, token: Option<&str>) -> Result<()> {
+    pub fn start(&self, token: Option<&str>, tools: Option<Tools>) -> Result<()> {
         self.launch(Role::Session, token.is_some())?;
         if let Some(token) = token {
             let stream = UnixStream::connect("/run/oblivion-session/token.sock")
                 .map_err(|_| Error("session_channel_unavailable"))?;
             crate::gateway::peer(&stream, VM_UID)?;
-            crate::gateway::grant(token)?;
+            crate::gateway::grant(token, tools)?;
             let mut channel = Channel::new(&stream, Duration::from_secs(60));
             qmp(Role::Session, "cont")?;
             let mut ready = [0u8; 6];

@@ -47,8 +47,9 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
             | "set-api-key"
             | "api-keys"
             | "egress"
+            | "network-policy"
     );
-    let limit = if matches!(operation.as_str(), "api-keys" | "egress") {
+    let limit = if matches!(operation.as_str(), "api-keys" | "egress" | "network-policy") {
         4096
     } else {
         1024

@@ -49,10 +49,11 @@ del grant chiude l'intera autorizzazione. Avvio parziale, EOF, byte sul canale
 e segnali devono rimuovere listener e connessioni. La [prova del servizio](tools-service-evidence.json)
 supera 56 controlli in una VM ARM senza swap: 28 test di libreria, dieci di
 attivazione, hardening dei binari di produzione e due prove dell'adapter.
-Il percorso completo dei tool attraverso supervisore e firewall deve ancora
-essere eseguito. Il controller host non invia ancora `tools`, quindi il servizio non
-si attiva nel normale ciclo delle sessioni. Questa aggiunta non completa il
-SOCKS globale.
+Il [percorso completo dei tool](tools-vm-evidence.json) supera quattro casi
+VM attraverso supervisore e firewall, con client Python. Il controller host
+ora invia `tools` quando esiste una policy salvata o scelta in RAM; la nuova
+integrazione host deve ancora superare le prove Linux. Senza policy il servizio
+rimane spento. Bun/webfetch resta da collegare prima di completare il SOCKS globale.
 Le nuove prove di componente usano socket reali per autorizzazione, indirizzi,
 separazione delle credenziali e revoca. Passano tutti i 28 test di libreria;
 i risultati precedenti non coprono questa aggiunta.
@@ -213,11 +214,11 @@ lifecycle host e volumi e proxy dei tool. Finché questi gate restano aperti
 non è dichiarato il supporto SOCKS globale.
 
 Il runner aggiunge ora `--tools` per attivare esplicitamente il terzo processo
-con una policy sintetica. Sono preparati quattro casi CI: revoca con SOCKS
+con una policy sintetica. Passano quattro casi CI: revoca con SOCKS
 autenticato e senza autenticazione, crash del proxy tool e crash del connettore.
-La verifica completa nelle VM è ancora da eseguire. Le fixture locali passano
-otto scambi HTTP/HTTPS con verifica del certificato e chiusura degli stream;
-questa prova non esegue i binari Rust o il firewall.
+Le [evidenze](tools-vm-evidence.json), sul commit `1190fcf`, registrano 13
+controlli per caso e tutti i 29 job CI verdi. HTTP e HTTPS verificato attraversano
+i binari Rust e il firewall; revoca e crash chiudono insieme gli stream API e tool.
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 script/oblivion/run-transport-lab.py \

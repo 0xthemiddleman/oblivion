@@ -1,0 +1,390 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1",
+  "status": "integrated-tools-vm-matrix-passed",
+  "scope": "Two read-only Debian ARM64 VMs under TCG, production gateway processes and firewall, native loopback SOCKS/TLS fixture and Python chat peer. No real provider or Tor tools traffic.",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40108659715",
+    "run_id": 40108659715,
+    "conclusion": "success",
+    "successful_jobs": 29
+  },
+  "cases": [
+    {
+      "authentication": "none",
+      "fault": "revoke",
+      "job_id": 120916272549,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts the expected grant processes, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "tools reject invalid tokens, denied/ask/unknown destinations, wrong ports and private addresses before contacting SOCKS",
+        "tools HTTP and verified client-side HTTPS cross the real supervisor, firewall and policy connector without API key or local proxy headers at the destination",
+        "compromised chat cannot forward; API/tools/Tor UIDs cannot use external SOCKS; API/tools/connector cannot bypass through local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "revoke closes both active tools HTTP and CONNECT/TLS streams at the external peer and chat",
+        "revoke closes an established upstream TLS stream and the chat response",
+        "shutdown removes all grant processes and route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "seconds": 109.46,
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0,
+        "tools_pid": 360,
+        "tools_uid": 1301,
+        "tools_caps": 0
+      },
+      "proxy": {
+        "contacts": 9,
+        "single_method": 9,
+        "http_requests": 3,
+        "finished": 9,
+        "tools_requests": 4,
+        "tools_http": 2,
+        "tools_https": 2,
+        "method_rejected": 1,
+        "connect_rejected": 1,
+        "stream_started": 1,
+        "tools_stream_started": 2,
+        "tools_stream_closed": 2,
+        "stream_closed": 1
+      },
+      "stopped": {
+        "supervisor": "inactive",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "tools_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 207,
+        "ipv4": 205,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 205,
+        "ipv4_fragments": 0,
+        "sha256": "0a8938803db2d83346af4b8f421975957b4ec9f87d077e7191fd9eba51f2052a"
+      },
+      "sources": {
+        "run-transport-lab.py": "210b8b6f71f161969ee14ae42dd12046377e1d33f715cbe1856cd73549748866",
+        "run-network-lab.py": "1e81102c66765dfa22d0081ba99948cce981f1e88e1086ad8bb3358ab0e3d5ab",
+        "transport_fixture.py": "6a282900653d1b6941c03e3845c6c52265842f9b08725e7b471df1163aefd4d6",
+        "packet_capture.py": "37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86",
+        "vm-stream-cert.pem": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+        "vm-stream-key.pem": "3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb"
+      },
+      "image_manifest": "b2b9a6592085c27229827cb6f7652d9eb0bcc618029bd94d1c0e66d92d311dd5  binaries.sha256\n6681d0ea947bd7cec565b02508b9da62318069c5eb65fb2f11484650ec78c66e  broker-sources.sha256\n355ccde0ddad5ab7209ab749857be92901506ad87d3ce4cbaf7bece7fde14d5d  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n85edc46621f0fd5bfbead088cb2e40facf407d60d4a5b45a4dfd5a51c398f10d  laboratory.squashfs\nd74175b24ae3bde2f3482875a63d39fb4775cc9a4845903844e125fe7fe8666c  sources.sha256\n8786ebfab9dfc3330a694d3c69f374999803a36f8a7f70928aa31378993cea78  trust.diff\n"
+    },
+    {
+      "authentication": "required",
+      "fault": "egress-crash",
+      "job_id": 120916272720,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts the expected grant processes, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "tools reject invalid tokens, denied/ask/unknown destinations, wrong ports and private addresses before contacting SOCKS",
+        "tools HTTP and verified client-side HTTPS cross the real supervisor, firewall and policy connector without API key or local proxy headers at the destination",
+        "compromised chat cannot forward; API/tools/Tor UIDs cannot use external SOCKS; API/tools/connector cannot bypass through local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "egress-crash closes both active tools HTTP and CONNECT/TLS streams at the external peer and chat",
+        "egress-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes all grant processes and route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "seconds": 112.25,
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0,
+        "tools_pid": 361,
+        "tools_uid": 1301,
+        "tools_caps": 0
+      },
+      "proxy": {
+        "contacts": 10,
+        "single_method": 10,
+        "http_requests": 3,
+        "finished": 10,
+        "tools_requests": 4,
+        "tools_http": 2,
+        "tools_https": 2,
+        "method_rejected": 1,
+        "auth_rejected": 1,
+        "connect_rejected": 1,
+        "stream_started": 1,
+        "tools_stream_started": 2,
+        "tools_stream_closed": 2,
+        "stream_closed": 1
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "tools_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 241,
+        "ipv4": 239,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 239,
+        "ipv4_fragments": 0,
+        "sha256": "860d2c7e74c0e212872bfb944f3b1cf8703d41add095af04c79011429a257675"
+      },
+      "sources": {
+        "run-transport-lab.py": "210b8b6f71f161969ee14ae42dd12046377e1d33f715cbe1856cd73549748866",
+        "run-network-lab.py": "1e81102c66765dfa22d0081ba99948cce981f1e88e1086ad8bb3358ab0e3d5ab",
+        "transport_fixture.py": "6a282900653d1b6941c03e3845c6c52265842f9b08725e7b471df1163aefd4d6",
+        "packet_capture.py": "37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86",
+        "vm-stream-cert.pem": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+        "vm-stream-key.pem": "3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb"
+      },
+      "image_manifest": "b2b9a6592085c27229827cb6f7652d9eb0bcc618029bd94d1c0e66d92d311dd5  binaries.sha256\n6681d0ea947bd7cec565b02508b9da62318069c5eb65fb2f11484650ec78c66e  broker-sources.sha256\n355ccde0ddad5ab7209ab749857be92901506ad87d3ce4cbaf7bece7fde14d5d  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n85edc46621f0fd5bfbead088cb2e40facf407d60d4a5b45a4dfd5a51c398f10d  laboratory.squashfs\nd74175b24ae3bde2f3482875a63d39fb4775cc9a4845903844e125fe7fe8666c  sources.sha256\n8786ebfab9dfc3330a694d3c69f374999803a36f8a7f70928aa31378993cea78  trust.diff\n"
+    },
+    {
+      "authentication": "required",
+      "fault": "revoke",
+      "job_id": 120916272561,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts the expected grant processes, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "tools reject invalid tokens, denied/ask/unknown destinations, wrong ports and private addresses before contacting SOCKS",
+        "tools HTTP and verified client-side HTTPS cross the real supervisor, firewall and policy connector without API key or local proxy headers at the destination",
+        "compromised chat cannot forward; API/tools/Tor UIDs cannot use external SOCKS; API/tools/connector cannot bypass through local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "revoke closes both active tools HTTP and CONNECT/TLS streams at the external peer and chat",
+        "revoke closes an established upstream TLS stream and the chat response",
+        "shutdown removes all grant processes and route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "seconds": 117.6,
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0,
+        "tools_pid": 360,
+        "tools_uid": 1301,
+        "tools_caps": 0
+      },
+      "proxy": {
+        "contacts": 10,
+        "single_method": 10,
+        "http_requests": 3,
+        "finished": 10,
+        "tools_requests": 4,
+        "tools_http": 2,
+        "tools_https": 2,
+        "method_rejected": 1,
+        "auth_rejected": 1,
+        "connect_rejected": 1,
+        "stream_started": 1,
+        "tools_stream_started": 2,
+        "tools_stream_closed": 2,
+        "stream_closed": 1
+      },
+      "stopped": {
+        "supervisor": "inactive",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "tools_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 241,
+        "ipv4": 239,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 239,
+        "ipv4_fragments": 0,
+        "sha256": "01f5a0cacf0de9949f80051625c8e595ce117f75c7faae808e7efe34c6829a60"
+      },
+      "sources": {
+        "run-transport-lab.py": "210b8b6f71f161969ee14ae42dd12046377e1d33f715cbe1856cd73549748866",
+        "run-network-lab.py": "1e81102c66765dfa22d0081ba99948cce981f1e88e1086ad8bb3358ab0e3d5ab",
+        "transport_fixture.py": "6a282900653d1b6941c03e3845c6c52265842f9b08725e7b471df1163aefd4d6",
+        "packet_capture.py": "37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86",
+        "vm-stream-cert.pem": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+        "vm-stream-key.pem": "3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb"
+      },
+      "image_manifest": "b2b9a6592085c27229827cb6f7652d9eb0bcc618029bd94d1c0e66d92d311dd5  binaries.sha256\n6681d0ea947bd7cec565b02508b9da62318069c5eb65fb2f11484650ec78c66e  broker-sources.sha256\n355ccde0ddad5ab7209ab749857be92901506ad87d3ce4cbaf7bece7fde14d5d  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n85edc46621f0fd5bfbead088cb2e40facf407d60d4a5b45a4dfd5a51c398f10d  laboratory.squashfs\nd74175b24ae3bde2f3482875a63d39fb4775cc9a4845903844e125fe7fe8666c  sources.sha256\n8786ebfab9dfc3330a694d3c69f374999803a36f8a7f70928aa31378993cea78  trust.diff\n"
+    },
+    {
+      "authentication": "required",
+      "fault": "tools-crash",
+      "job_id": 120916272529,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts the expected grant processes, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "tools reject invalid tokens, denied/ask/unknown destinations, wrong ports and private addresses before contacting SOCKS",
+        "tools HTTP and verified client-side HTTPS cross the real supervisor, firewall and policy connector without API key or local proxy headers at the destination",
+        "compromised chat cannot forward; API/tools/Tor UIDs cannot use external SOCKS; API/tools/connector cannot bypass through local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "tools-crash closes both active tools HTTP and CONNECT/TLS streams at the external peer and chat",
+        "tools-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes all grant processes and route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "seconds": 112.97,
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0,
+        "tools_pid": 360,
+        "tools_uid": 1301,
+        "tools_caps": 0
+      },
+      "proxy": {
+        "contacts": 10,
+        "single_method": 10,
+        "http_requests": 3,
+        "finished": 10,
+        "tools_requests": 4,
+        "tools_http": 2,
+        "tools_https": 2,
+        "method_rejected": 1,
+        "auth_rejected": 1,
+        "connect_rejected": 1,
+        "stream_started": 1,
+        "tools_stream_started": 2,
+        "tools_stream_closed": 2,
+        "stream_closed": 1
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "tools_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 239,
+        "ipv4": 237,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 237,
+        "ipv4_fragments": 0,
+        "sha256": "8c54c15f8d351abed8fa1553c183f7754b707a168e93473eb1709f2239628254"
+      },
+      "sources": {
+        "run-transport-lab.py": "210b8b6f71f161969ee14ae42dd12046377e1d33f715cbe1856cd73549748866",
+        "run-network-lab.py": "1e81102c66765dfa22d0081ba99948cce981f1e88e1086ad8bb3358ab0e3d5ab",
+        "transport_fixture.py": "6a282900653d1b6941c03e3845c6c52265842f9b08725e7b471df1163aefd4d6",
+        "packet_capture.py": "37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86",
+        "vm-stream-cert.pem": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+        "vm-stream-key.pem": "3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb"
+      },
+      "image_manifest": "b2b9a6592085c27229827cb6f7652d9eb0bcc618029bd94d1c0e66d92d311dd5  binaries.sha256\n6681d0ea947bd7cec565b02508b9da62318069c5eb65fb2f11484650ec78c66e  broker-sources.sha256\n355ccde0ddad5ab7209ab749857be92901506ad87d3ce4cbaf7bece7fde14d5d  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n85edc46621f0fd5bfbead088cb2e40facf407d60d4a5b45a4dfd5a51c398f10d  laboratory.squashfs\nd74175b24ae3bde2f3482875a63d39fb4775cc9a4845903844e125fe7fe8666c  sources.sha256\n8786ebfab9dfc3330a694d3c69f374999803a36f8a7f70928aa31378993cea78  trust.diff\n"
+    }
+  ],
+  "retained_evidence": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-none-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/summary.json",
+      "sha256": "bdc810247d5545fb4cf2b035719ab4ec4a0ee7d89a6a5de138239cd5e7abaa68"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-none-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway-outside.pcap",
+      "sha256": "0a8938803db2d83346af4b8f421975957b4ec9f87d077e7191fd9eba51f2052a"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-none-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway.log",
+      "sha256": "f002a9b6876319793d4d77ef9ded0bb33ee1a07b5ba84786a3237792f328f3e8"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-none-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/chat.log",
+      "sha256": "8f9c7453bee04ec1709cba069fb656532beffde3ab44177c22962f1072c8e17c"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-egress-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/summary.json",
+      "sha256": "ef8004fac2200d9d3982e1c791f56e0cd798ee32addc0df36784fdeae05e4b94"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-egress-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway-outside.pcap",
+      "sha256": "860d2c7e74c0e212872bfb944f3b1cf8703d41add095af04c79011429a257675"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-egress-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway.log",
+      "sha256": "e8ce8bb1bea8f9f11813e2f1f8cc2129eccf9564d483fce79ec4a415f34167b5"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-egress-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/chat.log",
+      "sha256": "f3b16aae170657de811f422ef9f2cb2d6118a707e8a43acf93f847240f17f073"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/summary.json",
+      "sha256": "c7fd7152d9a8ea12eb971b67f0fe9bd86daae78ca05edb3633e8b7df038f533c"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway-outside.pcap",
+      "sha256": "01f5a0cacf0de9949f80051625c8e595ce117f75c7faae808e7efe34c6829a60"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway.log",
+      "sha256": "09d17c964013eb20562e57607728bac9a0e9528704a5f1011c79ed9a74b76b86"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-revoke-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/chat.log",
+      "sha256": "8b26fe2c1f1b0e13755a61defe2ead88fce0900814a37cbc2c46eb257f0bcd4f"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-tools-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/summary.json",
+      "sha256": "91094fe2b3f13d20f86237ef736fa1a72b1977259f6121ba7ef9618f1a7d4a6c"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-tools-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway-outside.pcap",
+      "sha256": "8c54c15f8d351abed8fa1553c183f7754b707a168e93473eb1709f2239628254"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-tools-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/gateway.log",
+      "sha256": "d766f50a408cc6da9890a34ce3a0d9cf5750384b98ab9603033ed1aa657f97e9"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/tools-evidence/oblivion-network-evidence-tools-required-tools-crash-1190fcf37f4f511e2b3ee8f19fd7a198e02c67c1/results/case/chat.log",
+      "sha256": "fec0b906e913d59487844a0cb9983cf3355a34464b8d79e796699796eb64d542"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-1190fcf/jobs.json",
+      "sha256": "b32d58fae2ff478a330d951594f0706f5de991bc5e984edf91bf385382ca0837"
+    }
+  ],
+  "limits": [
+    "The Python peer does not prove Bun/OpenCode webfetch or shell proxy compatibility.",
+    "This commit predates host policy persistence, trusted manager editing and host grant integration.",
+    "Interactive ask, approval expiry and revocation of individual permissions are not implemented.",
+    "TCG laboratory results do not establish hardware isolation or the behavior of an arbitrary remote SOCKS proxy.",
+    "This report does not diagnose the earlier host console reopening failure."
+  ]
+}

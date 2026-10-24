@@ -35,6 +35,10 @@ TOR_SELECT = json.dumps({"action": "select", "transport": {"mode": "tor"}}).enco
 PROXY_SAVE = json.dumps({"action": "save", "transport": PROXY}).encode()
 PROXY_SELECT = json.dumps({"action": "select", "transport": PROXY}).encode()
 SAVED_TRANSPORT = b'{"action":"saved"}'
+WEB_RULE = {"destination": "oblivion-policy.example.com", "port": 443, "action": "allow"}
+WEB_SAVE = json.dumps({"action": "put", "rule": WEB_RULE, "save": True}).encode()
+WEB_SELECT = json.dumps({"action": "put", "rule": {**WEB_RULE, "action": "deny"}, "save": False}).encode()
+SAVED_POLICY = b'{"action":"saved"}'
 CONTROLLER = "oblivion-controller.service"
 MANAGER = "oblivion-manager.service"
 RECOVER = "oblivion-recover.service"
@@ -349,6 +353,7 @@ with socket.socket(socket.AF_UNIX) as client:
     check("fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request")
     assert status()["api_key_present"] is None and status()["egress"] is None
     assert command("egress", secret=TOR_SAVE, success=False) == "general_not_open"
+    assert command("network-policy", secret=WEB_SAVE, success=False) == "general_not_open"
     assert command("set-api-key", secret=API_KEY, success=False) == "general_not_writable"
     assert command("clear-api-key", success=False) == "general_not_writable"
     send(b"d", "Premi D di nuovo")
@@ -460,6 +465,58 @@ with socket.socket(socket.AF_UNIX) as client:
     command("egress", secret=PROXY_SAVE)
     assert transport_file.read_bytes() == saved_transport
     check("full-disk transport update preserves the prior profile; retry replaces the interrupted private staging file")
+    assert status()["network_policy"] == {"policy": {"version": 1, "rules": []}, "enabled": False, "temporary": False}
+    send(b"w", "regole web")
+    send(b"a", "Dominio, *.dominio o IP pubblico")
+    send(WEB_RULE["destination"].encode() + b"\r", "Porta di destinazione")
+    send(b"443\r", "attualmente blocca")
+    send(b"a", "Salva nel generale cifrato")
+    send(b"s", "Consenti oblivion-policy.example.com:443")
+    policy_file = Path("/run/oblivion/general/profile/network-policy.json")
+    policy_selection = Path("/run/oblivion/network-policy-selection.json")
+    saved_policy = policy_file.read_bytes()
+    assert json.loads(saved_policy) == {"version": 1, "rules": [WEB_RULE]}
+    assert policy_file.stat().st_uid == 0 and policy_file.stat().st_mode & 0o777 == 0o600
+    forbidden = subprocess.run(["cat", str(policy_file)], user=1000, group=1000, extra_groups=[], capture_output=True)
+    assert forbidden.returncode != 0 and not forbidden.stdout
+    send(b"d", "Rimuovi regola")
+    send(b"\x1b", "Consenti oblivion-policy.example.com:443")
+    send(b"d", "Rimuovi regola")
+    send(b"t", "Nessuna regola.")
+    assert status()["network_policy"]["temporary"] and policy_file.read_bytes() == saved_policy
+    send(b"p", "Consenti oblivion-policy.example.com:443")
+    assert not policy_selection.exists()
+    send(b"\x1b", "Sessioni protette")
+    check("trusted web rules menu saves a root-owned policy, cancellation preserves it and temporary removal restores from the encrypted profile")
+    for body in [b'{"action":"saved","extra":true}',
+            json.dumps({"action":"put","rule":{**WEB_RULE,"destination":"127.0.0.1"},"save":True}).encode()]:
+        assert command("network-policy", secret=body, success=False) == "invalid_network_command"
+        assert policy_file.read_bytes() == saved_policy
+    pending_policy = policy_file.with_suffix(".json.pending")
+    pending_policy.symlink_to(policy_file)
+    assert command("network-policy", secret=WEB_SAVE, success=False) == "file_unavailable"
+    pending_policy.unlink()
+    os.link(policy_file, pending_policy)
+    assert command("network-policy", secret=WEB_SAVE, success=False) == "unsafe_file"
+    pending_policy.unlink()
+    pending_policy.write_bytes(b"interrupted-network-policy")
+    command("network-policy", secret=WEB_SAVE)
+    assert not pending_policy.exists() and policy_file.read_bytes() == saved_policy
+    command("network-policy", secret=WEB_SELECT)
+    policy_file.write_bytes(b'{"version":999}')
+    assert command("status", success=False) == "invalid_network_policy"
+    policy_file.write_bytes(saved_policy)
+    assert status()["network_policy"]["temporary"]
+    check("unknown fields, reserved destinations, staging aliases and a corrupt saved policy fail closed even with a RAM override")
+    before_selection = policy_selection.read_bytes()
+    policy_filler = policy_file.with_name("policy-space-fixture")
+    fill_profile(policy_filler)
+    assert command("network-policy", secret=WEB_SAVE, success=False) == "network_policy_write_failed"
+    assert policy_file.read_bytes() == saved_policy and policy_selection.read_bytes() == before_selection
+    policy_filler.unlink()
+    command("network-policy", secret=WEB_SAVE)
+    assert not policy_selection.exists() and policy_file.read_bytes() == saved_policy
+    check("full-disk policy replacement preserves both the saved file and RAM selection; retry publishes and clears the override")
     for secret in [b"too short", b"invalid-key with-spaces", b"invalid-key-with-newline\n"]:
         assert command("set-api-key", secret=secret, success=False) == "invalid_api_key"
         assert stored_key() == API_KEY
@@ -554,6 +611,10 @@ with socket.socket(socket.AF_UNIX) as client:
         assert command("egress", secret=body, success=False) == "session_must_be_closed"
     assert transport_file.read_bytes() == saved_transport
     check("active chat blocks persistent, temporary and saved-profile transport changes")
+    for body in [WEB_SAVE, WEB_SELECT, SAVED_POLICY]:
+        assert command("network-policy", secret=body, success=False) == "session_must_be_closed"
+    assert policy_file.read_bytes() == saved_policy
+    check("an active chat blocks every saved or temporary web policy change")
     check("key picker chooses the opening credential; an active session blocks key mutations and identity changes")
     send(b"\x1d", "Sessioni protette")
     send(b"g", "chiavi Abliteration")
@@ -592,12 +653,22 @@ with socket.socket(socket.AF_UNIX) as client:
     assert not selection_file.exists()
     command("egress", secret=TOR_SELECT)
     assert transport_file.read_bytes() == saved_transport
+    assert command("network-policy", secret=WEB_SAVE, success=False) == "general_not_writable"
+    command("network-policy", secret=WEB_SELECT)
+    assert status()["network_policy"]["temporary"] and policy_selection.exists()
+    assert status()["network_policy"]["policy"]["rules"][0]["action"] == "deny"
+    assert policy_file.read_bytes() == saved_policy
+    command("network-policy", secret=SAVED_POLICY)
+    assert not policy_selection.exists()
+    command("network-policy", secret=WEB_SELECT)
     pending_id = next(Path("/run/oblivion/general/sessions").glob("*.pending")).stem
     assert command("discard-session-pending", pending_id, success=False) == "general_not_writable"
     assert status()["incomplete_sessions"] == []
     command("lock")
     assert file_digest("/data/general.luks") == encrypted_before
     assert not selection_file.exists()
+    assert not policy_selection.exists() and status()["network_policy"] is None
+    check("read-only web policy overrides use only RAM, clear on lock and leave the encrypted profile byte-identical")
     check("read-only transport choices use RAM, clear on lock and leave the entire encrypted image byte-identical")
     check("read-only profile exposes key metadata and permits RAM selection, rejects all key mutations and pending deletion, and remains byte-identical")
     terminal.reset()
@@ -680,7 +751,8 @@ with socket.socket(socket.AF_UNIX) as client:
     assert current["recovery_required"] and current["session_open"] and current["general_open"], current
     for operation, arguments, secret in [("create", [], PASSWORD), ("enter", [session_id], PASSWORD),
             ("unlock", [], GENERAL), ("unlock-ephemeral", [], GENERAL),
-            ("set-api-key", [], NEXT_API_KEY), ("clear-api-key", [], b""), ("egress", [], TOR_SELECT)]:
+            ("set-api-key", [], NEXT_API_KEY), ("clear-api-key", [], b""), ("egress", [], TOR_SELECT),
+            ("network-policy", [], WEB_SELECT)]:
         assert command(operation, *arguments, secret=secret, success=False) == "recovery_required"
     rejected = subprocess.run(["/usr/bin/oblivion-control", "create"], input=PASSWORD,
         capture_output=True, user=1000, group=1000, extra_groups=[], timeout=30)

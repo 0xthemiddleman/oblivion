@@ -33,7 +33,7 @@ pub fn protect() -> Result<()> {
 
 fn connect(operation: &str, session: Option<&str>, secret: &[u8]) -> Result<UnixStream> {
     if secret.len()
-        > if matches!(operation, "api-keys" | "egress") {
+        > if matches!(operation, "api-keys" | "egress" | "network-policy") {
             4096
         } else {
             1024

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Unprivileged guest probe for the real host grant and gateway network."""
+import base64
 import http.client
 import hashlib
 import json
@@ -30,6 +31,17 @@ def request(bearer, body):
     return code, payload
 
 
+def tools_request(bearer, target):
+    client = http.client.HTTPConnection('10.88.0.1', 8112, timeout=20)
+    auth = base64.b64encode(('oblivion-tools:' + bearer).encode()).decode()
+    client.request('CONNECT', target, headers={'Host': target, 'Proxy-Authorization': 'Basic ' + auth})
+    response = client.getresponse()
+    code, payload = response.status, response.read()
+    assert token.encode() not in payload
+    client.close()
+    return code
+
+
 with Path('/usr/bin/oblivion').open('rb') as binary:
     print('OBLIVION_SESSION_CLIENT_SHA256 ' + hashlib.file_digest(binary, 'sha256').hexdigest(), flush=True)
 print('OBLIVION_SESSION_READY', flush=True)
@@ -53,6 +65,12 @@ for command in sys.stdin:
         # outer log or a persisted file. The host uses it to test stale grants.
         print('TOKEN ' + token, flush=True)
         print('OBLIVION_SESSION_PROBED', flush=True)
+    elif command == 'tools-denied':
+        assert tools_request('0' * 64, 'denied.example.com:443') == 407
+        assert tools_request(token, 'denied.example.com:443') == 403
+        assert tools_request(token, 'unknown.example.com:443') == 403
+        assert tools_request(token, '127.0.0.1:443') == 400
+        print('OBLIVION_TOOLS_POLICY_ENFORCED', flush=True)
     elif command.startswith('old '):
         assert request(command[4:], {})[0] == 401
         assert request(token, {})[0] == 400
@@ -63,6 +81,9 @@ for command in sys.stdin:
             raise AssertionError('broker survived revocation')
         except OSError:
             pass
+        with socket.socket() as proxy:
+            proxy.settimeout(1)
+            assert proxy.connect_ex(('10.88.0.1', 8112)) != 0
         print('OBLIVION_SESSION_REVOKED', flush=True)
     elif command == 'stream':
         assert stream_child is None

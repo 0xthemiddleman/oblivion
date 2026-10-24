@@ -1,6 +1,7 @@
 use oblivion_host::control::{self, Result};
 use oblivion_host::terminal::{self, ACTION, BRAND, CLEAR, FEEDBACK, LOGO, RESET, Terminal};
-use oblivion_host::{egress, keys};
+use oblivion_host::{egress, keys, network};
+use oblivion_transport::policy::{Action, Rule};
 use oblivion_transport::{Authentication, Metadata, Transport};
 use serde::Deserialize;
 
@@ -23,6 +24,7 @@ struct Status {
     api_key_present: Option<bool>,
     api_keys: Option<keys::Status>,
     egress: Option<egress::Status>,
+    network_policy: Option<network::Status>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
@@ -109,7 +111,7 @@ fn run(preview: bool) -> Result<()> {
         {
             view.push_str(" SESSIONE ANCORA APERTA\r\n\r\n [Invio] Console   [C] Chiudi e blocca\r\n [F] Chiusura forzata\r\n");
         } else if status.general_readonly {
-            view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [G] Scegli chiave API  [R] Rete  [B] Blocca\r\n");
+            view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [G] Scegli chiave API  [R] Rete  [W] Regole web  [B] Blocca\r\n");
         } else {
             view.push_str(if incomplete {
                 " Creazioni interrotte - mai aperte come chat\r\n\r\n"
@@ -159,7 +161,7 @@ fn run(preview: bool) -> Result<()> {
             }
             if let Some(egress) = &status.egress {
                 view.push_str(&format!(
-                    " Rete: {}{}  [R] Configura\r\n",
+                    " Rete: {}{}  [R] Trasporto  [W] Regole web\r\n",
                     transport_label(&egress.selected),
                     if egress.temporary {
                         " (temporanea)"
@@ -289,6 +291,17 @@ fn run(preview: bool) -> Result<()> {
                 transport_menu(&mut terminal)?;
                 return Ok(());
             }
+            if key == b'w' {
+                network_menu(
+                    &mut terminal,
+                    if incomplete {
+                        None
+                    } else {
+                        sessions.get(selected).map(String::as_str)
+                    },
+                )?;
+                return Ok(());
+            }
             if key == b'g' {
                 key_menu(&mut terminal, false)?;
                 return Ok(());
@@ -393,6 +406,9 @@ fn run(preview: bool) -> Result<()> {
                 "invalid_proxy_endpoint" => "Proxy non valido: indica un IPv4 e una porta; loopback e rete interna non sono ammessi.",
                 "invalid_proxy_authentication" => "Username e password SOCKS devono contenere da 1 a 255 byte, senza caratteri di controllo.",
                 "external_proxy_requires_network" => "La rete è disabilitata in questa immagine: il proxy esterno non può essere attivato.",
+                "invalid_destination" | "invalid_destination_port" | "invalid_destination_pattern" | "reserved_destination" => "Destinazione non valida: usa un dominio pubblico (anche *.example.com), un IP pubblico e una porta da 1 a 65535.",
+                "too_many_network_rules" => "Sono ammesse al massimo 128 regole web.",
+                "network_rule_missing" => "La regola non esiste più. Riapri il menu delle regole web.",
                 "session_must_be_closed" => "Chiudi la sessione prima di cambiare chiave o percorso di rete.",
                 "session_channel_failed" | "invalid_session_ready" => "La sessione non ha completato l'avvio protetto. Chiudila prima di riprovare.",
                 "insufficient_space" => {
@@ -504,6 +520,130 @@ fn transport_menu(terminal: &mut Terminal) -> Result<()> {
     busy(terminal, "Cambio del percorso di rete")?;
     control::request("egress", None, &bytes)?;
     Ok(())
+}
+
+fn network_menu(terminal: &mut Terminal, session: Option<&str>) -> Result<()> {
+    let mut selected = 0usize;
+    loop {
+        let status: Status = serde_json::from_str(&control::request("status", None, &[])?)?;
+        let network = status.network_policy.ok_or("general_not_open")?;
+        let rules = network.policy.rules();
+        selected = selected.min(rules.len().saturating_sub(1));
+        let mut view = format!(
+            "{CLEAR}{BRAND} OBLIVION - regole web{RESET}\r\n\r\n {}\r\n Destinazioni senza regola: bloccate in attesa di autorizzazione.\r\n\r\n",
+            if network.temporary {
+                "Regole temporanee fino al blocco del generale."
+            } else if network.enabled {
+                "Regole salvate nel generale cifrato."
+            } else {
+                "Nessuna destinazione web autorizzata."
+            }
+        );
+        let size = terminal.size();
+        let limit = size.0.saturating_sub(13).max(1) as usize;
+        for (index, rule) in rules
+            .iter()
+            .enumerate()
+            .skip(selected.saturating_sub(limit - 1))
+            .take(limit)
+        {
+            let label = format!(
+                " {} {} {}:{} [{}]",
+                if index == selected { ">" } else { " " },
+                match rule.action() {
+                    Action::Allow => "Consenti",
+                    Action::Deny => "Blocca",
+                    Action::Ask => "Chiedi",
+                },
+                rule.destination(),
+                rule.port(),
+                rule.session().map(|id| &id[..8]).unwrap_or("globale")
+            );
+            let width = size.1.saturating_sub(2) as usize;
+            view.push_str(&label[..label.len().min(width)]);
+            view.push_str(if label.len() > width { "~\r\n" } else { "\r\n" });
+        }
+        if rules.is_empty() {
+            view.push_str(" Nessuna regola.\r\n");
+        }
+        view.push_str(&format!("\r\n {ACTION}[A] Aggiungi/modifica  [D] Rimuovi  [J/K] Seleziona\r\n [P] Usa regole salvate  [Esc] Indietro{RESET}\r\n Chiedi: bloccato; conferme interattive non ancora disponibili.\r\n"));
+        terminal.flush_input();
+        terminal.write(&view)?;
+        let key = terminal.input(-1)?;
+        let removing = match key.as_slice() {
+            b"\x1b" => return Ok(()),
+            b"j" | b"J" | b"\x1b[B" => {
+                selected = (selected + 1).min(rules.len().saturating_sub(1));
+                continue;
+            }
+            b"k" | b"K" | b"\x1b[A" => {
+                selected = selected.saturating_sub(1);
+                continue;
+            }
+            b"p" | b"P" => {
+                control::request("network-policy", None, br#"{"action":"saved"}"#)?;
+                continue;
+            }
+            b"a" | b"A" => false,
+            b"d" | b"D" if !rules.is_empty() => true,
+            _ => continue,
+        };
+        let rule = if removing {
+            rules[selected].clone()
+        } else {
+            let Some(destination) =
+                terminal.text("Dominio, *.dominio o IP pubblico - senza URL o porta")?
+            else {
+                continue;
+            };
+            let Some(port) = terminal.text("Porta di destinazione (esempio 443 per HTTPS)")? else {
+                continue;
+            };
+            let port = port
+                .parse::<u16>()
+                .map_err(|_| "invalid_destination_port")?;
+            terminal.flush_input();
+            terminal.write(&format!("{CLEAR} Regola web\r\n\r\n [A] Consenti  [D] Blocca  [C] Chiedi (attualmente blocca)\r\n [Esc] Annulla"))?;
+            let action = match terminal.input(-1)?.as_slice() {
+                b"a" | b"A" => Action::Allow,
+                b"d" | b"D" => Action::Deny,
+                b"c" | b"C" => Action::Ask,
+                _ => continue,
+            };
+            let scope = if let Some(id) = session {
+                terminal.flush_input();
+                terminal.write(&format!("{CLEAR} Ambito della regola\r\n\r\n [G] Tutte le sessioni\r\n [S] Solo sessione {}\r\n [Esc] Annulla", &id[..8]))?;
+                match terminal.input(-1)?.as_slice() {
+                    b"g" | b"G" => None,
+                    b"s" | b"S" => Some(id.to_owned()),
+                    _ => continue,
+                }
+            } else {
+                None
+            };
+            Rule::new(destination, port, action, scope)?
+        };
+        terminal.flush_input();
+        terminal.write(&format!("{CLEAR} {} regola {}:{} [{}]\r\n Azione: {}\r\n\r\n Autorizzare una destinazione permette ai tool di inviarle dati.\r\n Blocca prevale su Chiedi, che prevale su Consenti.\r\n\r\n {}[T] Applica fino al blocco del generale\r\n [Esc] Annulla",
+            if removing { "Rimuovi" } else { "Imposta" }, rule.destination(), rule.port(), rule.session().unwrap_or("globale"),
+            match rule.action() { Action::Allow => "Consenti", Action::Deny => "Blocca", Action::Ask => "Chiedi" },
+            if status.general_readonly { "Profilo in sola lettura.\r\n " } else { "[S] Salva nel generale cifrato tutte le regole attuali\r\n " }))?;
+        let save = match terminal.input(-1)?.as_slice() {
+            b"s" | b"S" if !status.general_readonly => true,
+            b"t" | b"T" => false,
+            _ => continue,
+        };
+        let command = if removing {
+            network::Command::Remove { rule, save }
+        } else {
+            network::Command::Put { rule, save }
+        };
+        control::request(
+            "network-policy",
+            None,
+            &zeroize::Zeroizing::new(serde_json::to_vec(&command)?),
+        )?;
+    }
 }
 
 fn proxy_settings(terminal: &mut Terminal) -> Result<Option<Transport>> {

@@ -1,4 +1,5 @@
-use oblivion_host::{egress, keys};
+use oblivion_host::{egress, keys, network};
+use oblivion_transport::policy::{Policy, Session, Tools};
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::fs::{self, File, OpenOptions};
@@ -52,6 +53,7 @@ struct Status {
     api_key_present: Option<bool>,
     api_keys: Option<keys::Status>,
     egress: Option<egress::Status>,
+    network_policy: Option<network::Status>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
@@ -118,6 +120,7 @@ pub fn main() -> Result<()> {
             | "clear-api-key"
             | "api-keys"
             | "egress"
+            | "network-policy"
     ) {
         require(!recovery_required()?, "recovery_required")?;
     }
@@ -152,6 +155,7 @@ pub fn main() -> Result<()> {
             config.unlock(&password(false)?, op == "unlock-ephemeral")?;
             clear_key_selection()?;
             clear_transport_selection()?;
+            clear_network_selection()?;
             config.start_gateway()
         }
         "create" => config.create(&password(true)?),
@@ -212,6 +216,17 @@ pub fn main() -> Result<()> {
                 serde_json::from_slice(&bytes).map_err(|_| Error("invalid_transport_command"))?;
             config.change_transport(command)
         }
+        "network-policy" => {
+            let mut bytes = Zeroizing::new(Vec::new());
+            std::io::stdin()
+                .take(4097)
+                .read_to_end(&mut bytes)
+                .map_err(|_| Error("secret_read_failed"))?;
+            require(bytes.len() <= 4096, "invalid_secret_length")?;
+            let command =
+                serde_json::from_slice(&bytes).map_err(|_| Error("invalid_network_command"))?;
+            config.change_network_policy(command)
+        }
         "open" => config.open(&args[3], &password(false)?),
         "enter" => {
             let vm = config.vm.as_ref().ok_or(Error("vm_not_configured"))?;
@@ -220,6 +235,16 @@ pub fn main() -> Result<()> {
             if config.gateway.is_some() {
                 crate::gateway::ready()?;
             }
+            let tools = if config.gateway.is_some() {
+                let (saved, selected) = policy_profiles()?;
+                selected
+                    .or(saved)
+                    .map(|policy| Session::new(&args[3]).map(|session| Tools { session, policy }))
+                    .transpose()
+                    .map_err(Error)?
+            } else {
+                None
+            };
             config.open(&args[3], &password(false)?)?;
             // Failed startup keeps the vault interlocked until explicit leave/lock.
             let result = (|| {
@@ -228,7 +253,7 @@ pub fn main() -> Result<()> {
                 } else {
                     None
                 };
-                vm.start(token.as_deref().map(String::as_str))
+                vm.start(token.as_deref().map(String::as_str), tools)
             })();
             if result.is_err() && config.gateway.is_some() {
                 crate::gateway::revoke()?;
@@ -256,6 +281,7 @@ pub fn main() -> Result<()> {
             close_general()?;
             clear_key_selection()?;
             clear_transport_selection()?;
+            clear_network_selection()?;
             if recovery_required()? {
                 fs::remove_file(RECOVERY).map_err(|_| Error("recovery_clear_failed"))?;
             }
@@ -317,6 +343,12 @@ pub fn main() -> Result<()> {
                 },
                 api_key_present: api_keys.as_ref().map(|keys| keys.selected.is_some()),
                 api_keys,
+                network_policy: if mode == MountMode::Closed {
+                    None
+                } else {
+                    let (saved, selected) = policy_profiles()?;
+                    Some(network::Status::new(saved, selected))
+                },
                 egress: if mode == MountMode::Closed {
                     None
                 } else {
@@ -339,6 +371,48 @@ pub fn main() -> Result<()> {
 }
 
 impl Config {
+    fn change_network_policy(&self, command: network::Command) -> Result<()> {
+        let mode = mount_mode()?;
+        require(mode != MountMode::Closed, "general_not_open")?;
+        require(
+            !mapping_open("oblivion-session")? && crate::vm::stopped()?,
+            "session_must_be_closed",
+        )?;
+        let (saved, selected) = policy_profiles()?;
+        let mut policy = selected.or(saved).unwrap_or_default();
+        let save = match command {
+            network::Command::Saved {} => return clear_network_selection(),
+            network::Command::Put { rule, save } => {
+                require(
+                    !save || mode == MountMode::ReadWrite,
+                    "general_not_writable",
+                )?;
+                policy.put(rule).map_err(Error)?;
+                save
+            }
+            network::Command::Remove { rule, save } => {
+                require(
+                    !save || mode == MountMode::ReadWrite,
+                    "general_not_writable",
+                )?;
+                policy.remove(&rule).map_err(Error)?;
+                save
+            }
+        };
+        let path = Path::new(if save { PROFILE } else { RUN }).join(if save {
+            "network-policy.json"
+        } else {
+            "network-policy-selection.json"
+        });
+        write_network_policy(&path, &policy, save)?;
+        // Publish the complete saved policy before discarding a RAM selection.
+        // A failed write must preserve both the previous file and selection.
+        if save {
+            clear_network_selection()?;
+        }
+        Ok(())
+    }
+
     fn change_transport(&self, command: egress::Command) -> Result<()> {
         let mode = mount_mode()?;
         require(mode != MountMode::Closed, "general_not_open")?;
@@ -751,6 +825,90 @@ fn transport_profiles() -> Result<(egress::Profile, Option<egress::Profile>)> {
         saved,
         read_transport_profile(&Path::new(RUN).join("transport-selection.json"))?,
     ))
+}
+
+fn policy_profiles() -> Result<(Option<Policy>, Option<Policy>)> {
+    let saved = if profile_directory()? {
+        read_network_policy(&Path::new(PROFILE).join("network-policy.json"))?
+    } else {
+        None
+    };
+    Ok((
+        saved,
+        read_network_policy(&Path::new(RUN).join("network-policy-selection.json"))?,
+    ))
+}
+
+fn read_network_policy(path: &Path) -> Result<Option<Policy>> {
+    match fs::symlink_metadata(path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(Error("network_policy_unavailable")),
+        Ok(_) => {}
+    }
+    let mut bytes = Zeroizing::new(Vec::new());
+    trusted_file(path)?
+        .take(network::LIMIT as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| Error("network_policy_unavailable"))?;
+    require(bytes.len() <= network::LIMIT, "invalid_network_policy")?;
+    serde_json::from_slice(&bytes)
+        .map(Some)
+        .map_err(|_| Error("invalid_network_policy"))
+}
+
+fn clear_network_selection() -> Result<()> {
+    for name in [
+        "network-policy-selection.json",
+        "network-policy-selection.json.pending",
+    ] {
+        let path = Path::new(RUN).join(name);
+        match fs::symlink_metadata(&path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => return Err(Error("selection_unavailable")),
+            Ok(_) => {}
+        }
+        trusted_file(&path)?;
+        fs::remove_file(path).map_err(|_| Error("selection_write_failed"))?;
+    }
+    Ok(())
+}
+
+fn write_network_policy(path: &Path, policy: &Policy, durable: bool) -> Result<()> {
+    let pending = path.with_extension("json.pending");
+    for existing in [path, &pending] {
+        match fs::symlink_metadata(existing) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => return Err(Error("network_policy_unavailable")),
+            Ok(_) => {
+                trusted_file(existing)?;
+            }
+        }
+    }
+    let bytes = Zeroizing::new(
+        serde_json::to_vec(policy).map_err(|_| Error("network_policy_encode_failed"))?,
+    );
+    require(bytes.len() <= network::LIMIT, "invalid_network_policy")?;
+    if pending.exists() {
+        fs::remove_file(&pending).map_err(|_| Error("network_policy_write_failed"))?;
+    }
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(&pending)
+        .map_err(|_| Error("network_policy_write_failed"))?;
+    file.write_all(&bytes)
+        .map_err(|_| Error("network_policy_write_failed"))?;
+    if durable {
+        file.sync_all()
+            .map_err(|_| Error("network_policy_write_failed"))?;
+    }
+    fs::rename(pending, path).map_err(|_| Error("network_policy_write_failed"))?;
+    if durable {
+        sync_directory(path.parent().ok_or(Error("invalid_path"))?)?;
+    }
+    Ok(())
 }
 
 fn read_transport_profile(path: &Path) -> Result<Option<egress::Profile>> {

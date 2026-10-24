@@ -1,6 +1,7 @@
 use oblivion_transport::Transport;
-use oblivion_transport::policy::{Action, Destination, Policy, Session};
-use serde::{Deserialize, Serialize};
+pub use oblivion_transport::policy::Tools;
+use oblivion_transport::policy::{Action, Destination};
+use serde::Deserialize;
 use std::{
     io,
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
@@ -29,13 +30,6 @@ pub struct Credentials {
     pub session_token: Zeroizing<String>,
     #[serde(default)]
     pub tools: Option<Tools>,
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-pub struct Tools {
-    pub session: Session,
-    pub policy: Policy,
 }
 
 // One connector per grant. Tools admission requires explicit trusted

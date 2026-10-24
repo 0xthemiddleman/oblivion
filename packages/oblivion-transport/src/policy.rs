@@ -42,6 +42,13 @@ impl Destination {
 #[serde(try_from = "String")]
 pub struct Session(String);
 
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Tools {
+    pub session: Session,
+    pub policy: Policy,
+}
+
 impl Session {
     pub fn new(id: &str) -> Result<Self, &'static str> {
         session(id)?;
@@ -72,14 +79,85 @@ struct Input {
     rules: Vec<Rule>,
 }
 
-#[derive(Deserialize, Serialize)]
-#[serde(deny_unknown_fields)]
-struct Rule {
+#[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(try_from = "RuleInput")]
+pub struct Rule {
     destination: String,
     port: u16,
     action: Action,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     session: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RuleInput {
+    destination: String,
+    port: u16,
+    action: Action,
+    #[serde(default)]
+    session: Option<String>,
+}
+
+impl Rule {
+    pub fn new(
+        destination: String,
+        port: u16,
+        action: Action,
+        session: Option<String>,
+    ) -> Result<Self, &'static str> {
+        RuleInput {
+            destination,
+            port,
+            action,
+            session,
+        }
+        .try_into()
+    }
+
+    pub fn destination(&self) -> &str {
+        &self.destination
+    }
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+    pub fn action(&self) -> Action {
+        self.action
+    }
+    pub fn session(&self) -> Option<&str> {
+        self.session.as_deref()
+    }
+}
+
+impl TryFrom<RuleInput> for Rule {
+    type Error = &'static str;
+
+    fn try_from(input: RuleInput) -> Result<Self, Self::Error> {
+        if let Some(id) = &input.session {
+            session(id)?;
+        }
+        let wildcard = input.destination.starts_with("*.");
+        let target = Destination::new(
+            input
+                .destination
+                .strip_prefix("*.")
+                .unwrap_or(&input.destination),
+            input.port,
+        )?;
+        if wildcard && target.host.parse::<IpAddr>().is_ok() {
+            return Err("invalid_destination_pattern");
+        }
+        Ok(Self {
+            destination: if wildcard {
+                format!("*.{}", target.host)
+            } else {
+                target.host
+            },
+            port: input.port,
+            action: input.action,
+            session: input.session,
+        })
+    }
 }
 
 impl Default for Policy {
@@ -98,36 +176,42 @@ impl TryFrom<Input> for Policy {
         if input.version != 1 || input.rules.len() > RULE_LIMIT {
             return Err("invalid_network_policy");
         }
-        let rules = input
-            .rules
-            .into_iter()
-            .map(|mut rule| {
-                if let Some(id) = &rule.session {
-                    session(id)?;
-                }
-                let wildcard = rule.destination.starts_with("*.");
-                let target = Destination::new(
-                    rule.destination
-                        .strip_prefix("*.")
-                        .unwrap_or(&rule.destination),
-                    rule.port,
-                )?;
-                if wildcard && target.host.parse::<IpAddr>().is_ok() {
-                    return Err("invalid_destination_pattern");
-                }
-                rule.destination = if wildcard {
-                    format!("*.{}", target.host)
-                } else {
-                    target.host
-                };
-                Ok(rule)
-            })
-            .collect::<Result<Vec<_>, Self::Error>>()?;
-        Ok(Self { version: 1, rules })
+        Ok(Self {
+            version: 1,
+            rules: input.rules,
+        })
     }
 }
 
 impl Policy {
+    pub fn rules(&self) -> &[Rule] {
+        &self.rules
+    }
+
+    pub fn put(&mut self, rule: Rule) -> Result<(), &'static str> {
+        let matches = |existing: &Rule| {
+            existing.destination == rule.destination
+                && existing.port == rule.port
+                && existing.session == rule.session
+        };
+        if self.rules.len() == RULE_LIMIT && !self.rules.iter().any(matches) {
+            return Err("too_many_network_rules");
+        }
+        self.rules.retain(|existing| !matches(existing));
+        self.rules.push(rule);
+        Ok(())
+    }
+
+    pub fn remove(&mut self, rule: &Rule) -> Result<(), &'static str> {
+        let index = self
+            .rules
+            .iter()
+            .position(|existing| existing == rule)
+            .ok_or("network_rule_missing")?;
+        self.rules.remove(index);
+        Ok(())
+    }
+
     // Order-independent and restrictive: any matching deny wins, then ask,
     // then allow. An unknown destination stays pending, never implicitly allowed.
     pub fn decision(&self, session: &Session, destination: &Destination) -> Action {

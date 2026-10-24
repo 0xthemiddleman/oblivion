@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.43 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.44 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -77,10 +77,17 @@ verdi, inclusi 28 controlli storage x86 e 21 dello stream host completo.
 Nessuno dei 14 marcatori sintetici cercati compare sul disco dello stream.
 Il precedente problema di riapertura non si è ripresentato, ma la causa resta
 da chiarire.
-Sono pronti quattro scenari VM del percorso tool completo, ancora da eseguire.
-Il controller host non invia una policy, quindi nel normale ciclo della
-sessione il servizio rimane spento. `ask` resta bloccato. Client Bun,
-integrazione nel manager, persistenza, conferme e scadenze sono ancora aperti.
+I [quattro scenari VM del percorso tool completo](docs/oblivion/tools-vm-evidence.json)
+passano, con 13 controlli ciascuno: HTTP e CONNECT/TLS, credenziali separate,
+regole, firewall, revoca e crash. Tutti i 29 job di questa CI sono verdi.
+Il client di questi casi è Python; Bun/webfetch resta da collegare.
+Il manager host ora permette regole globali o per sessione, salvate nel
+generale cifrato oppure applicate in RAM fino al blocco generale. Il controller
+le passa al gateway solo all'apertura della sessione; senza profilo il servizio
+tool resta spento. Passano 13 test delle regole e Clippy sul Mac. Sono aggiunte
+prove Linux di menu, persistenza, disco pieno, readonly e grant reale, ancora
+da eseguire. `ask` resta bloccato; conferme interattive, scadenze e revoca di
+singoli permessi restano aperti.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
 Nessuna modifica ai componenti della chat TUI.

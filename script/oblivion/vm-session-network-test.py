@@ -231,6 +231,15 @@ command("set-api-key", secret=KEY)
 ready()
 a = command("create", secret=PASSWORD)
 b = command("create", secret=b"synthetic-session-password-b")
+if SOCKS:
+    previous_gateway, _ = ready()
+    policy_command = json.dumps({"action": "put", "rule": {
+        "destination": "denied.example.com", "port": 443, "action": "deny", "session": a}, "save": True}).encode()
+    command("network-policy", secret=policy_command)
+    policy_file = Path("/run/oblivion/general/profile/network-policy.json")
+    assert json.loads(policy_file.read_text())["rules"][0]["session"] == a
+    assert ready()[0] == previous_gateway
+    check("a scoped web policy is saved in the encrypted profile without restarting an idle gateway")
 if STREAM:
     command("api-keys", secret=json.dumps({"action": "add", "name": "Seconda", "key": NEXT.decode()}).encode())
     initial_key, alternate_key = [entry["id"] for entry in status()["api_keys"]["entries"]]
@@ -336,6 +345,11 @@ assert not Path(f"/proc/{chat}/root/run/oblivion/gateway-control.sock").exists()
 client = console()
 first = probe(client)
 check("A receives a RAM token privately; real broker authenticates it, rejects bad tokens and reports the synthetic provider's offline probe")
+if SOCKS:
+    client.sendall(b"tools-denied\n")
+    receive(client, b"OBLIVION_TOOLS_POLICY_ENFORCED")
+    assert command("network-policy", secret=policy_command, success=False) == "session_must_be_closed"
+    check("the host grant activates the actual tools listener; invalid tokens, denied/unknown targets and private addresses fail closed, and policy changes are blocked while open")
 client.sendall(b"adapter\n")
 receive(client, b"OBLIVION_ADAPTER_AUTHENTICATED")
 check("compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error")

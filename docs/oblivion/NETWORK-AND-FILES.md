@@ -84,19 +84,39 @@ di componente in Debian ARM64: un ruolo `oblivion-tools`, abilitato soltanto da 
 privata esplicita, verifica sessione, destinazione e porta prima di contattare
 il trasporto. `ask` e `deny` chiudono la richiesta; soltanto `allow` inoltra.
 La configurazione privata è limitata a 128 KiB e la policy a 128 regole.
-Il supervisore corrente omette questa configurazione: il canale non è ancora
-disponibile al guest. Il modulo `oblivion-gateway::tools` implementa ora il
+Il supervisore accetta questa configurazione nel grant privato. Il modulo `oblivion-gateway::tools` implementa ora il
 proxy HTTP/CONNECT come componente, compilato e verificato in Debian ARM64: Basic
 con token locale, verifica dell'authority e dell'header Host, rimozione degli
 header riservati al proxy, streaming senza file intermedi e revoca anche dei
 tunnel già passati a CONNECT. Otto nuovi test passano con socket reali e un
 connettore sintetico; le [evidenze](tools-proxy-component-evidence.json) riportano
 anche il precedente errore di import corretto e le verifiche VM ancora pendenti.
-Il binario del servizio, il suo avvio nel supervisore,
-il firewall e la compatibilità di Bun/webfetch non sono ancora collegati.
-Persistenza nel generale, IPC host, conferme, scadenze e revoca dei singoli
-permessi restano da implementare.
+Il servizio, l'avvio dal supervisore e il firewall superano ora
+[quattro scenari completi nelle VM](tools-vm-evidence.json), con 13 controlli
+ciascuno: HTTP e CONNECT/TLS, separazione delle credenziali, rifiuti prima
+del SOCKS e stream chiusi alla revoca o al crash. Tutti i 29 job CI passano.
+Il client è Python: la compatibilità Bun/webfetch resta da verificare.
 La revoca dell'intero grant continua a interrompere tutte le sue connessioni.
+
+**Regole nel manager host: implementate, prove Linux pendenti.**
+`W` apre il menu separato dalla chat: aggiunta/sostituzione per destinazione,
+porta e ambito, rimozione della regola selezionata e ritorno al profilo salvato.
+Il salvataggio persiste tutte le regole attualmente selezionate, incluse
+eventuali modifiche temporanee, in `profile/network-policy.json` dentro il
+generale LUKS2, root 0600. Una scelta temporanea usa soltanto `/run/oblivion`
+e termina al blocco del generale; non è un permesso monouso né a scadenza.
+Le modifiche sono vietate a sessione aperta. In readonly si può soltanto
+selezionare in RAM. Il controller passa policy e identità opaca della sessione
+al grant; il guest non può modificarle. Senza profilo il proxy resta spento;
+un profilo esplicito vuoto lo attiva senza autorizzare destinazioni.
+
+Il formato rifiuta campi sconosciuti e un profilo salvato corrotto non viene
+nascosto da una selezione temporanea. Scrittura atomica e staging privato
+mantengono la versione precedente se il disco è pieno. I 13 test delle regole
+e Clippy passano sul Mac; nuove prove Linux coprono menu, file cifrato,
+staging, disco pieno, readonly e attivazione dal controller, ancora da eseguire.
+Conferme interattive, scadenze e revoca di singoli permessi restano da implementare;
+`ask` continua a bloccare.
 
 **Servizio API e significato delle autorizzazioni**
 

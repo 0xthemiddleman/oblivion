@@ -102,7 +102,7 @@ impl Terminal {
     }
 
     pub fn text(&mut self, title: &str) -> Result<Option<String>> {
-        self.field(title, false, "Indirizzo")?
+        self.field(title, false, "Valore")?
             .map(|bytes| String::from_utf8(bytes.to_vec()).map_err(Into::into))
             .transpose()
     }

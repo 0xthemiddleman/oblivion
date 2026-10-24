@@ -1,4 +1,5 @@
-use oblivion_transport::policy::{Action, Destination, Policy, RULE_LIMIT, Session};
+use oblivion_host::network;
+use oblivion_transport::policy::{Action, Destination, Policy, RULE_LIMIT, Rule, Session, Tools};
 use serde_json::{Value, json};
 
 const A: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -256,4 +257,109 @@ fn rule_count_is_bounded_at_the_policy_boundary() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn trusted_edits_replace_only_the_same_destination_port_and_scope() {
+    let mut policy = policy(json!([
+        {"destination":"example.com","port":443,"action":"allow"},
+        {"destination":"example.com","port":443,"action":"deny"},
+        {"destination":"example.com","port":80,"action":"deny"},
+        {"destination":"example.com","port":443,"action":"ask","session":B}
+    ]));
+    let rule = Rule::new("EXAMPLE.COM.".into(), 443, Action::Allow, None).unwrap();
+    policy.put(rule.clone()).unwrap();
+    assert_eq!(policy.rules().len(), 3);
+    assert_eq!(decide(&policy, A, "example.com", 443), Action::Allow);
+    assert_eq!(decide(&policy, B, "example.com", 443), Action::Ask);
+    assert_eq!(decide(&policy, A, "example.com", 80), Action::Deny);
+    let stale = Rule::new("example.com".into(), 443, Action::Deny, None).unwrap();
+    assert_eq!(policy.remove(&stale).err(), Some("network_rule_missing"));
+    policy.remove(&rule).unwrap();
+    assert_eq!(decide(&policy, A, "example.com", 443), Action::Ask);
+    assert_eq!(policy.remove(&rule).err(), Some("network_rule_missing"));
+}
+
+#[test]
+fn a_full_policy_allows_replacement_but_never_a_new_rule() {
+    let mut policy = Policy::default();
+    for index in 0..RULE_LIMIT {
+        policy
+            .put(
+                Rule::new(
+                    format!("site-{index}.example.com"),
+                    443,
+                    Action::Allow,
+                    None,
+                )
+                .unwrap(),
+            )
+            .unwrap();
+    }
+    let before = serde_json::to_vec(&policy).unwrap();
+    assert_eq!(
+        policy
+            .put(Rule::new("extra.example.com".into(), 443, Action::Allow, None).unwrap())
+            .err(),
+        Some("too_many_network_rules")
+    );
+    assert_eq!(serde_json::to_vec(&policy).unwrap(), before);
+    policy
+        .put(Rule::new("site-0.example.com".into(), 443, Action::Deny, None).unwrap())
+        .unwrap();
+    assert_eq!(policy.rules().len(), RULE_LIMIT);
+    assert_eq!(decide(&policy, A, "site-0.example.com", 443), Action::Deny);
+}
+
+#[test]
+fn private_edit_commands_validate_each_rule_before_mutation() {
+    for rule in [
+        json!({"destination":"127.0.0.1","port":443,"action":"allow"}),
+        json!({"destination":"example.com","port":0,"action":"allow"}),
+        json!({"destination":"example.com","port":443,"action":"allow","session":"../vault"}),
+        json!({"destination":"example.com","port":443,"action":"allow","extra":true}),
+    ] {
+        assert!(
+            serde_json::from_value::<network::Command>(
+                json!({"action":"put","rule":rule,"save":true})
+            )
+            .is_err()
+        );
+    }
+    assert!(Rule::new("*.8.8.8.8".into(), 443, Action::Allow, None).is_err());
+    assert!(
+        serde_json::from_value::<network::Command>(json!({"action":"saved","extra":true})).is_err()
+    );
+    let command: network::Command = serde_json::from_value(json!({"action":"put","rule":{"destination":"EXAMPLE.COM.","port":443,"action":"allow"},"save":false})).unwrap();
+    assert_eq!(
+        serde_json::to_value(command).unwrap()["rule"]["destination"],
+        "example.com"
+    );
+}
+
+#[test]
+fn selected_policy_and_private_grant_preserve_scope_without_a_default_allow() {
+    let saved =
+        policy(json!([{"destination":"example.com","port":443,"action":"allow","session":A}]));
+    let status = network::Status::new(Some(saved), Some(Policy::default()));
+    assert!(status.enabled && status.temporary);
+    assert_eq!(decide(&status.policy, A, "example.com", 443), Action::Ask);
+    let status = network::Status::new(None, None);
+    assert!(!status.enabled && !status.temporary && status.policy.rules().is_empty());
+    let tools = Tools {
+        session: Session::new(A).unwrap(),
+        policy: policy(json!([
+            {"destination":"EXAMPLE.COM.","port":443,"action":"allow","session":A}
+        ])),
+    };
+    let bytes = serde_json::to_vec(&tools).unwrap();
+    let decoded: Tools = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(
+        decoded.policy.decision(
+            &decoded.session,
+            &Destination::new("example.com", 443).unwrap()
+        ),
+        Action::Allow
+    );
+    assert_eq!(decide(&decoded.policy, B, "example.com", 443), Action::Ask);
 }

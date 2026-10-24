@@ -61,9 +61,15 @@ supera 56 controlli: 28 test di libreria, 10 di attivazione, hardening dei binar
 di produzione e due prove dell'adapter compilato. Tutti i 25 job passano:
 anche 28 controlli storage x86 e 21 dello stream host completo, senza nessuno
 dei 14 marcatori sintetici cercati sul disco. Il problema precedente della
-console non è stato riprodotto né spiegato. Quattro scenari del percorso tool completo sono pronti ma non ancora
-eseguiti. Il controller host non invia una policy: il servizio resta spento
-nel normale ciclo. Policy del manager, conferme e client Bun restano da collegare.
+console non è stato riprodotto né spiegato. I [quattro scenari del percorso tool completo](tools-vm-evidence.json)
+passano con 13 controlli ciascuno, inclusi HTTP e CONNECT/TLS, firewall e chiusura
+degli stream su revoca o crash. La CI termina con tutti i 29 job verdi.
+Il manager ora modifica regole globali o per sessione, salvate nel generale
+o temporanee in RAM fino al blocco; il controller le include nel grant privato.
+Passano 13 test delle regole e Clippy sul Mac. Menu, persistenza, ENOSPC,
+readonly e grant host hanno nuove prove Linux ancora da eseguire.
+Senza profilo il servizio tool resta spento. `ask` blocca; conferme interattive,
+scadenze, revoca dei singoli permessi e client Bun restano da collegare.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 
