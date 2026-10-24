@@ -607,6 +607,54 @@ assert not status()["general_open"]
 
 if SOCKS:
     assert stream_status()["active"] == []
+    encrypted_before = digest("/data/general.luks")
+    command("unlock-ephemeral", secret=GENERAL)
+    ready()
+    assert status()["general_readonly"] and status()["sessions"] == []
+    assert tor_state.read_bytes() == saved_tor_state
+    assert command("enter", a, secret=PASSWORD, success=False) == "general_not_writable"
+    command("enter-ephemeral")
+    client = console()
+    ephemeral_token = probe(client)
+    assert ephemeral_token not in tokens
+    tokens.append(ephemeral_token)
+    before_web = stream_status()["web"]
+    client.sendall(b"tools-scoped-denied\n")
+    receive(client, b"OBLIVION_OTHER_POLICY_DENIED")
+    assert stream_status()["web"] == before_web
+    check("an ephemeral VM receives a fresh private token and cannot inherit A's session-scoped web permissions")
+    client.sendall(b"stream\n")
+    receive(client, b"OBLIVION_STREAM_STARTED")
+    observed = stream_status()
+    assert observed["active"] == [4] and observed["credentials"]["4"] == "initial"
+    command("force-leave")
+    client.close()
+    stream_closed(4)
+    assert not status()["session_open"] and not Path("/run/oblivion/ephemeral.luks").exists()
+    assert "ephemeral.luks" not in run("losetup", "--list", "--output", "BACK-FILE")
+    assert digest("/data/general.luks") == encrypted_before
+    assert tor_state.read_bytes() == saved_tor_state
+    check("closing a streaming ephemeral session revokes its provider connection and removes its RAM disk without writing the general image or Tor state")
+
+    command("enter-ephemeral")
+    client = console()
+    next_ephemeral_token = probe(client)
+    assert next_ephemeral_token not in tokens
+    tokens.append(next_ephemeral_token)
+    client.sendall(b"old " + ephemeral_token + b"\n")
+    receive(client, b"OBLIVION_OLD_TOKEN_DENIED")
+    client.sendall(b"stream\n")
+    receive(client, b"OBLIVION_STREAM_STARTED")
+    assert stream_status()["active"] == [5]
+    command("lock")
+    client.close()
+    stopped()
+    stream_closed(5)
+    assert not status()["session_open"] and not status()["general_open"]
+    assert not Path("/run/oblivion/ephemeral.luks").exists()
+    assert "ephemeral.luks" not in run("losetup", "--list", "--output", "BACK-FILE")
+    assert digest("/data/general.luks") == encrypted_before
+    check("a second ephemeral VM rejects the previous token; global lock terminates its active stream, gateway and RAM volume while leaving the general image byte-identical")
     provider.terminate()
     provider.wait(timeout=10)
     Path("/run/oblivion-stream-provider.sock").unlink()
