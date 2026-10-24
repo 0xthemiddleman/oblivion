@@ -71,6 +71,20 @@ for command in sys.stdin:
         assert tools_request(token, 'unknown.example.com:443') == 403
         assert tools_request(token, '127.0.0.1:443') == 400
         print('OBLIVION_TOOLS_POLICY_ENFORCED', flush=True)
+    elif command == 'tools-scoped-denied':
+        assert tools_request(token, 'api.abliteration.ai:443') == 403
+        assert tools_request(token, 'api.abliteration.ai:80') == 403
+        print('OBLIVION_OTHER_POLICY_DENIED', flush=True)
+    elif command == 'webtools':
+        result = subprocess.run(['/usr/lib/oblivion/guest/conversation.sh', 'run', '--auto', '--format', 'json',
+            'OBLIVION_WEB_TOOLS_REQUEST'], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=180,
+            env={**os.environ, 'NODE_EXTRA_CA_CERTS': '/usr/lib/oblivion-stream-fixture/cert.pem',
+                'HTTP_PROXY': 'http://127.0.0.1:1', 'https_proxy': 'http://127.0.0.1:1',
+                'NO_PROXY': '*', 'no_proxy': '*'})
+        assert token not in result.stdout + result.stderr
+        assert result.returncode == 0, (result.returncode, result.stderr[-2000:])
+        assert 'OBLIVION_WEB_TOOLS_VERIFIED' in result.stdout, result.stdout[-4000:]
+        print('OBLIVION_COMPILED_WEBTOOLS_VERIFIED', flush=True)
     elif command.startswith('old '):
         assert request(command[4:], {})[0] == 401
         assert request(token, {})[0] == 400

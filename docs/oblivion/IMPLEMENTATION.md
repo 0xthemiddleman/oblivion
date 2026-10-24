@@ -66,10 +66,13 @@ passano con 13 controlli ciascuno, inclusi HTTP e CONNECT/TLS, firewall e chiusu
 degli stream su revoca o crash. La CI termina con tutti i 29 job verdi.
 Il manager ora modifica regole globali o per sessione, salvate nel generale
 o temporanee in RAM fino al blocco; il controller le include nel grant privato.
-Passano 13 test delle regole e Clippy sul Mac. Menu, persistenza, ENOSPC,
+Passano 13 test delle regole sul Mac e in Debian ARM64, oltre a Clippy sul Mac. Menu, persistenza, ENOSPC,
 readonly e grant host hanno nuove prove Linux ancora da eseguire.
 Senza profilo il servizio tool resta spento. `ask` blocca; conferme interattive,
-scadenze, revoca dei singoli permessi e client Bun restano da collegare.
+scadenze e revoca dei singoli permessi restano da collegare. Le variabili proxy
+sono ora nel launcher del guest, con il solo token locale. Due test nativi
+della fixture passano; la nuova prova del client compilato, di `webfetch`,
+redirect, shell e regole distinte A/B è preparata ma non ancora eseguita nelle VM.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

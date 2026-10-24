@@ -270,6 +270,7 @@ markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVIO
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
 if args.stream:
     markers.extend([b"OBLIVION_STREAM_REQUEST", b"Synthetic open stream"])
+    markers.extend([b"OBLIVION_WEB_TOOLS_REQUEST", b"OBLIVION_WEB_TOOLS_VERIFIED", b"OBLIVION_WEB_HTTP", b"OBLIVION_WEB_HTTPS"])
 if (image / "opencode.sha256").exists():
     markers.append(b"OBLIVION_GUEST_CHAT_CANARY_7eaf")
 if (image / "tui-lab").exists():

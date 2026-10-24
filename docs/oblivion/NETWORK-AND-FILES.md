@@ -53,8 +53,23 @@ descrive proxy HTTP tramite ambiente o opzione `proxy`, con CONNECT per HTTPS
 e richieste proxy HTTP per destinazioni HTTP. Questo identifica il punto di
 integrazione, senza provare il comportamento del binario fissato a Bun 1.4.4:
 occorre esercitare entrambi i protocolli con quel client, redirect compresi.
-Il servizio API locale deve continuare a usare il proprio canale ristretto;
-le credenziali del proxy esterno restano fuori da ambiente e filesystem del guest.
+Il launcher `conversation.sh` ora esporta `HTTP_PROXY`, `HTTPS_PROXY`,
+`ALL_PROXY` e le varianti minuscole verso `10.88.0.1:8112`, con username
+`oblivion-tools` e il solo token locale revocabile. `NO_PROXY`/`no_proxy`
+escludono loopback e `10.88.0.1:8111`, così server locale e broker conservano
+i loro percorsi. Le credenziali del proxy esterno restano fuori da ambiente
+e filesystem del guest. Il firewall è il confine anche per programmi che
+cambiano o ignorano queste variabili.
+
+È preparata una prova con OpenCode compilato e provider sintetico esterno:
+sei chiamate agli strumenti reali per HTTP, HTTPS, redirect a dominio vietato,
+dominio sconosciuto, porta non ammessa e programma Python lanciato dalla shell.
+La fixture controlla risultati, credenziali e assenza di contatti non ammessi;
+la sessione B deve poi rifiutare le destinazioni autorizzate solo per A.
+Il solo subprocess di prova aggiunge il certificato pubblico della fixture
+tramite `NODE_EXTRA_CA_CERTS`; non si disabilita la verifica TLS e non cambia
+la fiducia dell'immagine di produzione. Due test nativi della fixture passano
+con socket e TLS reali; la prova Bun/OpenCode nelle VM è ancora da eseguire.
 
 **Motore delle regole: prima implementazione.**
 `packages/oblivion-transport/src/policy.rs` definisce il formato versionato e
@@ -113,7 +128,7 @@ un profilo esplicito vuoto lo attiva senza autorizzare destinazioni.
 Il formato rifiuta campi sconosciuti e un profilo salvato corrotto non viene
 nascosto da una selezione temporanea. Scrittura atomica e staging privato
 mantengono la versione precedente se il disco è pieno. I 13 test delle regole
-e Clippy passano sul Mac; nuove prove Linux coprono menu, file cifrato,
+passano sul Mac e in Debian ARM64, e Clippy sul Mac; nuove prove Linux coprono menu, file cifrato,
 staging, disco pieno, readonly e attivazione dal controller, ancora da eseguire.
 Conferme interattive, scadenze e revoca di singoli permessi restano da implementare;
 `ask` continua a bloccare.

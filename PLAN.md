@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.44 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.45 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -84,10 +84,16 @@ Il client di questi casi è Python; Bun/webfetch resta da collegare.
 Il manager host ora permette regole globali o per sessione, salvate nel
 generale cifrato oppure applicate in RAM fino al blocco generale. Il controller
 le passa al gateway solo all'apertura della sessione; senza profilo il servizio
-tool resta spento. Passano 13 test delle regole e Clippy sul Mac. Sono aggiunte
+tool resta spento. Passano 13 test delle regole sul Mac e in Debian ARM64,
+oltre a Clippy sul Mac. Sono aggiunte
 prove Linux di menu, persistenza, disco pieno, readonly e grant reale, ancora
 da eseguire. `ask` resta bloccato; conferme interattive, scadenze e revoca di
 singoli permessi restano aperti.
+Il launcher ora prepara le variabili HTTP/HTTPS proxy con il solo token locale,
+escludendo loopback e broker API. La prova con OpenCode compilato è preparata:
+`webfetch` HTTP/HTTPS, redirect vietato, dominio e porta non autorizzati,
+shell e separazione delle regole A/B. I due test locali della fixture passano;
+questa nuova prova nelle VM non è ancora eseguita.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
 Nessuna modifica ai componenti della chat TUI.

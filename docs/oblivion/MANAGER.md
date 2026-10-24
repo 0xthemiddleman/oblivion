@@ -47,6 +47,17 @@ controlli, inclusi nuovo menu, credenziali nascoste, selezione RAM, readonly,
 disco pieno e crash. Usa host x86/KVM e sessione TCG; non verifica ancora
 il cambio effettivo della VM gateway. Nessuna modifica alla chat TUI upstream.
 
+**W** apre le [regole web](NETWORK-AND-FILES.md), a sessione chiusa. A aggiunge
+o sostituisce una regola per destinazione, porta e ambito; D rimuove quella
+selezionata dopo conferma; P ripristina il profilo salvato. La regola può valere
+per tutte le sessioni oppure soltanto per quella evidenziata nella lista.
+S salva tutte le regole attuali nel generale cifrato, incluse modifiche già
+selezionate in RAM; T le applica fino al blocco del generale. In readonly è
+disponibile solo T. `Blocca` prevale su `Chiedi`, che prevale su `Consenti`.
+`Chiedi` e le destinazioni sconosciute restano bloccate: la coda di conferme
+interattive non è ancora implementata. Le nuove prove Linux del menu e della
+persistenza sono in corso; i 13 test delle regole passano sul Mac e in Debian ARM.
+
 Le password si inseriscono fuori dalla VM, senza eco né history; i buffer
 posseduti dal manager sono azzerati e il processo Linux disabilita i core dump
 e l'accesso tramite dump del processo. La creazione richiede almeno 16 byte;

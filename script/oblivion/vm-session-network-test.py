@@ -236,6 +236,9 @@ if SOCKS:
     policy_command = json.dumps({"action": "put", "rule": {
         "destination": "denied.example.com", "port": 443, "action": "deny", "session": a}, "save": True}).encode()
     command("network-policy", secret=policy_command)
+    for port in [80, 443]:
+        command("network-policy", secret=json.dumps({"action": "put", "rule": {
+            "destination": "api.abliteration.ai", "port": port, "action": "allow", "session": a}, "save": True}).encode())
     policy_file = Path("/run/oblivion/general/profile/network-policy.json")
     assert json.loads(policy_file.read_text())["rules"][0]["session"] == a
     assert ready()[0] == previous_gateway
@@ -353,6 +356,11 @@ if SOCKS:
 client.sendall(b"adapter\n")
 receive(client, b"OBLIVION_ADAPTER_AUTHENTICATED")
 check("compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error")
+if SOCKS:
+    client.sendall(b"webtools\n")
+    receive(client, b"OBLIVION_COMPILED_WEBTOOLS_VERIFIED")
+    assert stream_status()["web"] == {"http": 1, "https": 1, "redirect": 1, "shell": 1, "completed": 1}
+    check("compiled OpenCode webfetch and a shell client use the local proxy for HTTP and verified HTTPS; redirected, unknown and wrong-port targets fail without external contact or a direct fallback")
 
 if STREAM:
     assert stream_status()["active"] == []
@@ -393,6 +401,12 @@ second = probe(client)
 assert first != second
 client.sendall(b"old " + first + b"\n")
 receive(client, b"OBLIVION_OLD_TOKEN_DENIED")
+if SOCKS:
+    before_web = stream_status()["web"]
+    client.sendall(b"tools-scoped-denied\n")
+    receive(client, b"OBLIVION_OTHER_POLICY_DENIED")
+    assert stream_status()["web"] == before_web
+    check("B cannot use A's allowed web destinations and the external fixture receives no request")
 _, owner = ready()
 chat = int(property("oblivion-session.service", "MainPID"))
 assert watched_pids(owner) == [chat] and gateway_status()["active"]
