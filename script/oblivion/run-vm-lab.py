@@ -50,7 +50,7 @@ with disk.open("rb") as stream:
         overlap = chunk[-128:]
 summary = {
     "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
-    "workload": "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell",
+    "workload": ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
     "outer_accelerator": "hvf", "inner_accelerator": "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
     "checks": [line.strip() for line in serial.splitlines() if line.startswith("PASS:")],

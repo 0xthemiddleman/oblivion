@@ -24,6 +24,7 @@ enum Operation {
     ForceClose,
     Lock,
     Status,
+    Console,
 }
 
 #[derive(Deserialize)]
@@ -39,6 +40,8 @@ struct Response {
     ok: bool,
     output: String,
     error: Option<String>,
+    #[serde(skip)]
+    console: Option<UnixStream>,
 }
 
 pub fn serve(config: &Path, uid: u32) -> Result<()> {
@@ -65,8 +68,16 @@ pub fn serve(config: &Path, uid: u32) -> Result<()> {
                 ok: false,
                 output: String::new(),
                 error: Some(error.0.to_owned()),
+                console: None,
             },
         };
+        // Only a connected serial console descriptor is delegated, never QMP or
+        // permission to traverse the hypervisor's private runtime directory.
+        if let Some(console) = &response.console {
+            if send_console(&stream, console).is_err() {
+                continue;
+            }
+        }
         // One request per connection; neither payloads nor errors are logged.
         if let Ok(bytes) = serde_json::to_vec(&response) {
             let _ = stream.write_all(&bytes);
@@ -138,6 +149,18 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
     stream
         .read_exact(&mut secret)
         .map_err(|_| Error("incomplete_secret"))?;
+    if matches!(request.operation, Operation::Console) {
+        let _lock = lock_named("storage.lock")?;
+        require(!crate::vm::stopped()?, "vm_not_running")?;
+        let console = UnixStream::connect("/run/oblivion-session/console.sock")
+            .map_err(|_| Error("console_unavailable"))?;
+        return Ok(Response {
+            ok: true,
+            output: String::new(),
+            error: None,
+            console: Some(console),
+        });
+    }
     let operation = match request.operation {
         Operation::InitGeneral => "init-general",
         Operation::Unlock => "unlock",
@@ -148,6 +171,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         Operation::ForceClose => "force-leave",
         Operation::Lock => "lock",
         Operation::Status => "status",
+        Operation::Console => unreachable!(),
     };
     let mut command =
         Command::new(std::env::current_exe().map_err(|_| Error("executable_unavailable"))?);
@@ -176,6 +200,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         .map_err(|_| Error("operation_wait_failed"))?;
     input.map_err(|_| Error("secret_pipe_failed"))?;
     Ok(Response {
+        console: None,
         ok: output.status.success(),
         output: String::from_utf8(output.stdout).map_err(|_| Error("invalid_response"))?,
         error: if output.status.success() {
@@ -189,4 +214,31 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
             )
         },
     })
+}
+
+fn send_console(stream: &UnixStream, console: &UnixStream) -> Result<()> {
+    // usize storage gives cmsghdr its required alignment on both target architectures.
+    let mut control = [0usize; 8];
+    let mut byte = b'F';
+    let mut data = libc::iovec {
+        iov_base: (&mut byte as *mut u8).cast(),
+        iov_len: 1,
+    };
+    let mut message: libc::msghdr = unsafe { std::mem::zeroed() };
+    message.msg_iov = &mut data;
+    message.msg_iovlen = 1;
+    message.msg_control = control.as_mut_ptr().cast();
+    message.msg_controllen =
+        unsafe { libc::CMSG_SPACE(std::mem::size_of::<i32>() as u32) as usize };
+    unsafe {
+        let header = libc::CMSG_FIRSTHDR(&message);
+        (*header).cmsg_level = libc::SOL_SOCKET;
+        (*header).cmsg_type = libc::SCM_RIGHTS;
+        (*header).cmsg_len = libc::CMSG_LEN(std::mem::size_of::<i32>() as u32) as usize;
+        std::ptr::write_unaligned(libc::CMSG_DATA(header).cast::<i32>(), console.as_raw_fd());
+        require(
+            libc::sendmsg(stream.as_raw_fd(), &message, libc::MSG_NOSIGNAL) == 1,
+            "console_transfer_failed",
+        )
+    }
 }

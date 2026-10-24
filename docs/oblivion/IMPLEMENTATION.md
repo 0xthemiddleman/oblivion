@@ -13,7 +13,7 @@ rilascio, non un blocco allo sviluppo sul Mac.
 | Controller cifratura | Rust + cryptsetup, due livelli, interblocco, blocco e profilo RO in [laboratorio](STORAGE-LAB.md) | Recovery creazione, power loss, quota/esaurimento disco |
 | Privilegi | Client UID limitato e socket con credenziali del peer; nessun accesso diretto al generale | Servizi di sistema e confinamento nel prodotto |
 | VM della sessione | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md) con OpenCode compilato, shell e provider sintetico interni al guest | KVM/hardware x86, TUI, console fidata e servizi di prodotto |
-| Console e manager | [Specifica approvata](BOOT-AND-TUI.md) | Rendering reale senza desktop, input fidato, segreti e ciclo VM |
+| Console e manager | [Prototipo Rust](MANAGER.md): password nascoste, IPC, console filtrata e ciclo A→B→A da TTY; 9 controlli reali passati | TUI guest, paste/resize, crash dei servizi e console fisica |
 | Fork privacy | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest | Altri download/plugin, credenziale esterna e TUI ridotta |
 | Rete e provider | [Progetto](NETWORK-AND-FILES.md) e catture di fixture | Broker, Tor, policy, revoca, test di guasto e provider reale |
 | Documenti | Flussi concordati | USB, copie A→B, OnionShare, quote e annullamento |

@@ -7,7 +7,9 @@ dumps, the updater, provider discovery and project configuration loading.
 A Linux controller prototype implements two-level LUKS2, restricted local IPC
 and confined per-session QEMU lifecycle, tested with the compiled OpenCode CLI
 and a synthetic provider inside the guest on Mac ARM.
-KVM/hardware validation, live USB, privacy TUI and
+An initial trusted Rust manager controls passwords and session lifecycle;
+its filtered console bridge has real PTY/VM tests on Mac ARM.
+KVM/hardware validation, live USB, the guest privacy TUI and
 network controls remain unfinished.
 Do not treat this branch as a private or hardened distribution.
 
@@ -20,6 +22,7 @@ Do not treat this branch as a private or hardened distribution.
 - [Real LUKS2 storage laboratory (Italian)](docs/oblivion/STORAGE-LAB.md)
 - [Session VM lifecycle laboratory and limitations (Italian)](docs/oblivion/VM-LAB.md)
 - [Compiled privacy profile and Mac ARM development (Italian)](docs/oblivion/PRIVACY-PROFILE.md)
+- [Trusted manager and console laboratory (Italian)](docs/oblivion/MANAGER.md)
 
 The upstream README follows. Its installation instructions install upstream OpenCode.
 

@@ -1,6 +1,6 @@
 # Sessioni OpenCode e ambienti Oblivion
 
-24 ottobre 2026. Analisi sul commit upstream `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`. **Modello approvato dall'utente; non ancora implementato.** Il manager e la riduzione dell'interfaccia sono definiti nella [specifica di avvio e TUI](BOOT-AND-TUI.md). Rimangono confermati un volume e una password indipendenti per sessione Oblivion, una sola aperta e nessun filesystem condiviso.
+24 ottobre 2026. Analisi sul commit upstream `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`. **Volumi, VM e primo [manager](MANAGER.md) implementati; adattamento delle azioni della TUI OpenCode ancora da realizzare.** Il manager e la riduzione dell'interfaccia sono definiti nella [specifica di avvio e TUI](BOOT-AND-TUI.md). Rimangono confermati un volume e una password indipendenti per sessione Oblivion, una sola aperta e nessun filesystem condiviso.
 
 ## Il comportamento attuale di OpenCode
 

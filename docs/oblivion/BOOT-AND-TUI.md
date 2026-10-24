@@ -1,6 +1,6 @@
 # Avvio e interfaccia minimale di Oblivion
 
-24 ottobre 2026. Direzione approvata dall'utente: Debian minimale senza ambiente desktop, logo ASCII Oblivion viola con animazione leggera, password LUKS2 generale e accesso immediato al manager delle sessioni protette. Una chat principale per sessione Oblivion; una sola sessione aperta. Le sottosessioni tecniche restano nello stesso volume. **Questo documento definisce il comportamento da realizzare; non è ancora una live o una TUI implementata.**
+24 ottobre 2026. Direzione approvata dall'utente: Debian minimale senza ambiente desktop, logo ASCII Oblivion viola con animazione leggera, password LUKS2 generale e accesso immediato al manager delle sessioni protette. Una chat principale per sessione Oblivion; una sola sessione aperta. Le sottosessioni tecniche restano nello stesso volume. **Il [primo manager e bridge della console](MANAGER.md) è implementato e provato; la live, l'animazione e la TUI di conversazione ridotta restano da completare.** Questo documento mantiene il comportamento finale richiesto.
 
 ## Un prodotto, due contesti di esecuzione
 

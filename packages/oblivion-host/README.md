@@ -50,8 +50,9 @@ and their ancestors belong to the trusted system, never to an imported document.
 
 Secrets are binary stdin (1–1024 bytes; creation requires at least 16). A newline
 is part of a secret. Do not type real passphrases into shell command lines.
-The trusted TUI password prompt is not implemented yet. The included lab uses
-only fixed, public synthetic passphrases.
+`oblivion-manager` now supplies a hidden password prompt outside the guest.
+Its native Mac `--preview` mode never connects to storage or asks for a password.
+The included lab uses only fixed, public synthetic passphrases.
 
 ## Local IPC
 
@@ -77,6 +78,11 @@ The manager protocol's `open` invokes `enter`; `close` invokes `leave` and
 root primitives. Configuration without a VM remains usable for isolated storage
 tests but rejects a manager session open.
 
+The new `console` IPC operation accepts no secret or session argument and delegates
+one connected serial socket using `SCM_RIGHTS`, followed by the ordinary JSON
+success response. It never delegates QMP or arbitrary paths. The manager checks
+that the controller's peer UID is root. See the [manager laboratory](../../docs/oblivion/MANAGER.md).
+
 ## VM boundary
 
 `vm` configuration selects root-owned public images, memory and CPUs, not an
@@ -91,7 +97,9 @@ only executables and libraries. Only the public boot images and active session
 block device are bound into it. No host or session directory is shared with the
 guest; the guest receives a readonly system disk and its own writable vault disk.
 This first prototype has **no network device**. QMP and console use private Unix
-sockets in RAM; the trusted user-facing console bridge is still to be implemented.
+sockets in RAM; the first trusted console bridge renders guest cells below a
+reserved host header and filters terminal control sequences. Interactive OpenCode
+TUI compatibility, paste and resize remain open gates.
 
 The guest mounts its vault at `/vault`; the conversation runs as UID/GID 1000.
 Home, workspace, state and configuration belong to that vault. `/tmp` and `/var`
@@ -109,7 +117,7 @@ the compiled Linux binaries with real cryptsetup and real device-mapper mappings
 inside a disposable Debian VM, not mocks of encryption or process execution.
 
 Still required: production controller-service confinement, KVM/hardware validation,
-actual OpenCode guest and trusted TUI, quota UI, explicit recovery for interrupted initialization
+guest TUI adaptation, manager crash/boot lifecycle, quota UI, explicit recovery for interrupted initialization
 and `.pending` session files, power-loss tests, profile settings/API broker,
 full ephemeral guests, USB provisioning, integrity/backup decisions and release
 hardening. A failed initialization retains its file and a failed creation may

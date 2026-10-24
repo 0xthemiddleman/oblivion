@@ -1,4 +1,5 @@
 ARG GUEST=guest
+ARG HOST=host
 FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS os
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TARGETARCH
@@ -12,7 +13,7 @@ FROM os AS compiler
 RUN apt-get update && apt-get install -y --no-install-recommends cargo rustc gcc libc6-dev && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
 COPY packages/oblivion-host/ ./
-RUN cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
+RUN cargo test --locked && cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
     && cargo build --locked --release --features lab-emulation --bin oblivion-storage
 
 FROM os AS guest
@@ -42,14 +43,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin 
 COPY --from=compiler /tmp/oblivion-storage /usr/bin/oblivion-storage
 COPY --from=compiler /build/target/release/oblivion-storage /usr/bin/oblivion-storage-lab
 COPY --from=compiler /build/target/release/oblivion-control /usr/bin/oblivion-control
+COPY --from=compiler /build/target/release/oblivion-manager /usr/bin/oblivion-manager
 COPY script/oblivion/vm-lab-test.py /usr/libexec/oblivion-vm-test
 COPY script/oblivion/vm-host-setup.sh /tmp/setup
 RUN sh /tmp/setup && rm /tmp/setup
 
+FROM host AS manager-host
+COPY script/oblivion/vm-manager-test.py /usr/libexec/oblivion-vm-test
+RUN touch /usr/lib/oblivion/vm/manager-lab
+
+FROM ${HOST} AS selected-host
+
 FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS pack
 RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
 COPY --from=selected-guest / /guest/
-COPY --from=host / /host/
+COPY --from=selected-host / /host/
 COPY packages/oblivion-host/ /sources/packages/oblivion-host/
 COPY script/oblivion/ /sources/script/oblivion/
 COPY script/oblivion/vm-lab-pack.sh /pack

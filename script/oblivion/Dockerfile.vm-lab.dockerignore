@@ -9,6 +9,8 @@ packages/oblivion-host/*
 !packages/oblivion-host/src/**
 !packages/oblivion-host/examples/
 !packages/oblivion-host/examples/**
+!packages/oblivion-host/tests/
+!packages/oblivion-host/tests/**
 !packages/oblivion-host/guest/
 !packages/oblivion-host/guest/**
 !script/
