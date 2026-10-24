@@ -29,6 +29,19 @@ e x86. I [tentativi precedenti](host-transport-ci-evidence.json) conservano
 i fallimenti del laboratorio ARM annidato e la diagnosi. Questa suite host
 non avvia un gateway: cambi effettivi Tor↔SOCKS, provider reale e KVM della
 sessione rimangono gate distinti.
+La nuova [suite SOCKS completa](host-socks-stream-ci-evidence.json) collega
+ora profilo cifrato, client corrente, gateway e proxy/provider sintetico
+esterno: **18 controlli passati**, inclusi cambio chiave, revoca dello stream,
+crash, ripristino del profilo e stato Tor invariato. Tutti i 25 job della
+relativa CI sono verdi. Non è una prova del provider remoto o della
+transizione host Tor↔SOCKS.
+
+Il motore puro delle regole in `oblivion-transport::policy` aggiunge nove
+test nativi passati a quelli host precedenti; passa anche Clippy. Valida
+destinazioni, wildcard delimitate, porte e ambiti e applica precedenza
+`deny > ask > allow`. La [descrizione tecnica](NETWORK-AND-FILES.md) distingue
+questo nucleo dal proxy dei tool, dalle conferme e dalla persistenza ancora
+da collegare. La CI del ciclo SOCKS precede questa aggiunta.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

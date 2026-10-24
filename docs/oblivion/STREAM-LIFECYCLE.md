@@ -1,6 +1,11 @@
 # Stream attivi nel ciclo delle VM
 
-Il laboratorio Mac ora verifica la revoca mentre il client compilato riceve
+La [suite CI x86](host-socks-stream-ci-evidence.json) supera ora 18 controlli
+attraverso profilo SOCKS cifrato, client compilato dal commit corrente e due
+VM. Il proxy/provider sintetico vive sul loopback dell'host di laboratorio,
+esterno al gateway. L'host non ha una NIC: nessun provider reale viene contattato.
+
+La prova storica Mac verifica la revoca mentre il client compilato riceve
 una risposta, attraverso controller LUKS, VM della sessione, supervisore e VM
 gateway. Il provider è sintetico e vive nella VM gateway; non viene contattato
 Abliteration e Tor non trasporta questa prova.
@@ -95,7 +100,7 @@ Il campo `opencode_sha256` del riepilogo grezzo del runner descrive la vecchia
 immagine host; il report distingue il binario realmente contenuto nella nuova
 immagine della sessione, coperto dal suo manifest e dall'hash della build CLI.
 
-## Percorso SOCKS salvato: nuova prova CI
+## Percorso SOCKS salvato: 18 controlli in CI
 
 La suite x86 aggiunge `--stream --stream-socks`, un host `stream-host` e un
 gateway `STREAM_GATEWAY=stream-gateway-base`. Questa variante conserva Tor
@@ -112,9 +117,12 @@ chiave, token nuovi per ogni apertura, rifiuto del cambio trasporto a stream
 aperto e ripristino del profilo dopo lock/unlock. Uno stato Tor volutamente
 invalido deve rimanere ignorato e invariato durante il percorso SOCKS.
 
-Gli esiti devono risultare negli artefatti `stream-results` del job x86 prima
-di considerare verificata questa estensione. I controlli già superati delle
-suite host e trasporto rimangono evidenze distinte. KVM accelera l'host di
+Gli artefatti `stream-results` registrano **18 controlli passati in 439,36
+secondi**; anche i 28 controlli host e gli altri job sono verdi. Il
+[report](host-socks-stream-ci-evidence.json) verifica hash, provenienza e
+copertura e conserva il primo fallimento dello script, corretto prima
+dell'esecuzione riuscita. Le suite host e trasporto rimangono evidenze
+distinte. KVM accelera l'host di
 laboratorio; gateway e sessione continuano a usare TCG, senza attestazione
 dell'isolamento KVM di produzione. La variante esterna verifica il manifest
 dell'immagine gateway e l'hash della fixture avviata sull'host; non legge un

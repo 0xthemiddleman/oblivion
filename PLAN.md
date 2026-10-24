@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.37 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.38 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -42,8 +42,20 @@ la VM di sessione TCG di laboratorio; passano anche gli avvii diretti della
 TUI ARM e x86. Tutti i 25 job CI sono verdi. I
 [precedenti tentativi ARM annidati](docs/oblivion/host-transport-ci-evidence.json)
 rimangono documentati come fallimenti, senza attribuire loro copertura.
-La suite host non contiene un gateway: il cambio effettivo Tor↔SOCKS,
-provider reale e isolamento KVM della sessione restano da collaudare.
+La suite storage non contiene un gateway. La successiva
+[prova SOCKS completa](docs/oblivion/host-socks-stream-ci-evidence.json)
+supera **18 controlli** con profilo cifrato, client del commit corrente,
+gateway e proxy/provider sintetico esterno alla VM gateway. Conferma cambio
+esplicito della chiave, token nuovi, revoca degli stream prima della chiusura
+del volume, ripristino del profilo dopo lock/unlock e mancata modifica dello
+stato Tor. Sono verdi tutti i 25 job della relativa CI. Il cambio effettivo
+Tor↔SOCKS, provider reale e isolamento KVM della sessione restano da collaudare.
+
+Il [motore delle regole](docs/oblivion/NETWORK-AND-FILES.md) ora valida domini,
+IP, porte e ambiti, con nove test nativi passati: divieti prioritari e
+destinazioni sconosciute in attesa di conferma. Non è ancora collegato al
+traffico o al manager; proxy dei tool, persistenza, conferme e scadenze
+rimangono da implementare. Questa aggiunta non è coperta dalla CI SOCKS precedente.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
 Nessuna modifica ai componenti della chat TUI.

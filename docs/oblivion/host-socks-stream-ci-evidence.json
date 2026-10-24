@@ -1,0 +1,369 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "e1cd8fc0fc9787563f1a224835878ec1f76343da",
+  "status": "passed",
+  "scope": "Host-selected encrypted SOCKS profile through actual LUKS session, compiled OpenCode client, supervisor, gateway broker and connector. Synthetic authenticated external SOCKS/TLS provider on offline laboratory host loopback; no real provider connection.",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40099252350",
+    "run_id": 40099252350,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "Debian ARM64 builds",
+        "id": 120887816910,
+        "conclusion": "success"
+      },
+      {
+        "name": "Repository checks",
+        "id": 120887817098,
+        "conclusion": "success"
+      },
+      {
+        "name": "x86 host LUKS, manager and SOCKS streams",
+        "id": 120888326485,
+        "conclusion": "success"
+      },
+      {
+        "name": "ARM64 compiled chat boot",
+        "id": 120888326502,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks required broker-crash",
+        "id": 120888466851,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation shutdown",
+        "id": 120888466853,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks required supervisor-crash",
+        "id": 120888466859,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks none supervisor-crash",
+        "id": 120888466864,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation disconnect",
+        "id": 120888466866,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation malformed",
+        "id": 120888466878,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks none broker-crash",
+        "id": 120888466881,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks none reconfigure",
+        "id": 120888466890,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks none revoke",
+        "id": 120888466895,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks none egress-crash",
+        "id": 120888466899,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks required revoke",
+        "id": 120888466900,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation oversized",
+        "id": 120888466902,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks required egress-crash",
+        "id": 120888466906,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks required control-disconnect",
+        "id": 120888466912,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks required reconfigure",
+        "id": 120888466916,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network socks none control-disconnect",
+        "id": 120888466964,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation duplicate-grant",
+        "id": 120888467702,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation partial",
+        "id": 120888467743,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation supervisor-crash",
+        "id": 120888467783,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation broker-crash",
+        "id": 120888467797,
+        "conclusion": "success"
+      },
+      {
+        "name": "Network tor isolation egress-crash",
+        "id": 120888467889,
+        "conclusion": "success"
+      }
+    ]
+  },
+  "counts": {
+    "stream_lifecycle": 18,
+    "host_lifecycle": 28,
+    "separate_network_cases": 21,
+    "canonical_check_tasks": 34,
+    "official_typescript_tasks": 34
+  },
+  "stream_runtime": {
+    "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
+    "workload": "session gateway grant, private token delivery and network isolation",
+    "outer_accelerator": "kvm",
+    "host_system": "Linux",
+    "architecture": "x86_64",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "seconds": 439.36,
+    "qemu_exit": 0,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: encrypted external SOCKS profile is selected before the key starts the gateway",
+      "PASS: reselecting the current key records the RAM choice without restarting its gateway or Tor bootstrap",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and reports the synthetic provider's offline probe",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+      "PASS: compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker",
+      "PASS: active streaming blocks a transport change without interrupting or replacing its gateway",
+      "PASS: controller revocation closes the provider TLS stream and the adapter reports failure while QEMU and its LUKS mapping are still open",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: explicit key selection replaces the gateway VM; the real compiled adapter sends the alternate key only through the broker",
+      "PASS: session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure",
+      "PASS: B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: unlock restores the persisted SOCKS route and credentials without reading or changing Tor state",
+      "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+      "PASS: normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes",
+      "PASS: fragmented private requests expire despite continued progress; the owner destroys its gateway VM and leaves storage state explicit",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ],
+    "guest_pass": true,
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "d80900c16eb201bca236008008fac21dd49ebade51abe5300d97fab2f3085005",
+    "image_manifest": "4336c75fc1a6a58e7bda66cbe9f4042f88064e7abc93faaea9e2aceb19459561  kernel\n03e26ca1107b2e86b25b5e7f3ed6e794b07c442f771aa703fce9f6201c021fae  initrd\n27046b793936fca1eab06ba122ab4cf4dd582d16f788d3099e612b12be26fde0  host.squashfs\nc4e3d56748e28d92b12918000a0a9da0f9a50bdc97f856425382a9df0a6e80a5  host-packages.tsv\ncab18832fa36e5efe3118d096505ee5915c7045b38cf40f8aaec5fd0a29a5314  guest-packages.tsv\n27879555bf9c9720998e625cd3578c6adc3b8c0f7e555161babc3b469cefa8c4  sources.sha256\n397314842678fef2c0bab9fbd9c68223e2c3bfe1fca1276a9ff89fd0ac1c67b2  opencode.sha256\n947f65e3a3639b326e604c0cefe21655298ef3d8dbe0c6dd2ee0ab91124318fd  opencode-build.json\n19aec87bcf5c65376007ff947e0cda5a73bf9d1a4be0831fec2060c31020c48a  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n",
+    "compiled_sources": "546042bf477aa5a249f1ec8ce93d25f71b388a48c94d5c93804b6c4763908e39  packages/oblivion-host/Cargo.lock\n1a5f944aa50427c9966074006908bcc22db401d2eba73d344fa0589886fd66bc  packages/oblivion-host/Cargo.toml\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  packages/oblivion-host/examples/ipc-probe.rs\nd4f68d67f3f95eff9a42a14c1ac01cbf1d3f7682895f9fba215b36c5ab093b56  packages/oblivion-host/guest/conversation.sh\ne464f4d764ac5b70bb7db73179a5ac2c52361788b57876cf03be86feab9bc5aa  packages/oblivion-host/guest/install.sh\nd744debcb6c6d2397652c5da325c3891d9519ee342fcb519acf08d374e19c7b7  packages/oblivion-host/guest/network.sh\nc1a8aef253c6e490277587ee53e514cff3358318f70e6cad0144ebe392c6d6e2  packages/oblivion-host/guest/oblivion-conversation.service\n8f703fc1b02f035ba7782353837e3936217ef9fc3fa7bfcab757a21883039e6f  packages/oblivion-host/guest/oblivion-session-network.service\n0e7d92bf6f2abafc4c00978558973102dfb0e1868ff644d64e9b34fc12196c52  packages/oblivion-host/guest/oblivion-vault.service\ne48a7666d23bdfffd4ea7fe21550afd862b901e85d2c0499f3ef6ad1457dc33c  packages/oblivion-host/guest/prepare.sh\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  packages/oblivion-host/host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  packages/oblivion-host/host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  packages/oblivion-host/host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  packages/oblivion-host/host/oblivion-recover.service\nc26c96a0ca11e1f82c0d1d0d351dc3d28d77cb7a225dd8f378c4bf8b55988c2e  packages/oblivion-host/src/channel.rs\nb3d9e951e1e9e7415242c64358c0391124b0755eeee8f1382d0004e5c63833b8  packages/oblivion-host/src/client.rs\nbcdb1646d97b15e2263e2b610e0fd63435628829e57a5a80ace64b2730de914f  packages/oblivion-host/src/control.rs\ne2fc2244144fd103bd59ee7f86c7dc8595c1f1065eba94b62b261fe63e5f21cf  packages/oblivion-host/src/egress.rs\nb65fb7a48bc2f3850282880d533d2df2fe72fa40975cf2fbd8e89cc86904f1e2  packages/oblivion-host/src/gateway.rs\n0f7fe02fc80fd581b57f8b57b45a47c315f9f31a0849a64290618bc8d457345b  packages/oblivion-host/src/ipc.rs\n63051dd132d554c7e6a302d3097fafdaf8c13111cd22b3d0641eede138bea77c  packages/oblivion-host/src/keys.rs\nce01c69ed9fa4d10948f8ab7350765c2fdede5901fc4a2de926db6470e422c15  packages/oblivion-host/src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  packages/oblivion-host/src/main.rs\n8f6bea4cfa30b727690c673851f51e8c56e95671a509d4a40d9adf0ca63ad62b  packages/oblivion-host/src/manager.rs\n9703c7251d03906efcb991d7fa77def326d1f74e2717797870df66955aec3874  packages/oblivion-host/src/storage.rs\nfc8ef41fa85d38ab2c4f6d15e62361617672a16f711fd8f86ccc04ce1500b98b  packages/oblivion-host/src/terminal.rs\nd1979bcac8b8c7e685c42d301c082363f0383b6177b08e9db975ccae6be94269  packages/oblivion-host/src/vm.rs\n659e99741f93a3db5bd87d74e9ee05eb85b0bf8ee913926ffcd72ddef95557d7  packages/oblivion-host/tests/channel.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  packages/oblivion-host/tests/console.rs\na77cb5e30ef916b34fb1590b777769e436ed9b8e9087b7ecc50974c360650d73  packages/oblivion-host/tests/egress.rs\n943e545d9f2d0e4520090a3dfa43a83dcb3bebe36bf24cd70ac9652c4e02c87c  packages/oblivion-host/tests/keys.rs\n1a2a4b5b3ff7d599a68a53479a34a41f4c2d30c2b22b142cff503fb28aa3633f  packages/oblivion-tor-state/Cargo.lock\n5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  packages/oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  packages/oblivion-tor-state/src/lib.rs\n8dc68df0af76d6c99fd25b61200e584dda3f93139b2b6530ae9c36b3fda4e56d  packages/oblivion-transport/Cargo.toml\nd555e50dfcae8b2263b6f5003fdcddf99e151366b484d3e715e3d6ec6212e3a5  packages/oblivion-transport/src/lib.rs\n61920988bef2ed6754d896605a5746922d9404207bb41c0b2f909f6e83fdfcd9  script/oblivion/Dockerfile.vm-lab\n420b40bb6bfd8eb329c5f160961bbd7e4bc43e62f68d74340c4b9867d40b6b6e  script/oblivion/Dockerfile.vm-lab.dockerignore\n37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86  script/oblivion/packet_capture.py\nac8fd94bc1ee7118a6ea0f3f1a96c5137d22c808913b3286767b5f0416bcc450  script/oblivion/run-tui-boot-lab.py\ne457aea935c3e28ce4ae34d63e7160bbf56036e802a4dcc8648f9597d25a9b88  script/oblivion/run-vm-lab.py\n10e89b26e7a5c9fe0a8f405c36f1ec187759e67318f75a4e99fcbfe9dec0ab09  script/oblivion/vm-chat-probe.py\n0eb3a9da1a99b7f3fb85d47c148108b2c5921d77fb1f09ccdeca6d065c53628c  script/oblivion/vm-common-setup.sh\n2b00f81ec52fe7a9c363d168bc7d6a88e0a604c7e9b6906d9383b1f4fd91d49b  script/oblivion/vm-gateway-host-test.py\nefd9e92d84bbc8d086422f21d8a121f5bed5a55188df8ef6c489b786cfabfef0  script/oblivion/vm-gateway-test.py\n7e54a8db69f2757d61b45844c41457e54025ddbbd12882300d6f93e53602a14a  script/oblivion/vm-guest-fixture.sh\nd83153c91a952a0dbe390dcdcb615d4766db61fa1e633b375d0656d0c7c7ae61  script/oblivion/vm-host-setup.sh\n566ccc563d775eb495e47163320346e292d9dfef0a1142132ca64517734a73a0  script/oblivion/vm-lab-pack.sh\n1590c7bae0ebf8b9c55beea426766a0d53c36b387a875c50dbf44d81e2c82747  script/oblivion/vm-lab-test.py\nae8c44b7047fcf7bd72ab435d9072da785956af537d6fcd1d2767068ef98944c  script/oblivion/vm-manager-test.py\ne5cf7e3821fb8fe08d94bd83d4806e342d249e08940d8eac5dde223584d8e8bf  script/oblivion/vm-network-fixture.py\n00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41  script/oblivion/vm-network-setup.sh\nece75dda3cadc54afd8c0525d0d70d379cd05be625119ef2f76514048104d51b  script/oblivion/vm-services-test.py\na81179011bb506dba25b84c4bb6042a5bdef45dc5fd53b395476b72860fe0d85  script/oblivion/vm-session-network-guest.py\n7a50815f4bf1b8b2edf9b9fc9cdac4a1ba06e22ed3ad7a1f96e51125b87ff861  script/oblivion/vm-session-network-test.py\n59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62  script/oblivion/vm-stream-cert.pem\n3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb  script/oblivion/vm-stream-key.pem\n117416a01b2e0fb8549c4887883700fe4c66cd16177f8c7a7a361ea23f778bff  script/oblivion/vm-stream-provider.py\n79b12f91537b954961ce5da9f982caa76ad49b5f548f2a184292c44838eb1b41  script/oblivion/vm-stream-provider.service\n2458ffc5c8e65330a71398fbd3a3d6f9824e2223f61c4ef7a76a34a029091e12  script/oblivion/vm-tor-state-test.py\n7cb5eda51d0d2e0a1e8b3e848c75685193a34ea54a8dc2fbe609d092b22e5bf7  script/oblivion/vm-tui-guest.py\nf0a658e56c63fa52acc158438e90bfc7753f288571162b70225482457afba1f8  script/oblivion/vm-tui-test.py\n",
+    "opencode_sha256": "3b21199a08d0a833e59c732e016f524e66ac1f948df0b5d18a836ef81f4e25f6",
+    "adapter_override": null,
+    "adapter_verified": null,
+    "adapter_capture": null,
+    "lab_initrd_sha256": "5d2021953aaaace80d6dccc458395496f2f6293cb66eee34d0821f30a97ecc87",
+    "runtime_fixture_override": {
+      "file": "vm-session-network-test.py",
+      "sha256": "7a50815f4bf1b8b2edf9b9fc9cdac4a1ba06e22ed3ad7a1f96e51125b87ff861"
+    },
+    "runtime_host_bundle": {
+      "manifest": "0718ae9010d59baa5e8a62b2c9eda905cbb090817116c1b5d121bbd780729cf5  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  oblivion-gateway-host.service\nb38244a926fae6f5e7f9fcf47f5d9375418c6332b984c527588b8bc1db053235  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\nd27ec011b379b12fad699928b61f0a72c1126df28ffe6a111b71d7f8c3e57cd8  oblivion-storage\n219e93a29db25685ab9795132af46bb6abe4fa7722422bde95fec4e7ccc5f247  oblivion-storage-lab\ne615eb656a86ba3eba47be167aca3bb6321bdd6322a49363ee1934e2e57a1de8  sources.sha256\n",
+      "sources": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  ../oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  ../oblivion-tor-state/src/lib.rs\n8dc68df0af76d6c99fd25b61200e584dda3f93139b2b6530ae9c36b3fda4e56d  ../oblivion-transport/Cargo.toml\nd555e50dfcae8b2263b6f5003fdcddf99e151366b484d3e715e3d6ec6212e3a5  ../oblivion-transport/src/lib.rs\n546042bf477aa5a249f1ec8ce93d25f71b388a48c94d5c93804b6c4763908e39  Cargo.lock\n1a5f944aa50427c9966074006908bcc22db401d2eba73d344fa0589886fd66bc  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\nc26c96a0ca11e1f82c0d1d0d351dc3d28d77cb7a225dd8f378c4bf8b55988c2e  src/channel.rs\nb3d9e951e1e9e7415242c64358c0391124b0755eeee8f1382d0004e5c63833b8  src/client.rs\nbcdb1646d97b15e2263e2b610e0fd63435628829e57a5a80ace64b2730de914f  src/control.rs\ne2fc2244144fd103bd59ee7f86c7dc8595c1f1065eba94b62b261fe63e5f21cf  src/egress.rs\nb65fb7a48bc2f3850282880d533d2df2fe72fa40975cf2fbd8e89cc86904f1e2  src/gateway.rs\n0f7fe02fc80fd581b57f8b57b45a47c315f9f31a0849a64290618bc8d457345b  src/ipc.rs\n63051dd132d554c7e6a302d3097fafdaf8c13111cd22b3d0641eede138bea77c  src/keys.rs\nce01c69ed9fa4d10948f8ab7350765c2fdede5901fc4a2de926db6470e422c15  src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  src/main.rs\n8f6bea4cfa30b727690c673851f51e8c56e95671a509d4a40d9adf0ca63ad62b  src/manager.rs\n9703c7251d03906efcb991d7fa77def326d1f74e2717797870df66955aec3874  src/storage.rs\nfc8ef41fa85d38ab2c4f6d15e62361617672a16f711fd8f86ccc04ce1500b98b  src/terminal.rs\nd1979bcac8b8c7e685c42d301c082363f0383b6177b08e9db975ccae6be94269  src/vm.rs\n659e99741f93a3db5bd87d74e9ee05eb85b0bf8ee913926ffcd72ddef95557d7  tests/channel.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\na77cb5e30ef916b34fb1590b777769e436ed9b8e9087b7ecc50974c360650d73  tests/egress.rs\n943e545d9f2d0e4520090a3dfa43a83dcb3bebe36bf24cd70ac9652c4e02c87c  tests/keys.rs\n",
+      "verified_in_guest": true
+    },
+    "runtime_gateway_bundle": null,
+    "fixture_verified": true,
+    "gateway_image_manifest": "dc3aef8b4153d5173dfdb5697b7de8ee720e238bdd2349f713f94ca6c9812bdb  gateway.squashfs\n5b6d172376f0b5b3b586347e680bb798be83385a2d182b0957522545abc27e73  initrd\n4336c75fc1a6a58e7bda66cbe9f4042f88064e7abc93faaea9e2aceb19459561  kernel\nbdcbac114c1b257772553a02f6e336536695c4c6b4e50026bc018834ed904fc6  stream.json\ne0fdd42ae0f7e4f31167adf4fcc1dfc56a71388c0e866661f6415755dd7030c9  trust.diff\n",
+    "session_image_manifest": "947f65e3a3639b326e604c0cefe21655298ef3d8dbe0c6dd2ee0ab91124318fd  build-evidence.json\n951c042f5006483cf7737dce8137e18acfab68a3ae74d0c480974a1ccf17c97a  initrd\n4336c75fc1a6a58e7bda66cbe9f4042f88064e7abc93faaea9e2aceb19459561  kernel\n2a6438e50d508f185cf28c664d70398bb389d256f8a7636524b99e8a862c97f8  opencode.sha256\n8fc1628b62853041a0ac0e9de1d65377d7e962b3fbf369648393816e7285d79c  session.squashfs\n",
+    "tor_online": false,
+    "synthetic_streams": true,
+    "external_socks_streams": true,
+    "session_opencode_sha256": "3b21199a08d0a833e59c732e016f524e66ac1f948df0b5d18a836ef81f4e25f6",
+    "captures": null
+  },
+  "host_runtime": {
+    "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
+    "workload": "systemd service crash/recovery with real manager and VM",
+    "outer_accelerator": "kvm",
+    "host_system": "Linux",
+    "architecture": "x86_64",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "seconds": 310.4,
+    "qemu_exit": 0,
+    "checks": [
+      "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+      "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+      "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+      "PASS: fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request",
+      "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+      "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+      "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+      "PASS: trusted network menu saves hidden proxy credentials only in the root-owned encrypted profile; offline policy refuses external proxies",
+      "PASS: temporary transport stays in RAM; saved selection restores it; unknown fields, aliases and corrupt profiles never trigger a fallback",
+      "PASS: full-disk transport update preserves the prior profile; retry replaces the interrupted private staging file",
+      "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+      "PASS: legacy key is read without migration; ENOSPC preserves it and retry publishes the versioned archive before deleting the legacy file",
+      "PASS: full-disk replacement preserves the archive; published archives take precedence over leftover legacy secrets and malformed archives fail closed",
+      "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+      "PASS: trusted manager adds and renames a second hidden key, saves its default and selects another key only in RAM",
+      "PASS: active chat blocks persistent, temporary and saved-profile transport changes",
+      "PASS: key picker chooses the opening credential; an active session blocks key mutations and identity changes",
+      "PASS: removing the selected key never rotates to the remaining account; explicit default and selection restore access",
+      "PASS: read-only transport choices use RAM, clear on lock and leave the entire encrypted image byte-identical",
+      "PASS: read-only profile exposes key metadata and permits RAM selection, rejects all key mutations and pending deletion, and remains byte-identical",
+      "PASS: interrupted session formatting survives restart, cannot open, and is discarded only after confirmation",
+      "PASS: disk exhaustion is explicit, preserves existing archives and permits reopening after pending cleanup",
+      "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+      "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+      "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+      "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+      "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+      "PASS: synthetic passwords, API keys and proxy credentials never appear on the managed console"
+    ],
+    "guest_pass": true,
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "6e87cb62e4ef3bf190ba5b3494a477514c2cc9fb6c9d9a69d83dce56c862a2ac",
+    "image_manifest": "4336c75fc1a6a58e7bda66cbe9f4042f88064e7abc93faaea9e2aceb19459561  kernel\n03e26ca1107b2e86b25b5e7f3ed6e794b07c442f771aa703fce9f6201c021fae  initrd\n27046b793936fca1eab06ba122ab4cf4dd582d16f788d3099e612b12be26fde0  host.squashfs\nc4e3d56748e28d92b12918000a0a9da0f9a50bdc97f856425382a9df0a6e80a5  host-packages.tsv\ncab18832fa36e5efe3118d096505ee5915c7045b38cf40f8aaec5fd0a29a5314  guest-packages.tsv\n27879555bf9c9720998e625cd3578c6adc3b8c0f7e555161babc3b469cefa8c4  sources.sha256\n397314842678fef2c0bab9fbd9c68223e2c3bfe1fca1276a9ff89fd0ac1c67b2  opencode.sha256\n947f65e3a3639b326e604c0cefe21655298ef3d8dbe0c6dd2ee0ab91124318fd  opencode-build.json\n19aec87bcf5c65376007ff947e0cda5a73bf9d1a4be0831fec2060c31020c48a  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n",
+    "compiled_sources": "546042bf477aa5a249f1ec8ce93d25f71b388a48c94d5c93804b6c4763908e39  packages/oblivion-host/Cargo.lock\n1a5f944aa50427c9966074006908bcc22db401d2eba73d344fa0589886fd66bc  packages/oblivion-host/Cargo.toml\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  packages/oblivion-host/examples/ipc-probe.rs\nd4f68d67f3f95eff9a42a14c1ac01cbf1d3f7682895f9fba215b36c5ab093b56  packages/oblivion-host/guest/conversation.sh\ne464f4d764ac5b70bb7db73179a5ac2c52361788b57876cf03be86feab9bc5aa  packages/oblivion-host/guest/install.sh\nd744debcb6c6d2397652c5da325c3891d9519ee342fcb519acf08d374e19c7b7  packages/oblivion-host/guest/network.sh\nc1a8aef253c6e490277587ee53e514cff3358318f70e6cad0144ebe392c6d6e2  packages/oblivion-host/guest/oblivion-conversation.service\n8f703fc1b02f035ba7782353837e3936217ef9fc3fa7bfcab757a21883039e6f  packages/oblivion-host/guest/oblivion-session-network.service\n0e7d92bf6f2abafc4c00978558973102dfb0e1868ff644d64e9b34fc12196c52  packages/oblivion-host/guest/oblivion-vault.service\ne48a7666d23bdfffd4ea7fe21550afd862b901e85d2c0499f3ef6ad1457dc33c  packages/oblivion-host/guest/prepare.sh\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  packages/oblivion-host/host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  packages/oblivion-host/host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  packages/oblivion-host/host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  packages/oblivion-host/host/oblivion-recover.service\nc26c96a0ca11e1f82c0d1d0d351dc3d28d77cb7a225dd8f378c4bf8b55988c2e  packages/oblivion-host/src/channel.rs\nb3d9e951e1e9e7415242c64358c0391124b0755eeee8f1382d0004e5c63833b8  packages/oblivion-host/src/client.rs\nbcdb1646d97b15e2263e2b610e0fd63435628829e57a5a80ace64b2730de914f  packages/oblivion-host/src/control.rs\ne2fc2244144fd103bd59ee7f86c7dc8595c1f1065eba94b62b261fe63e5f21cf  packages/oblivion-host/src/egress.rs\nb65fb7a48bc2f3850282880d533d2df2fe72fa40975cf2fbd8e89cc86904f1e2  packages/oblivion-host/src/gateway.rs\n0f7fe02fc80fd581b57f8b57b45a47c315f9f31a0849a64290618bc8d457345b  packages/oblivion-host/src/ipc.rs\n63051dd132d554c7e6a302d3097fafdaf8c13111cd22b3d0641eede138bea77c  packages/oblivion-host/src/keys.rs\nce01c69ed9fa4d10948f8ab7350765c2fdede5901fc4a2de926db6470e422c15  packages/oblivion-host/src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  packages/oblivion-host/src/main.rs\n8f6bea4cfa30b727690c673851f51e8c56e95671a509d4a40d9adf0ca63ad62b  packages/oblivion-host/src/manager.rs\n9703c7251d03906efcb991d7fa77def326d1f74e2717797870df66955aec3874  packages/oblivion-host/src/storage.rs\nfc8ef41fa85d38ab2c4f6d15e62361617672a16f711fd8f86ccc04ce1500b98b  packages/oblivion-host/src/terminal.rs\nd1979bcac8b8c7e685c42d301c082363f0383b6177b08e9db975ccae6be94269  packages/oblivion-host/src/vm.rs\n659e99741f93a3db5bd87d74e9ee05eb85b0bf8ee913926ffcd72ddef95557d7  packages/oblivion-host/tests/channel.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  packages/oblivion-host/tests/console.rs\na77cb5e30ef916b34fb1590b777769e436ed9b8e9087b7ecc50974c360650d73  packages/oblivion-host/tests/egress.rs\n943e545d9f2d0e4520090a3dfa43a83dcb3bebe36bf24cd70ac9652c4e02c87c  packages/oblivion-host/tests/keys.rs\n1a2a4b5b3ff7d599a68a53479a34a41f4c2d30c2b22b142cff503fb28aa3633f  packages/oblivion-tor-state/Cargo.lock\n5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  packages/oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  packages/oblivion-tor-state/src/lib.rs\n8dc68df0af76d6c99fd25b61200e584dda3f93139b2b6530ae9c36b3fda4e56d  packages/oblivion-transport/Cargo.toml\nd555e50dfcae8b2263b6f5003fdcddf99e151366b484d3e715e3d6ec6212e3a5  packages/oblivion-transport/src/lib.rs\n61920988bef2ed6754d896605a5746922d9404207bb41c0b2f909f6e83fdfcd9  script/oblivion/Dockerfile.vm-lab\n420b40bb6bfd8eb329c5f160961bbd7e4bc43e62f68d74340c4b9867d40b6b6e  script/oblivion/Dockerfile.vm-lab.dockerignore\n37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86  script/oblivion/packet_capture.py\nac8fd94bc1ee7118a6ea0f3f1a96c5137d22c808913b3286767b5f0416bcc450  script/oblivion/run-tui-boot-lab.py\ne457aea935c3e28ce4ae34d63e7160bbf56036e802a4dcc8648f9597d25a9b88  script/oblivion/run-vm-lab.py\n10e89b26e7a5c9fe0a8f405c36f1ec187759e67318f75a4e99fcbfe9dec0ab09  script/oblivion/vm-chat-probe.py\n0eb3a9da1a99b7f3fb85d47c148108b2c5921d77fb1f09ccdeca6d065c53628c  script/oblivion/vm-common-setup.sh\n2b00f81ec52fe7a9c363d168bc7d6a88e0a604c7e9b6906d9383b1f4fd91d49b  script/oblivion/vm-gateway-host-test.py\nefd9e92d84bbc8d086422f21d8a121f5bed5a55188df8ef6c489b786cfabfef0  script/oblivion/vm-gateway-test.py\n7e54a8db69f2757d61b45844c41457e54025ddbbd12882300d6f93e53602a14a  script/oblivion/vm-guest-fixture.sh\nd83153c91a952a0dbe390dcdcb615d4766db61fa1e633b375d0656d0c7c7ae61  script/oblivion/vm-host-setup.sh\n566ccc563d775eb495e47163320346e292d9dfef0a1142132ca64517734a73a0  script/oblivion/vm-lab-pack.sh\n1590c7bae0ebf8b9c55beea426766a0d53c36b387a875c50dbf44d81e2c82747  script/oblivion/vm-lab-test.py\nae8c44b7047fcf7bd72ab435d9072da785956af537d6fcd1d2767068ef98944c  script/oblivion/vm-manager-test.py\ne5cf7e3821fb8fe08d94bd83d4806e342d249e08940d8eac5dde223584d8e8bf  script/oblivion/vm-network-fixture.py\n00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41  script/oblivion/vm-network-setup.sh\nece75dda3cadc54afd8c0525d0d70d379cd05be625119ef2f76514048104d51b  script/oblivion/vm-services-test.py\na81179011bb506dba25b84c4bb6042a5bdef45dc5fd53b395476b72860fe0d85  script/oblivion/vm-session-network-guest.py\n7a50815f4bf1b8b2edf9b9fc9cdac4a1ba06e22ed3ad7a1f96e51125b87ff861  script/oblivion/vm-session-network-test.py\n59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62  script/oblivion/vm-stream-cert.pem\n3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb  script/oblivion/vm-stream-key.pem\n117416a01b2e0fb8549c4887883700fe4c66cd16177f8c7a7a361ea23f778bff  script/oblivion/vm-stream-provider.py\n79b12f91537b954961ce5da9f982caa76ad49b5f548f2a184292c44838eb1b41  script/oblivion/vm-stream-provider.service\n2458ffc5c8e65330a71398fbd3a3d6f9824e2223f61c4ef7a76a34a029091e12  script/oblivion/vm-tor-state-test.py\n7cb5eda51d0d2e0a1e8b3e848c75685193a34ea54a8dc2fbe609d092b22e5bf7  script/oblivion/vm-tui-guest.py\nf0a658e56c63fa52acc158438e90bfc7753f288571162b70225482457afba1f8  script/oblivion/vm-tui-test.py\n",
+    "opencode_sha256": "3b21199a08d0a833e59c732e016f524e66ac1f948df0b5d18a836ef81f4e25f6",
+    "adapter_override": null,
+    "adapter_verified": null,
+    "adapter_capture": null,
+    "lab_initrd_sha256": "bcf1f9d94da0b38d0f70607fa562a128172768f2b2d67b1bfd5e36c82fb1c37f",
+    "runtime_fixture_override": {
+      "file": "vm-services-test.py",
+      "sha256": "ece75dda3cadc54afd8c0525d0d70d379cd05be625119ef2f76514048104d51b"
+    },
+    "runtime_host_bundle": {
+      "manifest": "0718ae9010d59baa5e8a62b2c9eda905cbb090817116c1b5d121bbd780729cf5  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  oblivion-gateway-host.service\nb38244a926fae6f5e7f9fcf47f5d9375418c6332b984c527588b8bc1db053235  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\nd27ec011b379b12fad699928b61f0a72c1126df28ffe6a111b71d7f8c3e57cd8  oblivion-storage\n219e93a29db25685ab9795132af46bb6abe4fa7722422bde95fec4e7ccc5f247  oblivion-storage-lab\ne615eb656a86ba3eba47be167aca3bb6321bdd6322a49363ee1934e2e57a1de8  sources.sha256\n",
+      "sources": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  ../oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  ../oblivion-tor-state/src/lib.rs\n8dc68df0af76d6c99fd25b61200e584dda3f93139b2b6530ae9c36b3fda4e56d  ../oblivion-transport/Cargo.toml\nd555e50dfcae8b2263b6f5003fdcddf99e151366b484d3e715e3d6ec6212e3a5  ../oblivion-transport/src/lib.rs\n546042bf477aa5a249f1ec8ce93d25f71b388a48c94d5c93804b6c4763908e39  Cargo.lock\n1a5f944aa50427c9966074006908bcc22db401d2eba73d344fa0589886fd66bc  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\nc26c96a0ca11e1f82c0d1d0d351dc3d28d77cb7a225dd8f378c4bf8b55988c2e  src/channel.rs\nb3d9e951e1e9e7415242c64358c0391124b0755eeee8f1382d0004e5c63833b8  src/client.rs\nbcdb1646d97b15e2263e2b610e0fd63435628829e57a5a80ace64b2730de914f  src/control.rs\ne2fc2244144fd103bd59ee7f86c7dc8595c1f1065eba94b62b261fe63e5f21cf  src/egress.rs\nb65fb7a48bc2f3850282880d533d2df2fe72fa40975cf2fbd8e89cc86904f1e2  src/gateway.rs\n0f7fe02fc80fd581b57f8b57b45a47c315f9f31a0849a64290618bc8d457345b  src/ipc.rs\n63051dd132d554c7e6a302d3097fafdaf8c13111cd22b3d0641eede138bea77c  src/keys.rs\nce01c69ed9fa4d10948f8ab7350765c2fdede5901fc4a2de926db6470e422c15  src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  src/main.rs\n8f6bea4cfa30b727690c673851f51e8c56e95671a509d4a40d9adf0ca63ad62b  src/manager.rs\n9703c7251d03906efcb991d7fa77def326d1f74e2717797870df66955aec3874  src/storage.rs\nfc8ef41fa85d38ab2c4f6d15e62361617672a16f711fd8f86ccc04ce1500b98b  src/terminal.rs\nd1979bcac8b8c7e685c42d301c082363f0383b6177b08e9db975ccae6be94269  src/vm.rs\n659e99741f93a3db5bd87d74e9ee05eb85b0bf8ee913926ffcd72ddef95557d7  tests/channel.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\na77cb5e30ef916b34fb1590b777769e436ed9b8e9087b7ecc50974c360650d73  tests/egress.rs\n943e545d9f2d0e4520090a3dfa43a83dcb3bebe36bf24cd70ac9652c4e02c87c  tests/keys.rs\n",
+      "verified_in_guest": true
+    },
+    "runtime_gateway_bundle": null,
+    "fixture_verified": true,
+    "gateway_image_manifest": null,
+    "session_image_manifest": null,
+    "tor_online": false,
+    "synthetic_streams": false,
+    "external_socks_streams": false,
+    "session_opencode_sha256": null,
+    "captures": null
+  },
+  "client_build": {
+    "source_commit": "e1cd8fc0fc9787563f1a224835878ec1f76343da",
+    "profile": "oblivion",
+    "binary_sha256": "3b21199a08d0a833e59c732e016f524e66ac1f948df0b5d18a836ef81f4e25f6",
+    "architecture": "x86_64",
+    "scope": "CI laboratory build, not a signed release"
+  },
+  "gateway_fixture": {
+    "provider_sha256": "117416a01b2e0fb8549c4887883700fe4c66cd16177f8c7a7a361ea23f778bff",
+    "api_sha256": "98229e45989d4d70734617de2b41e2bfb52133c31442571ac0f6a8f1f16895a0",
+    "certificate_sha256": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+    "trust_diff_sha256": "e0fdd42ae0f7e4f31167adf4fcc1dfc56a71388c0e866661f6415755dd7030c9"
+  },
+  "direct_chat_boot": {
+    "arm": {
+      "scope": "compiled chat TUI boot only; synthetic plaintext vault, no LUKS or host lifecycle assertion",
+      "accelerator": "tcg",
+      "architecture": "aarch64",
+      "nested": false,
+      "network_interfaces": 0,
+      "seconds": 57.58,
+      "markers": {
+        "Conversazioni e documenti": true,
+        "/exit blocca": true
+      },
+      "passed": true,
+      "termination": "QEMU terminated by diagnostic after observation; not a shutdown test",
+      "opencode_sha256": "6b2612935d202ca810527831ce02bceecf2682ac0aee79dfb3bbf74c9cd7f46f",
+      "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nf0d8d4eceef98eced4139787c10bab836dc987daf7dd135c64ef1a8665e57ab5  initrd\n983e3f75d7fe1db923996ffa1784965d964ce28a7788a4c148f82f3392e79b10  host.squashfs\n5f5dc1832ec5d93491b6f9cdbb0fda9350938d31ae20b97c340b46fbd5c1d78a  host-packages.tsv\nb23d84696f492da1c5998e8f4fb026d3357aa72b7b95de89d1e5104f172b2786  guest-packages.tsv\n27879555bf9c9720998e625cd3578c6adc3b8c0f7e555161babc3b469cefa8c4  sources.sha256\n52f840b586f773a4546f1ea0fde41affccf1ad85c85eee89d53b09792c6d6ae8  opencode.sha256\n1a213cd6e1e35c8d1dd1f689d0a250a338dfd6fbe23abaa5de3d76a892966d85  opencode-build.json\nc588c020590898778a225edd1d77af041d4cce28f59de1f1f5ff9dde79d7a428  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n"
+    },
+    "x64": {
+      "scope": "compiled chat TUI boot only; synthetic plaintext vault, no LUKS or host lifecycle assertion",
+      "accelerator": "kvm",
+      "architecture": "x86_64",
+      "nested": false,
+      "network_interfaces": 0,
+      "seconds": 6.33,
+      "markers": {
+        "Conversazioni e documenti": true,
+        "/exit blocca": true
+      },
+      "passed": true,
+      "termination": "QEMU terminated by diagnostic after observation; not a shutdown test",
+      "opencode_sha256": "3b21199a08d0a833e59c732e016f524e66ac1f948df0b5d18a836ef81f4e25f6",
+      "image_manifest": "4336c75fc1a6a58e7bda66cbe9f4042f88064e7abc93faaea9e2aceb19459561  kernel\n03e26ca1107b2e86b25b5e7f3ed6e794b07c442f771aa703fce9f6201c021fae  initrd\n27046b793936fca1eab06ba122ab4cf4dd582d16f788d3099e612b12be26fde0  host.squashfs\nc4e3d56748e28d92b12918000a0a9da0f9a50bdc97f856425382a9df0a6e80a5  host-packages.tsv\ncab18832fa36e5efe3118d096505ee5915c7045b38cf40f8aaec5fd0a29a5314  guest-packages.tsv\n27879555bf9c9720998e625cd3578c6adc3b8c0f7e555161babc3b469cefa8c4  sources.sha256\n397314842678fef2c0bab9fbd9c68223e2c3bfe1fca1276a9ff89fd0ac1c67b2  opencode.sha256\n947f65e3a3639b326e604c0cefe21655298ef3d8dbe0c6dd2ee0ab91124318fd  opencode-build.json\n19aec87bcf5c65376007ff947e0cda5a73bf9d1a4be0831fec2060c31020c48a  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n"
+    }
+  },
+  "runner_sha256": "e457aea935c3e28ce4ae34d63e7160bbf56036e802a4dcc8648f9597d25a9b88",
+  "workflow_sha256": "11a43ca86d540d105866a0ff9f218163a3f700a5b912929a2da28b204c48bf96",
+  "image_recipe_sha256": "61920988bef2ed6754d896605a5746922d9404207bb41c0b2f909f6e83fdfcd9",
+  "earlier_attempt": {
+    "source_commit": "001d14c59ffc683770529f42468430f2b4a0715b",
+    "run_id": 40098081823,
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40098081823",
+    "completed_checks": 0,
+    "failure": "Laboratory attempted to create the already-present gateway QEMU mount target; FileExistsError before LUKS or network checks.",
+    "fix": "Accept the existing directory in the verified immutable image. No product networking change."
+  },
+  "limits": [
+    "Outer x86 Debian host uses KVM; nested gateway and session use explicit laboratory TCG. Not a production session-KVM or physical USB isolation proof.",
+    "Provider/proxy uses synthetic credentials and a laboratory-only additional TLS root. Production broker trust, endpoint and TLS verification remain unchanged.",
+    "No outer NIC and no Internet traffic. This run has no packet capture; the separate 21-case matrix supplies transport/firewall capture evidence, not a complete trace of these host sessions.",
+    "Tests an authenticated external SOCKS route, key selection, revocation and persistence. Does not test a host Tor-to-SOCKS transition, real provider, real Tor provider flow, or global OS shutdown during an active stream.",
+    "Fixture verifies its host executable hash and the gateway image manifest. External variant does not read a runtime broker hash through the gateway console.",
+    "Disk canary scan covers synthetic passwords, keys and proxy credentials; it is not a fresh scan for every prompt, response or possible filesystem residue. Runtime scan covers regular files beneath /run after closure.",
+    "Generic tool proxy, approval UI, expiring permissions and persistent rules remain incomplete. The later policy evaluator commit is not covered by this run.",
+    "Transfer services, full ephemeral guest, signed live-image provisioning and physical hardware/fault verification remain separate release gates."
+  ],
+  "local_artifacts": "artifacts/oblivion-linux-ci/run-e1cd8fc",
+  "artifact_hashes": {
+    "arm-evidence/ci/host-image/SHA256SUMS": "035704304909029354e9d66c571ca265ef30b392ec8c319741dc8482cf624855",
+    "arm-evidence/ci/host-image/sources.sha256": "27879555bf9c9720998e625cd3578c6adc3b8c0f7e555161babc3b469cefa8c4",
+    "arm-evidence/ci/tui-boot/serial.log": "4bd005f67b7eb08587875e1280ee7565871b84242f50a1849421ecce4c102037",
+    "arm-evidence/ci/tui-boot/summary.json": "254922f532645925d38f59109393b11c3093afe7cd3a01694f97c3a88529d350",
+    "arm-evidence/oblivion-build/build-evidence.json": "1a213cd6e1e35c8d1dd1f689d0a250a338dfd6fbe23abaa5de3d76a892966d85",
+    "host-job.log": "4715288400325f7a6f35132bcdce303c4131678dc6da2cb36e708f1bf221324b",
+    "repository-job.log": "97d598b97f9a94a2b10fd264383d2a4e9028daa0dd62936cd048a909d48516cf",
+    "run.json": "0f981ab2d6776fe90ee07fa469ba83fe5a026c66f9dff6a7cfa44c26660b80e6",
+    "x64-evidence/ci/host/SHA256SUMS": "299cd5ff0713c7d919001e108a9f6cbd70348ffc65addf804ea10bbf650ed46f",
+    "x64-evidence/ci/host/sources.sha256": "e615eb656a86ba3eba47be167aca3bb6321bdd6322a49363ee1934e2e57a1de8",
+    "x64-evidence/ci/host-image/SHA256SUMS": "eebe0b5b206cfe83f764adc832b2701f43afce38bbd0a47c3d678d5b3012e026",
+    "x64-evidence/ci/host-image/sources.sha256": "27879555bf9c9720998e625cd3578c6adc3b8c0f7e555161babc3b469cefa8c4",
+    "x64-evidence/ci/host-results/serial.log": "b64a38b5f450a9aa72b4523f5dccb6d4845230ae112c1370213348692c4e4fe6",
+    "x64-evidence/ci/host-results/summary.json": "43785aeec86490d821691955373aa6babfd585a4d1e0c19396df6c5b2c5814fe",
+    "x64-evidence/ci/stream-images/gateway/SHA256SUMS": "5f053019aec8d613db9914085e9358083965a7b12ba1fa096626169dc2c9f6ba",
+    "x64-evidence/ci/stream-images/gateway/stream.json": "bdcbac114c1b257772553a02f6e336536695c4c6b4e50026bc018834ed904fc6",
+    "x64-evidence/ci/stream-images/gateway/trust.diff": "e0fdd42ae0f7e4f31167adf4fcc1dfc56a71388c0e866661f6415755dd7030c9",
+    "x64-evidence/ci/stream-images/session/SHA256SUMS": "57263ee679362d53b3a58a4dde894cd03bbfc1f9c12dd0b4db81ddc34722be05",
+    "x64-evidence/ci/stream-images/session/build-evidence.json": "947f65e3a3639b326e604c0cefe21655298ef3d8dbe0c6dd2ee0ab91124318fd",
+    "x64-evidence/ci/stream-images/session/opencode.sha256": "2a6438e50d508f185cf28c664d70398bb389d256f8a7636524b99e8a862c97f8",
+    "x64-evidence/ci/stream-results/serial.log": "32fa5ea252cd5cc865e349ca0c9ff85e3ddefef3960df5b83063ae4e6c4a776f",
+    "x64-evidence/ci/stream-results/summary.json": "712719a761904449104be82e7e1ade82de4be0bee532e41369acbf2fb7f90d43",
+    "x64-evidence/ci/tui-boot/serial.log": "1f96fe26faf3a3763d736634eead7001e619ba33cd13c5d205e03167df345043",
+    "x64-evidence/ci/tui-boot/summary.json": "6b2eece2bd16e262d62cb0b1d95a2ec42c078b99d4228b7d339e9828a69fd9f7",
+    "x64-evidence/oblivion-build/build-evidence.json": "947f65e3a3639b326e604c0cefe21655298ef3d8dbe0c6dd2ee0ab91124318fd"
+  }
+}

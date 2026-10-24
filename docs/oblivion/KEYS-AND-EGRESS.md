@@ -9,6 +9,9 @@ SOCKS e 9 Tor offline. Storage e manager superano ora
 [28 controlli con LUKS in CI](host-lifecycle-ci-evidence.json), su host
 x86/KVM e sessione TCG di laboratorio. Il Docker del Mac restituisce ancora
 errori I/O; la CI usa un runner indipendente.
+Il [ciclo completo SOCKS](host-socks-stream-ci-evidence.json) supera inoltre
+18 controlli con client corrente, gateway e provider/proxy sintetico esterno:
+chiavi distinguibili, stream revocati, profilo ricaricato e stato Tor invariato.
 
 ## Chiavi salvate
 
@@ -121,8 +124,10 @@ readonly con confronto byte per byte del volume. La
 compresi menu, credenziali nascoste, selezione RAM, disco pieno, readonly con
 immagine cifrata identica, rifiuto dei cambi a chat aperta e recupero dopo crash.
 La scansione del disco include anche i marcatori delle credenziali SOCKS,
-senza ritrovarli in chiaro. Restano inoltre da provare il cambio effettivo di gateway
-Tor↔SOCKS, stream, persistenza delle guardie e tutte le catture esterne. Il
+senza ritrovarli in chiaro. I successivi 18 controlli con gateway verificano
+stream, chiavi e profilo SOCKS autenticato nel ciclo completo del client.
+Restano da provare il cambio effettivo di gateway Tor↔SOCKS, provider reale,
+shutdown globale e catture del ciclo host completo. Il
 proxy dei tool rimane da realizzare prima di dichiarare il trasporto globale.
 
 I nomi delle destinazioni vengono passati al proxy dopo l'autorizzazione,
@@ -162,7 +167,8 @@ SOCKS verrà mostrato come non disponibile, senza avviare Tor di nascosto.
 2. Consegnare al supervisore la sola chiave scelta e un profilo di trasporto
    tipizzato. Mantenere immutabile la coppia chiave/percorso durante l'apertura.
    **Implementato** per chiave e profilo; il cambio è rifiutato a chat aperta
-   nella suite host. Il cambio effettivo di gateway nel ciclo completo resta da provare.
+   nella suite host. Il cambio esplicito di chiave sostituisce il gateway ed è
+   verificato con il client reale; il cambio Tor↔SOCKS resta da provare.
 3. Inserire un connettore locale del gateway per Tor o SOCKS esterno, riusabile
    dal broker e dal futuro proxy dei tool. Separare il token locale e le
    credenziali di isolamento Tor dall'autenticazione del SOCKS esterno.
@@ -180,8 +186,9 @@ SOCKS verrà mostrato come non disponibile, senza avviare Tor di nascosto.
    per dominio, proxy caduto, cambio percorso e revoca durante lo stream.
    Combinare catture e tracing per dimostrare assenza di fallback, DNS diretto
    e bypass dai sottoprocessi. I 28 controlli host e le 21 prove di rete sono
-   ora superati separatamente. Collegarli al percorso completo del client,
-   quindi confermare con VM di sessione KVM e provider reale.
+   ora superati separatamente. I 18 controlli del ciclo completo collegano
+   il client corrente al profilo SOCKS autenticato; restano transizioni
+   Tor↔SOCKS, shutdown globale e conferma con VM di sessione KVM e provider reale.
 
 Questi passi precedono l'estensione del proxy dei tool: quest'ultimo deve
 applicare la stessa policy indipendentemente dal trasporto selezionato.
