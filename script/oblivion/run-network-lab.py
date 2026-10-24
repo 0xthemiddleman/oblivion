@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Two disposable ARM VMs on Mac; packet capture outside the untrusted guest."""
+"""Two disposable ARM VMs; packet capture outside the untrusted guest."""
 import argparse
 import gzip
 import hashlib
@@ -21,8 +21,16 @@ from pathlib import Path
 from packet_capture import capture
 
 
+def validate_accelerator(accelerator):
+    if accelerator == "hvf":
+        assert (platform.system(), platform.machine()) == ("Darwin", "arm64"), "HVF requires an ARM Mac"
+        return
+    assert accelerator == "tcg" and platform.system() == "Linux", "TCG laboratory requires Linux"
+
+
 class VM:
-    def __init__(self, role, image, output, wire, online):
+    def __init__(self, role, image, output, wire, online, accelerator="hvf"):
+        validate_accelerator(accelerator)
         self.role = role
         self.output = output
         self.messages = queue.Queue()
@@ -38,8 +46,8 @@ class VM:
                 "-chardev", f"socket,id=control,path={wire.parent / 'control.sock'},server=on,wait=off",
                 "-device", "virtserialport,chardev=control,name=oblivion.gateway"]
         self.process = subprocess.Popen([
-            "qemu-system-aarch64", "-machine", "virt", "-accel", "hvf",
-            "-cpu", "host", "-m", "1024" if role == "gateway" else "512", "-smp", "2",
+            "qemu-system-aarch64", "-machine", "virt", "-accel", accelerator,
+            "-cpu", "host" if accelerator == "hvf" else "max", "-m", "1024" if role == "gateway" else "512", "-smp", "2",
             "-nodefaults", "-no-reboot", "-display", "none", "-monitor", "none", "-serial", "stdio",
             "-object", "rng-random,filename=/dev/urandom,id=rng", "-device", "virtio-rng-pci,rng=rng",
             "-kernel", str(image / "kernel"), "-initrd", str(output / "lab-initrd"),
@@ -194,13 +202,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--accelerator", choices=["hvf", "tcg"], default="hvf", help="Explicit lab backend: Mac HVF or Linux software emulation; never falls back")
     parser.add_argument("--overlay", action="store_true", help="Development only: load the current fixture and network script in RAM")
     parser.add_argument("--tor-online", action="store_true", help="Allow Tor to bootstrap and check HTTPS via check.torproject.org; no provider requests")
     parser.add_argument("--control-fault", choices=["disconnect", "shutdown", "malformed", "oversized", "partial", "duplicate-grant", "supervisor-crash", "broker-crash", "egress-crash"], default="disconnect")
     args = parser.parse_args()
-    assert (platform.system(), platform.machine()) == ("Darwin", "arm64")
+    validate_accelerator(args.accelerator)
     # Linux's dump-guest-core property is unavailable with HVF. Suppress core
-    # dumps for this runner and its QEMU children; this is still a Mac lab.
+    # dumps for this runner and its QEMU children on either lab backend.
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     image = args.image.resolve()
     output = args.output.resolve()
@@ -214,7 +223,8 @@ def main():
     checks = []
     started = time.monotonic()
     fixture_hash = hashlib.sha256(Path(__file__).with_name("vm-network-fixture.py").read_bytes()).hexdigest()
-    summary = {"scope": "two independent Debian ARM VMs on Mac HVF; synthetic API credentials; no LUKS lifecycle or OpenCode integration",
+    summary = {"scope": "two independent Debian ARM VMs; synthetic API credentials; no LUKS lifecycle or OpenCode integration",
+        "accelerator": args.accelerator, "host_system": platform.system(), "hardware_isolation_verified": False,
         "online_tor_requested": args.tor_online, "provider_requests": False, "checks": checks, "passed": False,
         "image_manifest": (image / "SHA256SUMS").read_text(), "fixture_sha256": fixture_hash,
         "runtime_overlays": ["fixture", "network script", "error console"] if args.overlay else [],
@@ -232,14 +242,14 @@ def main():
     try:
         with tempfile.TemporaryDirectory(prefix="oblivion-net-", dir="/tmp") as temporary:
             wire = Path(temporary) / "inside.sock"
-            gateway = VM("gateway", image, output, wire, args.tor_online)
+            gateway = VM("gateway", image, output, wire, args.tor_online, args.accelerator)
             vms.append(gateway)
             deadline = time.monotonic() + 10
             while not wire.exists() or not (wire.parent / "control.sock").exists():
                 assert gateway.process.poll() is None and time.monotonic() < deadline
                 time.sleep(0.01)
             control = Control(wire.parent / "control.sock")
-            chat = VM("chat", image, output, wire, args.tor_online)
+            chat = VM("chat", image, output, wire, args.tor_online, args.accelerator)
             vms.append(chat)
             gateway.ready(fixture_hash)
             chat.ready(fixture_hash)

@@ -25,10 +25,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--accelerator", choices=["hvf", "tcg"], default="hvf", help="Explicit lab backend: Mac HVF or Linux software emulation; never falls back")
     parser.add_argument("--authentication", choices=["required", "none"], default="required")
     parser.add_argument("--fault", choices=["revoke", "egress-crash", "broker-crash", "supervisor-crash", "control-disconnect", "reconfigure"], default="egress-crash")
     args = parser.parse_args()
-    assert (platform.system(), platform.machine()) == ("Darwin", "arm64")
+    network.validate_accelerator(args.accelerator)
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     image, output = args.image.resolve(), args.output.resolve()
     assert all("," not in str(path) for path in [image, output])
@@ -41,7 +42,8 @@ def main():
     checks = []
     started = time.monotonic()
     fixture_hash = hashlib.sha256(Path(__file__).with_name("vm-network-fixture.py").read_bytes()).hexdigest()
-    summary = {"scope": "two read-only Debian ARM VMs on Mac HVF with native loopback SOCKS/TLS fixture; no LUKS, host profile or OpenCode lifecycle",
+    summary = {"scope": "two read-only Debian ARM VMs with native loopback SOCKS/TLS fixture; no LUKS, host profile or OpenCode lifecycle",
+        "accelerator": args.accelerator, "host_system": platform.system(), "hardware_isolation_verified": False,
         "passed": False, "checks": checks, "authentication": args.authentication, "fault": args.fault,
         "provider_requests": False, "real_tor": False, "image_manifest": (image / "SHA256SUMS").read_text(),
         "fixture_sha256": fixture_hash,
@@ -63,14 +65,14 @@ def main():
             wire = Path(temporary) / "inside.sock"
             # QEMU's host alias reaches the loopback fixture. The production
             # gateway policy must admit precisely this endpoint and nothing else.
-            gateway = network.VM("gateway", image, output, wire, True)
+            gateway = network.VM("gateway", image, output, wire, True, args.accelerator)
             vms.append(gateway)
             deadline = time.monotonic() + 10
             while not wire.exists() or not (wire.parent / "control.sock").exists():
                 assert gateway.process.poll() is None and time.monotonic() < deadline
                 time.sleep(0.01)
             control = network.Control(wire.parent / "control.sock")
-            chat = network.VM("chat", image, output, wire, True)
+            chat = network.VM("chat", image, output, wire, True, args.accelerator)
             vms.append(chat)
             gateway.ready(fixture_hash)
             chat.ready(fixture_hash)

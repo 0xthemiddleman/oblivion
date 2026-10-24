@@ -105,3 +105,38 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           compression-level: 0
+      - name: Install software-emulated VM laboratory
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-arm
+      - name: SOCKS transport and stream fault matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for authentication in required none; do
+            for fault in revoke egress-crash broker-crash supervisor-crash control-disconnect reconfigure; do
+              timeout --kill-after=20s 240s python3 -u script/oblivion/run-transport-lab.py \
+                --accelerator tcg --image artifacts/ci/transport \
+                --output "artifacts/ci/results/socks-$authentication-$fault" \
+                --authentication "$authentication" --fault "$fault"
+            done
+          done
+      - name: Offline Tor regression and control fault matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for fault in disconnect shutdown malformed oversized partial duplicate-grant supervisor-crash broker-crash egress-crash; do
+            timeout --kill-after=20s 240s python3 -u script/oblivion/run-network-lab.py \
+              --accelerator tcg --image artifacts/ci/transport \
+              --output "artifacts/ci/results/tor-$fault" --control-fault "$fault"
+          done
+      - name: Retain synthetic VM evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oblivion-network-evidence-${{ github.sha }}
+          path: |
+            artifacts/ci/results/**/*.json
+            artifacts/ci/results/**/*.pcap
+            artifacts/ci/results/**/*.log
+            artifacts/ci/source-commit.txt
+          retention-days: 7
+          if-no-files-found: warn
