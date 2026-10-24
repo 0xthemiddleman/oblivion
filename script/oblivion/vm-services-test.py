@@ -11,6 +11,7 @@ import pwd
 import select
 import shutil
 import signal
+import socket
 import struct
 import subprocess
 import termios
@@ -710,7 +711,29 @@ with socket.socket(socket.AF_UNIX) as client:
 except BaseException:
     print("OBLIVION_VM_LAB_FAIL", flush=True)
     # This disposable image journals only synthetic diagnostics in RAM.
-    subprocess.run(["journalctl", "-b", "-u", CONTROLLER, "-u", MANAGER, "-u", RECOVER, "--no-pager", "-n", "80"])
+    subprocess.run(["journalctl", "-b", "-u", CONTROLLER, "-u", MANAGER, "-u", RECOVER,
+        "-u", "oblivion-session.service", "--no-pager", "-n", "80"])
+    subprocess.run(["systemctl", "show", "oblivion-session.service", "--property=ActiveState,SubState,Result,CPUUsageNSec,MemoryCurrent"])
+    if Path("/run/oblivion-session/qmp.sock").exists():
+        # Inspect the actual nested CPU on failure. Register values belong only
+        # to this synthetic lab; production QMP remains private to the host.
+        try:
+            with socket.socket(socket.AF_UNIX) as diagnostic:
+                diagnostic.settimeout(5)
+                diagnostic.connect("/run/oblivion-session/qmp.sock")
+                with diagnostic.makefile("rb") as reader:
+                    assert "QMP" in json.loads(reader.readline(65536))
+                    for number, request in enumerate([{"execute": "qmp_capabilities"},
+                            {"execute": "query-status"},
+                            {"execute": "human-monitor-command", "arguments": {"command-line": "info registers"}}]):
+                        diagnostic.sendall(json.dumps({**request, "id": number}).encode() + b"\n")
+                        while True:
+                            reply = json.loads(reader.readline(65536))
+                            if reply.get("id") == number:
+                                print("OBLIVION_GUEST_DIAGNOSTIC " + json.dumps(reply), flush=True)
+                                break
+        except (OSError, ValueError, AssertionError) as error:
+            print("OBLIVION_GUEST_DIAGNOSTIC_FAILED " + type(error).__name__, flush=True)
     raise
 finally:
     os.close(slave)

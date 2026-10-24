@@ -201,7 +201,11 @@ jobs:
           --build-arg OPENCODE_BUILD_EVIDENCE=artifacts/oblivion-build/build-evidence.json
           --output type=local,dest=artifacts/ci/host-image .
       - name: Install the VM laboratory tools
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-arm libarchive-tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-arm libarchive-tools squashfs-tools e2fsprogs
+      - name: Boot the compiled chat without nested emulation
+        run: >-
+          python3 -u script/oblivion/run-tui-boot-lab.py
+          --image artifacts/ci/host-image --output artifacts/ci/tui-boot
       - name: Exercise protected profiles and trusted manager
         run: >-
           python3 -u script/oblivion/run-vm-lab.py --accelerator tcg
@@ -213,6 +217,8 @@ jobs:
         with:
           name: oblivion-host-evidence-${{ github.sha }}
           path: |
+            artifacts/ci/tui-boot/summary.json
+            artifacts/ci/tui-boot/serial.log
             artifacts/ci/host-results/summary.json
             artifacts/ci/host-results/serial.log
             artifacts/ci/host-image/SHA256SUMS
