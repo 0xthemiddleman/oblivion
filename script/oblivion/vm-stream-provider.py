@@ -15,7 +15,8 @@ from pathlib import Path
 
 ROOT = Path("/usr/lib/oblivion-stream-fixture")
 EXTERNAL = False
-KEYS = {b"Bearer OBLIVION_API_KEY_CANARY_5c91": "initial", b"Bearer OBLIVION_API_NEXT_CANARY_86ab": "alternate"}
+KEYS = {b"Bearer OBLIVION_API_KEY_CANARY_5c91": "initial", b"Bearer OBLIVION_API_NEXT_CANARY_86ab": "alternate",
+    b"Bearer OBLIVION_API_RAM_CANARY_a13e": "temporary"}
 lock = threading.Lock()
 active = set()
 closed = set()

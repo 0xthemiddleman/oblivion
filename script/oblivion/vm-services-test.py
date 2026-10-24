@@ -26,6 +26,7 @@ GENERAL = b"synthetic-general-password"
 PASSWORD = b"synthetic-session-password-a"
 API_KEY = b"OBLIVION_API_KEY_CANARY_5c91"
 NEXT_API_KEY = b"OBLIVION_API_NEXT_CANARY_86ab"
+RAM_API_KEY = b"OBLIVION_API_RAM_CANARY_a13e"
 PROXY_USER = b"OBLIVION_PROXY_USER_CANARY_31d2"
 PROXY_PASSWORD = b"OBLIVION_PROXY_PASSWORD_CANARY_72a4"
 PROXY = {"mode": "socks5", "endpoint": "192.168.1.20:1080",
@@ -670,7 +671,7 @@ with socket.socket(socket.AF_UNIX) as client:
     assert not policy_selection.exists() and status()["network_policy"] is None
     check("read-only web policy overrides use only RAM, clear on lock and leave the encrypted profile byte-identical")
     check("read-only transport choices use RAM, clear on lock and leave the entire encrypted image byte-identical")
-    check("read-only profile exposes key metadata and permits RAM selection, rejects all key mutations and pending deletion, and remains byte-identical")
+    check("read-only profile exposes key metadata and permits RAM selection, rejects saved-key mutations and pending deletion, and remains byte-identical")
     terminal.reset()
     os.kill(manager_pid, signal.SIGKILL)
     manager_pid = wait_restart(MANAGER, manager_pid)
@@ -705,10 +706,67 @@ with socket.socket(socket.AF_UNIX) as client:
     send(b"e", "avvio effimero, sola lettura")
     send(GENERAL + b"\r", "Nuova sessione effimera")
     check("exhausted RAM filesystem quota refuses ephemeral allocation without a disk fallback or VM; lock removes the partial RAM file and leaves the general image unchanged")
-    send(b"n", "Conversazioni e documenti")
+    ram_keys = Path("/run/oblivion/api-keys.json")
+    ram_pending = ram_keys.with_suffix(".json.pending")
+    key_selection_file = Path("/run/oblivion/api-key-selection")
+    temporary_command = key_command("temporary", name="Volatile", key=RAM_API_KEY.decode())
+    saved_keys = key_file.read_bytes()
+    assert command("api-keys", secret=key_command("temporary", name="Volatile", key="short"), success=False) == "invalid_api_key"
+    ram_pending.symlink_to(key_file)
+    assert command("api-keys", secret=temporary_command, success=False) == "file_unavailable"
+    ram_pending.unlink()
+    send(b"g", "chiavi Abliteration")
+    send(b"t", "Nome della chiave temporanea")
+    send(b"Volatile\r", "solo RAM fino al blocco")
+    send(RAM_API_KEY + b"\r", "Nuova sessione effimera")
+    ram_id = status()["api_keys"]["selected"]
+    assert ram_id != first_key and status()["api_keys"]["entries"][1]["temporary"]
+    assert ram_keys.stat().st_uid == 0 and ram_keys.stat().st_mode & 0o777 == 0o600
+    assert subprocess.check_output(["stat", "-f", "-c", "%T", str(ram_keys)]).strip() == b"tmpfs"
+    assert RAM_API_KEY in ram_keys.read_bytes() and RAM_API_KEY.decode() not in command("status")
+    forbidden = subprocess.run(["cat", str(ram_keys)], user=1000, group=1000, extra_groups=[], capture_output=True)
+    assert forbidden.returncode != 0 and not forbidden.stdout
+    assert key_file.read_bytes() == saved_keys and file_digest("/data/general.luks") == encrypted_before
+    check("the trusted readonly key menu accepts a hidden RAM credential; only root can read its tmpfs archive and neither status nor the encrypted profile receives the secret")
+    saved_ram_keys = ram_keys.read_bytes()
+    saved_selection = key_selection_file.read_bytes()
+    runtime_space = os.statvfs("/run")
+    runtime_limit = runtime_space.f_blocks * runtime_space.f_frsize
+    runtime_used = (runtime_space.f_blocks - runtime_space.f_bfree) * runtime_space.f_frsize
+    subprocess.run(["mount", "-o", f"remount,size={runtime_used}", "/run"], check=True)
+    try:
+        assert command("api-keys", secret=temporary_command, success=False) == "selection_write_failed"
+        assert command("api-keys", secret=key_command("select", id=first_key), success=False) == "selection_write_failed"
+        assert ram_keys.read_bytes() == saved_ram_keys and key_selection_file.read_bytes() == saved_selection
+    finally:
+        subprocess.run(["mount", "-o", f"remount,size={runtime_limit}", "/run"], check=True)
+    command("api-keys", secret=key_command("select", id=ram_id))
+    send(b"g", "Volatile [RAM]")
+    send(b"j", "> Volatile [RAM]")
+    send(b"r", "Nuovo nome della chiave")
+    send(b"Solo RAM\r", "Solo RAM [RAM]")
+    assert not ram_pending.exists()
+    send(b"s", "Sostituisci la API key selezionata")
+    send(NEXT_API_KEY + b"\r", "Solo RAM [RAM]")
+    assert NEXT_API_KEY in ram_keys.read_bytes() and RAM_API_KEY not in ram_keys.read_bytes()
+    send(b"x", "Premi X di nuovo")
+    send(b"q", "Solo RAM [RAM]")
+    assert status()["api_keys"]["selected"] == ram_id
+    send(b"x", "Premi X di nuovo")
+    send(b"x", "Predefinita [predefinita]")
+    assert status()["api_keys"]["selected"] is None and not status()["api_key_present"]
+    assert key_file.read_bytes() == saved_keys and file_digest("/data/general.luks") == encrypted_before
+    check("RAM key rename, replacement and confirmed removal leave the saved archive untouched; ENOSPC preserves the prior key and selection and removal never rotates to the saved account")
+    send(b"t", "Nome della chiave temporanea")
+    send(b"Volatile\r", "solo RAM fino al blocco")
+    send(RAM_API_KEY + b"\r", "Nuova sessione effimera")
+    send(b"n", "Scegli la chiave per questa apertura")
+    send(b"j", "> Volatile [RAM]")
+    send(b"\r", "Conversazioni e documenti")
     wait_screen("/exit blocca")
     assert status()["session_open"] and status()["general_readonly"]
     assert command("enter-ephemeral", success=False) == "vm_already_running"
+    assert command("api-keys", secret=temporary_command, success=False) == "session_must_be_closed"
     assert ephemeral.stat().st_uid == 0 and ephemeral.stat().st_mode & 0o777 == 0o600
     assert ephemeral.stat().st_size == status()["session_bytes"]
     assert ephemeral.stat().st_blocks * 512 >= ephemeral.stat().st_size
@@ -724,7 +782,9 @@ with socket.socket(socket.AF_UNIX) as client:
     assert str(ephemeral).encode() not in subprocess.check_output(["losetup", "--list", "--output", "BACK-FILE"])
     assert property("oblivion-session.service", "ActiveState") in ["inactive", "failed"]
     assert file_digest("/data/general.luks") == encrypted_before
-    send(b"n", "Conversazioni e documenti")
+    send(b"n", "Scegli la chiave per questa apertura")
+    send(b"j", "> Volatile [RAM]")
+    send(b"\r", "Conversazioni e documenti")
     wait_screen("/exit blocca")
     assert subprocess.check_output(["cryptsetup", "luksUUID", str(ephemeral)]).strip() != first_ephemeral
     send(b"OBLIVION_TUI_B_REQUEST", "OBLIVION_TUI_B_REQUEST")
@@ -736,12 +796,25 @@ with socket.socket(socket.AF_UNIX) as client:
     wait_screen("Archivio generale bloccato")
     locked()
     assert not ephemeral.exists() and file_digest("/data/general.luks") == encrypted_before
+    assert not ram_keys.exists() and not ram_pending.exists() and not key_selection_file.exists()
+    assert not key_selection_file.with_name("api-key-selection.pending").exists()
     assert str(ephemeral).encode() not in subprocess.check_output(["losetup", "--list", "--output", "BACK-FILE"])
     check("manager death destroys the ephemeral VM and RAM disk before restart, closes both mappings and leaves the complete encrypted general image byte-identical")
     send(b"\r", "Password del volume generale")
     send(GENERAL + b"\r", "Sessioni protette")
     assert command("enter-ephemeral", success=False) == "ephemeral_boot_required"
     current = status()
+    assert len(current["api_keys"]["entries"]) == 1 and not current["api_keys"]["entries"][0]["temporary"]
+    saved_keys = key_file.read_bytes()
+    command("api-keys", secret=temporary_command)
+    temporary_id = status()["api_keys"]["selected"]
+    assert status()["api_keys"]["entries"][1]["temporary"] and RAM_API_KEY in ram_keys.read_bytes()
+    assert key_file.read_bytes() == saved_keys
+    command("api-keys", secret=key_command("remove", id=temporary_id))
+    assert status()["api_keys"]["selected"] is None
+    assert key_file.read_bytes() == saved_keys
+    command("api-keys", secret=key_command("select", id=first_key))
+    check("RAM credentials remain separate even with a writable general profile; removal does not select a saved account until an explicit choice")
     assert current["sessions"] == [session_id] and len(current["incomplete_sessions"]) == 1
     pending_id = current["incomplete_sessions"][0]
     assert command("open", pending_id, secret=PASSWORD, success=False) == "file_unavailable"
@@ -842,7 +915,7 @@ with socket.socket(socket.AF_UNIX) as client:
     assert property(MANAGER, "ActiveState") in ["inactive", "failed"]
     assert not Path(f"/proc/{manager_pid}").exists()
     check("controller stop drains dependent services and leaves no active VM or open volume")
-    assert all(secret not in output for secret in [GENERAL, PASSWORD, API_KEY, NEXT_API_KEY, PROXY_USER, PROXY_PASSWORD])
+    assert all(secret not in output for secret in [GENERAL, PASSWORD, API_KEY, NEXT_API_KEY, RAM_API_KEY, PROXY_USER, PROXY_PASSWORD])
     check("synthetic passwords, API keys and proxy credentials never appear on the managed console")
     subprocess.run(["umount", "/data"], check=True)
     print("OBLIVION_VM_LAB_PASS", flush=True)

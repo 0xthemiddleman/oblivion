@@ -1,4 +1,4 @@
-use oblivion_host::keys::{Archive, Command, LEGACY};
+use oblivion_host::keys::{Archive, Command, Keyring, LEGACY};
 use zeroize::Zeroizing;
 
 const FIRST: &str = "synthetic-first-api-key";
@@ -126,5 +126,75 @@ fn malformed_archives_never_fall_back_to_legacy_or_another_key() {
     assert!(
         serde_json::from_str::<Command>(r#"{"action":"select","id":"a","key":"not-allowed"}"#)
             .is_err()
+    );
+}
+
+#[test]
+fn temporary_keys_are_marked_and_never_encoded_into_the_saved_archive() {
+    let saved = Archive::legacy(Zeroizing::new(FIRST.into())).unwrap();
+    let before = saved.encode().unwrap();
+    let mut temporary = Archive::empty();
+    temporary
+        .change(Command::Add {
+            name: "Temporanea".into(),
+            key: Zeroizing::new(SECOND.into()),
+        })
+        .unwrap();
+    let id = temporary.status(None).entries[0].id.clone();
+    let keyring = Keyring::new(saved, temporary).unwrap();
+    let status = keyring.status(Some(Some(id.clone())));
+    assert_eq!(status.selected.as_deref(), Some(id.as_str()));
+    assert_eq!(status.default.as_deref(), Some(LEGACY));
+    assert!(!status.entries[0].temporary);
+    assert!(status.entries[1].temporary);
+    let public = serde_json::to_string(&status).unwrap();
+    assert!(!public.contains(FIRST) && !public.contains(SECOND));
+    assert_eq!(keyring.key(&id), Some(SECOND));
+    assert_eq!(keyring.key(LEGACY), Some(FIRST));
+    assert_eq!(*before, *keyring.saved.encode().unwrap());
+    assert!(
+        !std::str::from_utf8(&keyring.saved.encode().unwrap())
+            .unwrap()
+            .contains(SECOND)
+    );
+}
+
+#[test]
+fn removing_a_temporary_key_never_rotates_to_the_saved_account() {
+    let mut temporary = Archive::empty();
+    temporary
+        .change(Command::Add {
+            name: "RAM".into(),
+            key: Zeroizing::new(SECOND.into()),
+        })
+        .unwrap();
+    let id = temporary.status(None).entries[0].id.clone();
+    let mut keyring = Keyring::new(
+        Archive::legacy(Zeroizing::new(FIRST.into())).unwrap(),
+        temporary,
+    )
+    .unwrap();
+    keyring
+        .temporary
+        .change(Command::Remove { id: id.clone() })
+        .unwrap();
+    assert!(keyring.status(Some(Some(id))).selected.is_none());
+    assert!(keyring.status(Some(None)).selected.is_none());
+    assert_eq!(keyring.status(None).selected.as_deref(), Some(LEGACY));
+    assert!(
+        keyring
+            .saved
+            .change(Command::Temporary {
+                name: "RAM".into(),
+                key: Zeroizing::new(SECOND.into()),
+            })
+            .is_err()
+    );
+    assert!(
+        Keyring::new(
+            keyring.saved,
+            Archive::legacy(Zeroizing::new(SECOND.into())).unwrap()
+        )
+        .is_err()
     );
 }

@@ -8,6 +8,10 @@ pub const LEGACY: &str = "00000000000000000000000000000000";
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "action", rename_all = "kebab-case", deny_unknown_fields)]
 pub enum Command {
+    Temporary {
+        name: String,
+        key: Zeroizing<String>,
+    },
     Add {
         name: String,
         key: Zeroizing<String>,
@@ -52,6 +56,8 @@ pub struct Archive {
 pub struct Info {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub temporary: bool,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -60,6 +66,44 @@ pub struct Status {
     pub entries: Vec<Info>,
     pub default: Option<String>,
     pub selected: Option<String>,
+}
+
+// Keep the two archives separate: there is deliberately no combined encoder.
+pub struct Keyring {
+    pub saved: Archive,
+    pub temporary: Archive,
+}
+
+impl Keyring {
+    pub fn new(saved: Archive, temporary: Archive) -> Result<Self, &'static str> {
+        if temporary
+            .entries
+            .iter()
+            .any(|entry| saved.key(&entry.id).is_some())
+        {
+            return Err("key_id_exists");
+        }
+        Ok(Self { saved, temporary })
+    }
+
+    pub fn key(&self, id: &str) -> Option<&str> {
+        self.saved.key(id).or_else(|| self.temporary.key(id))
+    }
+
+    pub fn status(&self, selection: Option<Option<String>>) -> Status {
+        let mut status = self.saved.status(None);
+        status
+            .entries
+            .extend(self.temporary.entries.iter().map(|entry| Info {
+                id: entry.id.clone(),
+                name: entry.name.clone(),
+                temporary: true,
+            }));
+        status.selected = selection
+            .unwrap_or_else(|| status.default.clone())
+            .filter(|id| self.key(id).is_some());
+        status
+    }
 }
 
 impl Archive {
@@ -127,6 +171,7 @@ impl Archive {
                 .map(|entry| Info {
                     id: entry.id.clone(),
                     name: entry.name.clone(),
+                    temporary: false,
                 })
                 .collect(),
             default: self.default.clone(),
@@ -194,6 +239,7 @@ impl Archive {
                 self.default = Some(id);
             }
             Command::Select { .. } => return Err("selection_is_volatile"),
+            Command::Temporary { .. } => return Err("temporary_keys_are_volatile"),
         }
         Ok(())
     }

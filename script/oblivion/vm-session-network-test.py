@@ -19,6 +19,7 @@ GENERAL = b"synthetic-general-password"
 PASSWORD = b"synthetic-session-password-a"
 KEY = b"OBLIVION_API_KEY_CANARY_5c91"
 NEXT = b"OBLIVION_API_NEXT_CANARY_86ab"
+RAM_KEY = b"OBLIVION_API_RAM_CANARY_a13e"
 OWNER = "oblivion-gateway-host.service"
 VM = "oblivion-gateway-vm.service"
 STREAM = Path("/run/oblivion-stream-lab").exists()
@@ -99,7 +100,7 @@ def ready():
     for process in [pid, owner]:
         for name in ["cmdline", "environ"]:
             value = Path(f"/proc/{process}/{name}").read_bytes()
-            assert not any(secret in value for secret in [KEY, NEXT, PROXY_USER, PROXY_PASSWORD])
+            assert not any(secret in value for secret in [KEY, NEXT, RAM_KEY, PROXY_USER, PROXY_PASSWORD])
     return pid, owner
 
 
@@ -607,9 +608,23 @@ assert not status()["general_open"]
 
 if SOCKS:
     assert stream_status()["active"] == []
+    command("unlock", secret=GENERAL)
+    for identifier in [initial_key, alternate_key]:
+        command("api-keys", secret=json.dumps({"action": "remove", "id": identifier}).encode())
+    assert status()["api_keys"]["entries"] == [] and not status()["api_key_present"]
+    command("lock")
     encrypted_before = digest("/data/general.luks")
     command("unlock-ephemeral", secret=GENERAL)
+    stopped()
+    assert command("enter-ephemeral", success=False) == "gateway_unavailable"
+    assert not Path("/run/oblivion/ephemeral.luks").exists()
+    saved_keys = Path("/run/oblivion/general/profile/abliteration.keys.json").read_bytes()
+    temporary_command = json.dumps({"action": "temporary", "name": "Solo RAM", "key": RAM_KEY.decode()}).encode()
+    command("api-keys", secret=temporary_command)
     ready()
+    assert status()["api_keys"]["entries"][0]["temporary"]
+    assert Path("/run/oblivion/general/profile/abliteration.keys.json").read_bytes() == saved_keys
+    check("an empty saved key archive leaves the ephemeral gateway stopped; a new RAM-only key starts it without writing the read-only profile")
     assert status()["general_readonly"] and status()["sessions"] == []
     assert tor_state.read_bytes() == saved_tor_state
     assert command("enter", a, secret=PASSWORD, success=False) == "general_not_writable"
@@ -626,7 +641,9 @@ if SOCKS:
     client.sendall(b"stream\n")
     receive(client, b"OBLIVION_STREAM_STARTED")
     observed = stream_status()
-    assert observed["active"] == [4] and observed["credentials"]["4"] == "initial"
+    assert observed["active"] == [4] and observed["credentials"]["4"] == "temporary"
+    assert command("api-keys", secret=temporary_command, success=False) == "session_must_be_closed"
+    assert stream_status()["active"] == [4]
     command("force-leave")
     client.close()
     stream_closed(4)
@@ -636,6 +653,15 @@ if SOCKS:
     assert tor_state.read_bytes() == saved_tor_state
     check("closing a streaming ephemeral session revokes its provider connection and removes its RAM disk without writing the general image or Tor state")
 
+    assert Path("/run/oblivion/api-keys.json").exists()
+    command("lock")
+    assert not Path("/run/oblivion/api-keys.json").exists()
+    assert not Path("/run/oblivion/api-key-selection").exists()
+    command("unlock-ephemeral", secret=GENERAL)
+    stopped()
+    assert status()["api_keys"]["entries"] == [] and not status()["api_key_present"]
+    command("api-keys", secret=json.dumps({"action": "temporary", "name": "Nuova RAM", "key": NEXT.decode()}).encode())
+    ready()
     command("enter-ephemeral")
     client = console()
     next_ephemeral_token = probe(client)
@@ -645,7 +671,8 @@ if SOCKS:
     receive(client, b"OBLIVION_OLD_TOKEN_DENIED")
     client.sendall(b"stream\n")
     receive(client, b"OBLIVION_STREAM_STARTED")
-    assert stream_status()["active"] == [5]
+    observed = stream_status()
+    assert observed["active"] == [5] and observed["credentials"]["5"] == "alternate"
     command("lock")
     client.close()
     stopped()
@@ -654,7 +681,11 @@ if SOCKS:
     assert not Path("/run/oblivion/ephemeral.luks").exists()
     assert "ephemeral.luks" not in run("losetup", "--list", "--output", "BACK-FILE")
     assert digest("/data/general.luks") == encrypted_before
+    assert not Path("/run/oblivion/api-keys.json").exists()
+    assert not Path("/run/oblivion/api-keys.json.pending").exists()
+    assert not Path("/run/oblivion/api-key-selection").exists()
     check("a second ephemeral VM rejects the previous token; global lock terminates its active stream, gateway and RAM volume while leaving the general image byte-identical")
+    check("locking discards RAM credentials; the next read-only boot has no key until a new explicit RAM choice, which is observed by the external TLS provider")
     provider.terminate()
     provider.wait(timeout=10)
     Path("/run/oblivion-stream-provider.sock").unlink()
@@ -665,7 +696,7 @@ for path in Path("/run").rglob("*"):
     with path.open("rb") as stream:
         tail = b""
         while chunk := stream.read(1024 * 1024):
-            assert not any(secret in tail + chunk for secret in [KEY, NEXT, PROXY_USER, PROXY_PASSWORD, *tokens]), str(path)
+            assert not any(secret in tail + chunk for secret in [KEY, NEXT, RAM_KEY, PROXY_USER, PROXY_PASSWORD, *tokens]), str(path)
             tail = chunk[-128:]
 check("runtime regular files contain none of the synthetic provider keys or session tokens after closure")
 run("umount", "/data")

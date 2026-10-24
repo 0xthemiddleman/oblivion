@@ -265,7 +265,7 @@ adapter_digest = adapter_manifest["sha256"] if adapter_manifest else (image / "o
 adapter_verified = not args.gateway_bundle or ("OBLIVION_ADAPTER_BINARY_SHA256 " + str(adapter_digest)) in serial.splitlines()
 adapter_capture = next((json.loads(line.removeprefix("OBLIVION_ADAPTER_CAPTURE ")) for line in serial.splitlines() if line.startswith("OBLIVION_ADAPTER_CAPTURE ")), None)
 markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVION_VM_TEMP_CANARY_d9ae",
-           b"OBLIVION_API_KEY_CANARY_5c91", b"OBLIVION_API_NEXT_CANARY_86ab",
+           b"OBLIVION_API_KEY_CANARY_5c91", b"OBLIVION_API_NEXT_CANARY_86ab", b"OBLIVION_API_RAM_CANARY_a13e",
            b"OBLIVION_PROXY_USER_CANARY_31d2", b"OBLIVION_PROXY_PASSWORD_CANARY_72a4",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
 if args.stream:

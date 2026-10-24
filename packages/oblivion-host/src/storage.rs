@@ -156,6 +156,7 @@ pub fn main() -> Result<()> {
         "unlock" | "unlock-ephemeral" => {
             config.unlock(&password(false)?, op == "unlock-ephemeral")?;
             clear_key_selection()?;
+            clear_key_file("api-keys.json")?;
             clear_transport_selection()?;
             clear_network_selection()?;
             config.start_gateway()
@@ -166,8 +167,7 @@ pub fn main() -> Result<()> {
                 mount_mode()? == MountMode::ReadWrite,
                 "general_not_writable",
             )?;
-            let archive = read_api_keys()?;
-            let status = archive.status(key_selection()?);
+            let status = read_keyring()?.status(key_selection()?);
             let command = if op == "clear-api-key" {
                 status.selected.map(|id| keys::Command::Remove { id })
             } else {
@@ -291,6 +291,7 @@ pub fn main() -> Result<()> {
             }
             close_general()?;
             clear_key_selection()?;
+            clear_key_file("api-keys.json")?;
             clear_transport_selection()?;
             clear_network_selection()?;
             if recovery_required()? {
@@ -303,7 +304,7 @@ pub fn main() -> Result<()> {
             let api_keys = if mode == MountMode::Closed {
                 None
             } else {
-                Some(read_api_keys()?.status(key_selection()?))
+                Some(read_keyring()?.status(key_selection()?))
             };
             let status = Status {
                 general_present: config
@@ -476,23 +477,52 @@ impl Config {
     fn change_keys(&self, command: keys::Command) -> Result<()> {
         let mode = mount_mode()?;
         require(mode != MountMode::Closed, "general_not_open")?;
+        let mut keyring = read_keyring()?;
+        let temporary = match &command {
+            keys::Command::Temporary { .. } => true,
+            keys::Command::Replace { id, .. }
+            | keys::Command::Rename { id, .. }
+            | keys::Command::Remove { id } => keyring.temporary.key(id).is_some(),
+            _ => false,
+        };
         require(
-            mode == MountMode::ReadWrite || matches!(command, keys::Command::Select { .. }),
+            mode == MountMode::ReadWrite
+                || temporary
+                || matches!(command, keys::Command::Select { .. }),
             "general_not_writable",
         )?;
         require(
             !mapping_open("oblivion-session")? && crate::vm::stopped()?,
             "session_must_be_closed",
         )?;
-        let mut archive = read_api_keys()?;
-        let before = archive.status(key_selection()?);
+        let before = keyring.status(key_selection()?);
+        let selecting = matches!(command, keys::Command::Select { .. });
         let selection = match command {
             keys::Command::Select { id } => {
-                require(archive.key(&id).is_some(), "api_key_missing")?;
+                require(keyring.key(&id).is_some(), "api_key_missing")?;
+                Some(id)
+            }
+            keys::Command::Temporary { name, key } => {
+                keyring
+                    .temporary
+                    .change(keys::Command::Add { name, key })
+                    .map_err(Error)?;
+                let id = keyring
+                    .temporary
+                    .status(None)
+                    .entries
+                    .pop()
+                    .ok_or(Error("api_key_missing"))?
+                    .id;
+                require(keyring.saved.key(&id).is_none(), "key_id_exists")?;
                 Some(id)
             }
             command => {
-                archive.change(command).map_err(Error)?;
+                if temporary {
+                    keyring.temporary.change(command).map_err(Error)?;
+                } else {
+                    keyring.saved.change(command).map_err(Error)?;
+                }
                 None
             }
         };
@@ -512,19 +542,21 @@ impl Config {
         if self.gateway.is_some() {
             crate::gateway::stop()?;
         }
+        if temporary {
+            write_key_file("api-keys.json", &keyring.temporary.encode().map_err(Error)?)?;
+        } else if !selecting {
+            save_api_keys(&keyring.saved)?;
+        }
         if let Some(id) = selection {
             write_key_selection(Some(&id))?;
-        } else {
-            save_api_keys(&archive)?;
-            if before.entries.is_empty() {
-                clear_key_selection()?;
-            } else if before
-                .selected
-                .as_ref()
-                .is_some_and(|id| archive.key(id).is_none())
-            {
-                write_key_selection(None)?;
-            }
+        } else if before.entries.is_empty() {
+            clear_key_selection()?;
+        } else if before
+            .selected
+            .as_ref()
+            .is_some_and(|id| keyring.key(id).is_none())
+        {
+            write_key_selection(None)?;
         }
         self.start_gateway()
     }
@@ -743,17 +775,8 @@ fn read_api_keys() -> Result<keys::Archive> {
         return Ok(keys::Archive::empty());
     }
     let path = Path::new(PROFILE).join("abliteration.keys.json");
-    match fs::symlink_metadata(&path) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(_) => return Err(Error("profile_unavailable")),
-        Ok(_) => {
-            let mut bytes = Zeroizing::new(Vec::new());
-            trusted_file(&path)?
-                .take(keys::LIMIT as u64 + 1)
-                .read_to_end(&mut bytes)
-                .map_err(|_| Error("profile_unavailable"))?;
-            return keys::Archive::decode(&bytes).map_err(Error);
-        }
+    if let Some(archive) = read_key_archive(&path)? {
+        return Ok(archive);
     }
     let path = Path::new(PROFILE).join("abliteration.key");
     match fs::symlink_metadata(&path) {
@@ -771,12 +794,35 @@ fn read_api_keys() -> Result<keys::Archive> {
     keys::Archive::legacy(key).map_err(Error)
 }
 
+fn read_key_archive(path: &Path) -> Result<Option<keys::Archive>> {
+    match fs::symlink_metadata(path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(Error("profile_unavailable")),
+        Ok(_) => {}
+    }
+    let mut bytes = Zeroizing::new(Vec::new());
+    trusted_file(path)?
+        .take(keys::LIMIT as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| Error("profile_unavailable"))?;
+    keys::Archive::decode(&bytes).map(Some).map_err(Error)
+}
+
+fn read_keyring() -> Result<keys::Keyring> {
+    keys::Keyring::new(
+        read_api_keys()?,
+        read_key_archive(&Path::new(RUN).join("api-keys.json"))?
+            .unwrap_or_else(keys::Archive::empty),
+    )
+    .map_err(Error)
+}
+
 fn api_key_present() -> Result<bool> {
-    Ok(read_api_keys()?.status(key_selection()?).selected.is_some())
+    Ok(read_keyring()?.status(key_selection()?).selected.is_some())
 }
 
 fn read_api_key() -> Result<Zeroizing<Vec<u8>>> {
-    let archive = read_api_keys()?;
+    let archive = read_keyring()?;
     let id = archive
         .status(key_selection()?)
         .selected
@@ -812,24 +858,52 @@ fn key_selection() -> Result<Option<Option<String>>> {
 }
 
 fn clear_key_selection() -> Result<()> {
-    let path = Path::new(RUN).join("api-key-selection");
-    if key_selection()?.is_some() {
+    clear_key_file("api-key-selection")
+}
+
+fn clear_key_file(name: &str) -> Result<()> {
+    for name in [name.to_owned(), format!("{name}.pending")] {
+        let path = Path::new(RUN).join(name);
+        match fs::symlink_metadata(&path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => return Err(Error("selection_unavailable")),
+            Ok(_) => {}
+        }
+        trusted_file(&path)?;
         fs::remove_file(path).map_err(|_| Error("selection_write_failed"))?;
     }
     Ok(())
 }
 
 fn write_key_selection(id: Option<&str>) -> Result<()> {
-    clear_key_selection()?;
+    write_key_file("api-key-selection", id.unwrap_or("").as_bytes())
+}
+
+fn write_key_file(name: &str, bytes: &[u8]) -> Result<()> {
+    let path = Path::new(RUN).join(name);
+    let pending = Path::new(RUN).join(format!("{name}.pending"));
+    for existing in [&path, &pending] {
+        match fs::symlink_metadata(existing) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => return Err(Error("selection_unavailable")),
+            Ok(_) => {
+                trusted_file(existing)?;
+            }
+        }
+    }
+    if pending.exists() {
+        fs::remove_file(&pending).map_err(|_| Error("selection_write_failed"))?;
+    }
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
         .mode(0o600)
         .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
-        .open(Path::new(RUN).join("api-key-selection"))
+        .open(&pending)
         .map_err(|_| Error("selection_write_failed"))?;
-    file.write_all(id.unwrap_or("").as_bytes())
-        .map_err(|_| Error("selection_write_failed"))
+    file.write_all(bytes)
+        .map_err(|_| Error("selection_write_failed"))?;
+    fs::rename(pending, path).map_err(|_| Error("selection_write_failed"))
 }
 
 fn transport_profiles() -> Result<(egress::Profile, Option<egress::Profile>)> {

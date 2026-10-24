@@ -330,11 +330,10 @@ fn run(preview: bool) -> Result<()> {
             }
             if status.general_readonly {
                 if matches!(key, b'n' | b'\r' | b'\n') {
-                    if status
-                        .api_keys
-                        .as_ref()
-                        .is_some_and(|keys| keys.entries.len() > 1)
-                        && !key_menu(&mut terminal, true)?
+                    if status.api_keys.as_ref().is_some_and(|keys| {
+                        keys.entries.len() > 1
+                            || (status.gateway_state.is_some() && keys.selected.is_none())
+                    }) && !key_menu(&mut terminal, true)?
                     {
                         return Ok(());
                     }
@@ -345,9 +344,16 @@ fn run(preview: bool) -> Result<()> {
                 return Ok(());
             }
             if key == b'a' {
-                if let Some(secret) = terminal
-                    .password("API key Abliteration - salvata nel volume generale cifrato")?
-                {
+                let temporary = status.api_keys.as_ref().is_some_and(|keys| {
+                    keys.entries
+                        .iter()
+                        .any(|entry| entry.temporary && keys.selected.as_ref() == Some(&entry.id))
+                });
+                if let Some(secret) = terminal.password(if temporary {
+                    "API key Abliteration - solo RAM fino al blocco"
+                } else {
+                    "API key Abliteration - salvata nel volume generale cifrato"
+                })? {
                     busy(&mut terminal, "Salvataggio della API key")?;
                     control::request("set-api-key", None, &secret)?;
                 }
@@ -736,9 +742,10 @@ fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
             .take(limit)
         {
             view.push_str(&format!(
-                " {} {}{}{}\r\n",
+                " {} {}{}{}{}\r\n",
                 if index == selected { ">" } else { " " },
                 entry.name,
+                if entry.temporary { " [RAM]" } else { "" },
                 if keys.default.as_ref() == Some(&entry.id) {
                     " [predefinita]"
                 } else {
@@ -754,11 +761,17 @@ fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
         if keys.entries.is_empty() {
             view.push_str(" Nessuna chiave salvata.\r\n");
         }
+        let entry = keys.entries.get(selected);
         view.push_str("\r\n [Invio] Usa  [J/K] Seleziona  [Esc] Indietro\r\n");
+        view.push_str(" [T] Usa nuova chiave in RAM (fino al blocco)\r\n");
         if !status.general_readonly && !choosing {
-            view.push_str(
-                " [A] Aggiungi  [R] Rinomina  [S] Sostituisci\r\n [D] Predefinita  [X] Rimuovi\r\n",
-            );
+            view.push_str(" [A] Aggiungi al generale cifrato\r\n");
+            if !entry.is_some_and(|entry| entry.temporary) {
+                view.push_str(" [D] Predefinita\r\n");
+            }
+        }
+        if !choosing && (!status.general_readonly || entry.is_some_and(|entry| entry.temporary)) {
+            view.push_str(" [R] Rinomina  [S] Sostituisci  [X] Rimuovi\r\n");
         }
         terminal.write(&view)?;
         let input = terminal.input(-1)?;
@@ -779,8 +792,21 @@ fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
             selected = selected.saturating_sub(1);
             continue;
         }
-        let entry = keys.entries.get(selected);
-        let command = if matches!(byte, b'\r' | b'\n') {
+        let command = if byte == b't' {
+            let Some(name) = terminal.name("Nome della chiave temporanea (massimo 64 byte)")?
+            else {
+                continue;
+            };
+            let Some(bytes) =
+                terminal.password("API key Abliteration - solo RAM fino al blocco")?
+            else {
+                continue;
+            };
+            keys::Command::Temporary {
+                name,
+                key: zeroize::Zeroizing::new(std::str::from_utf8(&bytes)?.to_owned()),
+            }
+        } else if matches!(byte, b'\r' | b'\n') {
             let Some(entry) = entry else {
                 continue;
             };
@@ -788,10 +814,13 @@ fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
                 id: entry.id.clone(),
             }
         } else {
-            if status.general_readonly || choosing {
+            if choosing {
                 continue;
             }
             if byte == b'a' {
+                if status.general_readonly {
+                    continue;
+                }
                 let Some(name) = terminal.name("Nome della nuova chiave (massimo 64 byte)")? else {
                     continue;
                 };
@@ -808,6 +837,9 @@ fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
                 let Some(entry) = entry else {
                     continue;
                 };
+                if status.general_readonly && !entry.temporary {
+                    continue;
+                }
                 match byte {
                     b'r' => {
                         let Some(name) = terminal.name("Nuovo nome della chiave")? else {
@@ -829,7 +861,7 @@ fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
                             key: zeroize::Zeroizing::new(std::str::from_utf8(&bytes)?.to_owned()),
                         }
                     }
-                    b'd' => keys::Command::Default {
+                    b'd' if !entry.temporary => keys::Command::Default {
                         id: entry.id.clone(),
                     },
                     b'x' => {
@@ -846,7 +878,10 @@ fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
                 }
             }
         };
-        let selected = matches!(command, keys::Command::Select { .. });
+        let selected = matches!(
+            command,
+            keys::Command::Select { .. } | keys::Command::Temporary { .. }
+        );
         let bytes = zeroize::Zeroizing::new(serde_json::to_vec(&command)?);
         busy(terminal, "Aggiornamento delle chiavi")?;
         control::request("api-keys", None, &bytes)?;
