@@ -20,6 +20,8 @@ const JOB: &str = "/run/oblivion/transfer.json";
 #[serde(deny_unknown_fields)]
 struct Job {
     id: String,
+    #[serde(default)]
+    recovery: bool,
 }
 
 pub fn status(configured: bool, general: &Path) -> Result<Status> {
@@ -114,15 +116,7 @@ fn sources(general: &Path) -> Result<Vec<Source>> {
 }
 
 pub fn start(source: &str, general: &Path) -> Result<Started> {
-    require(
-        matches!(vm::unit_state(UNIT)?.as_str(), "inactive" | "failed")
-            && vm::stopped_role(Role::Import)?,
-        "transfer_already_running",
-    )?;
-    require(
-        !Path::new(JOB).exists() && !Path::new(vm::IMPORT_DEVICE).exists(),
-        "transfer_cleanup_required",
-    )?;
+    idle()?;
     let source = sources(general)?
         .into_iter()
         .find(|device| device.id == source)
@@ -165,6 +159,28 @@ pub fn start(source: &str, general: &Path) -> Result<Started> {
     )?;
     fs::set_permissions(vm::IMPORT_DEVICE, fs::Permissions::from_mode(0o400))
         .map_err(|_| Error("device_permissions_failed"))?;
+    start_job(false)
+}
+
+pub fn start_recovery() -> Result<Started> {
+    idle()?;
+    start_job(true)
+}
+
+fn idle() -> Result<()> {
+    require(
+        matches!(vm::unit_state(UNIT)?.as_str(), "inactive" | "failed")
+            && vm::stopped_role(Role::Import)?,
+        "transfer_already_running",
+    )?;
+    require(
+        !Path::new(JOB).exists() && !Path::new(vm::IMPORT_DEVICE).exists(),
+        "transfer_cleanup_required",
+    )?;
+    Ok(())
+}
+
+fn start_job(recovery: bool) -> Result<Started> {
     let id = crate::storage::random_id()?;
     let mut job = OpenOptions::new()
         .write(true)
@@ -174,7 +190,11 @@ pub fn start(source: &str, general: &Path) -> Result<Started> {
         .open(JOB)
         .map_err(|_| Error("transfer_state_failed"))?;
     job.write_all(
-        &serde_json::to_vec(&Job { id: id.clone() }).map_err(|_| Error("transfer_state_failed"))?,
+        &serde_json::to_vec(&Job {
+            id: id.clone(),
+            recovery,
+        })
+        .map_err(|_| Error("transfer_state_failed"))?,
     )
     .map_err(|_| Error("transfer_state_failed"))?;
     vm::execute("/usr/bin/systemctl", &["start".into(), UNIT.into()])?;
@@ -248,28 +268,35 @@ pub fn cleanup() -> Result<()> {
     Ok(())
 }
 
-pub fn serve(config: &vm::Config, uid: u32) -> Result<()> {
+pub fn serve(config: Option<&vm::Config>, uid: u32) -> Result<()> {
     let job = job()?.ok_or(Error("transfer_not_prepared"))?;
-    config.validate()?;
-    config.start_role(Role::Import)?;
-    let source = UnixStream::connect("/run/oblivion-import-vm/copy.sock")
-        .map_err(|_| Error("transfer_port_unavailable"))?;
-    crate::gateway::peer(&source, vm::IMPORT_UID)?;
+    let source = if job.recovery {
+        None
+    } else {
+        let config = config.ok_or(Error("transfers_not_configured"))?;
+        config.validate()?;
+        config.start_role(Role::Import)?;
+        let source = UnixStream::connect("/run/oblivion-import-vm/copy.sock")
+            .map_err(|_| Error("transfer_port_unavailable"))?;
+        crate::gateway::peer(&source, vm::IMPORT_UID)?;
+        vm::resume_import()?;
+        Some(source)
+    };
     let destination = vm::copy_port(&job.id)?;
-    vm::resume_import()?;
-    for port in [&source, &destination] {
+    for port in source.iter().chain(std::iter::once(&destination)) {
         let mut ready = [0; 6];
         Channel::new(port, Duration::from_secs(90))
             .read_exact(&mut ready)
             .map_err(|_| Error("transfer_guest_not_ready"))?;
         require(&ready == b"ready\n", "invalid_transfer_guest")?;
     }
-    let source = File::from(OwnedFd::from(source));
+    let source = source.map(|source| File::from(OwnedFd::from(source)));
     let destination = File::from(OwnedFd::from(destination));
-    let owners = vec![
-        relay::peer_process(&source).map_err(|_| Error("transfer_owner_failed"))?,
-        relay::peer_process(&destination).map_err(|_| Error("transfer_owner_failed"))?,
-    ];
+    let mut owners = source
+        .iter()
+        .chain(std::iter::once(&destination))
+        .map(|port| relay::peer_process(port).map_err(|_| Error("transfer_owner_failed")))
+        .collect::<Result<Vec<_>>>()?;
     let listener =
         UnixListener::bind(transfers::SOCKET).map_err(|_| Error("transfer_socket_failed"))?;
     fs::set_permissions(transfers::SOCKET, fs::Permissions::from_mode(0o600))
@@ -324,19 +351,30 @@ pub fn serve(config: &vm::Config, uid: u32) -> Result<()> {
             .accept()
             .map_err(|_| Error("transfer_socket_failed"))?;
         crate::gateway::peer(&control, uid)?;
-        for port in [&source, &destination] {
+        for port in source.iter().chain(std::iter::once(&destination)) {
             let mut port = port;
-            port.write_all(b"G")
+            port.write_all(if job.recovery { b"R" } else { b"G" })
                 .map_err(|_| Error("transfer_guest_not_ready"))?;
         }
+        let remaining = deadline
+            .checked_duration_since(Instant::now())
+            .ok_or(Error("transfer_expired"))?;
+        let control = File::from(OwnedFd::from(control));
+        let Some(source) = source else {
+            return relay::recover(
+                destination,
+                control,
+                owners.pop().ok_or(Error("transfer_owner_failed"))?,
+                remaining,
+            )
+            .map_err(|_| Error("transfer_failed"));
+        };
         return relay::run_permitted(
             source,
             destination,
-            File::from(OwnedFd::from(control)),
+            control,
             owners,
-            deadline
-                .checked_duration_since(Instant::now())
-                .ok_or(Error("transfer_expired"))?,
+            remaining,
             Some(Permit {
                 id: job.id,
                 limits: transfers::limits(),

@@ -46,6 +46,17 @@ impl Directory {
             .set_permissions(std::fs::Permissions::from_mode(mode))
     }
 
+    pub fn metadata(&self) -> io::Result<std::fs::Metadata> {
+        self.0.metadata()
+    }
+
+    pub fn lock(&self) -> io::Result<()> {
+        if unsafe { libc::flock(self.0.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(())
+    }
+
     pub fn clone(&self) -> io::Result<Self> {
         Ok(Self(self.0.try_clone()?))
     }

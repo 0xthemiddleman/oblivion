@@ -10,6 +10,7 @@ pub const BUDGET_SECONDS: u64 = 300;
 pub enum Command {
     List,
     Import { source: String },
+    Recover,
     Cancel,
 }
 

@@ -43,6 +43,7 @@ jobs:
           docker buildx build --platform linux/amd64 --progress plain
           -f script/oblivion/Dockerfile.vm-lab --target artifacts
           --build-arg HOST=import-host
+          --build-arg GUEST=manager-import-guest
           --output type=local,dest=artifacts/ci/import-image .
       - name: Install the VM laboratory
         run: |

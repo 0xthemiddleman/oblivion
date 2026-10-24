@@ -24,6 +24,31 @@ pub struct Permit {
     pub limits: Limits,
 }
 
+/// A maintenance port reaches only the active guest's receiver. No source VM,
+/// external device, arbitrary path or document payload is involved.
+pub fn recover(
+    destination: File,
+    control: File,
+    owner: OwnedFd,
+    budget: Duration,
+) -> io::Result<()> {
+    let deadline = Instant::now()
+        .checked_add(budget)
+        .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidInput))?;
+    let mut destination = Channel::until(destination, deadline)?;
+    destination.watch(control.try_clone()?.into());
+    destination.watch(owner.try_clone()?);
+    let mut control = Channel::until(control, deadline)?;
+    control.watch(owner);
+    let request: crate::recovery::Request = read_message(&mut control, 1024)?;
+    request.validate()?;
+    write_message(&mut destination, &request)?;
+    let response: crate::recovery::Response = read_message(&mut destination, 64 * 1024)?;
+    response.validate(&request)?;
+    drop(destination);
+    write_message(&mut control, &response)
+}
+
 /// The controller supplies the fresh operation ID and ceiling independently of
 /// the manager's requested selection. They cannot be widened on the channel.
 pub fn run_permitted(

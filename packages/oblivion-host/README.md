@@ -172,6 +172,22 @@ and remove the readonly mapping before closing the session. Cleanup failure
 is an error, not a locked state. A lost final receipt can leave a complete copy
 already published; interrupted publication can leave a private reserved ID.
 There is no automatic retry, overwrite or claim of transactional rollback.
+
+`U` in the document menu lists the active session's copies. A fresh maintenance
+port reaches the dedicated receiver without an import VM, USB device or host
+mount. Private receipts and publication markers remain inside the encrypted
+session inbox, inaccessible to chat. The receipt describes the original import;
+later chat edits are not rehashed or labelled corrupt. Published and uncertain
+exposed copies cannot be deleted through recovery. Only private unpublished
+attempts offer `D`, followed by a second explicit `D` confirmation. The receiver
+rechecks state under the same inbox lock as import before deleting. `B` locks
+both vault levels; cancellation never triggers an automatic retry.
+
+Inventory pages contain at most 64 entries, with an inspection ceiling of 4096
+IDs per root. Malformed records or an exceeded ceiling fail without deleting
+anything. Hard process interruption is tested separately from power loss and
+physical-device faults; those release gates remain open.
+
 Export, physical USB removal/I/O fault tests, orphan reconciliation, A→B and
 OnionShare remain separate roadmap work.
 

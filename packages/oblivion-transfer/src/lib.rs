@@ -1,6 +1,7 @@
 pub mod channel;
 mod directory;
 pub mod endpoint;
+pub mod recovery;
 pub mod relay;
 
 use directory::Directory;
@@ -231,12 +232,20 @@ pub fn receive(
         return Err(error);
     }
     root.sync()?;
-    Ok(Receipt {
+    let receipt = Receipt {
         id: id.to_owned(),
         manifest_sha256: manifest.sha256(),
         entries: manifest.entries.len(),
         bytes: manifest.bytes,
-    })
+    };
+    // Keep the proof in the receiver's private inbox, on the same encrypted
+    // volume. A killed write leaves only receipt.pending, never a valid receipt.
+    let mut file = transaction.create_file("receipt.pending")?;
+    serde_json::to_writer(&mut file, &receipt).map_err(|_| invalid("invalid_receipt"))?;
+    file.sync_all()?;
+    transaction.rename("receipt.pending", "receipt.json")?;
+    transaction.sync()?;
+    Ok(receipt)
 }
 
 fn validate_id(id: &str) -> io::Result<()> {
@@ -304,11 +313,12 @@ pub fn publish(root: &Path, target: &Path, id: &str, manifest: &Manifest) -> io:
     transaction.move_into("files", &reserved, "files")?;
     reserved.sync()?;
     transaction.sync()?;
-    reserved.mode(0o770)?;
+    // Chat may edit the document tree, but cannot replace its top-level name.
+    reserved.mode(0o750)?;
     reserved.sync()?;
     target.sync()?;
-    root.remove_directory(id)?;
-    root.sync()
+    transaction.create_file("published")?.sync_all()?;
+    transaction.sync()
 }
 
 fn receive_transaction(

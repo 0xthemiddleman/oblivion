@@ -69,6 +69,12 @@ COPY packages/oblivion-host/guest/ /usr/lib/oblivion/guest/
 COPY script/oblivion/vm-guest-fixture.sh /usr/libexec/oblivion
 RUN sh /usr/lib/oblivion/guest/install.sh
 
+FROM guest AS manager-import-guest
+RUN apt-get update && apt-get install -y --no-install-recommends python3 && rm -rf /var/lib/apt/lists/*
+COPY script/oblivion/vm-import-seed.py /usr/lib/oblivion/lab/import-seed.py
+RUN mkdir -p /etc/systemd/system/oblivion-vault.service.d \
+    && printf '[Service]\nExecStartPost=/usr/bin/python3 /usr/lib/oblivion/lab/import-seed.py\n' > /etc/systemd/system/oblivion-vault.service.d/lab.conf
+
 FROM os AS import-guest
 COPY --from=compiler /bundle/oblivion-copy /usr/bin/oblivion-copy
 COPY packages/oblivion-host/import/ /usr/lib/oblivion/import/

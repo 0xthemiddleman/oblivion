@@ -21,6 +21,59 @@ const LIMITS: Limits = Limits {
 };
 const CONTENT: &[u8] = b"OBLIVION_RELAY_CANARY_91e";
 
+#[test]
+fn recovery_relay_validates_the_inventory_and_revokes_it_with_the_guest_or_manager() {
+    use oblivion_transfer::recovery::{Request, Response};
+    for case in ["complete", "owner", "manager", "invalid"] {
+        let (destination, guest) = UnixStream::pair().unwrap();
+        let (control, manager) = UnixStream::pair().unwrap();
+        let (owner, alive) = UnixStream::pair().unwrap();
+        let worker = std::thread::spawn(move || {
+            relay::recover(
+                file(destination),
+                file(control),
+                owner.into(),
+                Duration::from_secs(5),
+            )
+        });
+        let mut manager = channel(manager);
+        let mut guest = channel(guest);
+        write_message(&mut manager, &Request::List { after: None }).unwrap();
+        let _: Request = read_message(&mut guest, 1024).unwrap();
+        match case {
+            "owner" => {
+                drop(alive);
+            }
+            "manager" => {
+                drop(manager);
+                assert!(worker.join().unwrap().is_err());
+                continue;
+            }
+            "invalid" => {
+                write_message(&mut guest, &Response::Discarded { id: ID.into() }).unwrap();
+            }
+            _ => {
+                write_message(
+                    &mut guest,
+                    &Response::Inventory {
+                        records: vec![],
+                        next: None,
+                    },
+                )
+                .unwrap();
+                let response: Response = read_message(&mut manager, 64 * 1024).unwrap();
+                response.validate(&Request::List { after: None }).unwrap();
+                assert!(worker.join().unwrap().is_ok());
+                continue;
+            }
+        }
+        let mut output = Vec::new();
+        manager.read_to_end(&mut output).unwrap();
+        assert!(output.is_empty());
+        assert!(worker.join().unwrap().is_err());
+    }
+}
+
 fn file(stream: UnixStream) -> File {
     OwnedFd::from(stream).into()
 }

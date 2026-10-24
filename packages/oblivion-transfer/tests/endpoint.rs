@@ -301,7 +301,7 @@ fn oversized_control_frames_and_unknown_fields_fail_without_path_disclosure() {
 fn compiled_import_endpoint_publishes_only_complete_verified_files() {
     let source = Tree::new();
     fs::write(source.0.join(NAME), CONTENT).unwrap();
-    for corrupt in [false, true] {
+    for (corrupt, lose_receipt) in [(false, false), (true, false), (false, true)] {
         let inbox = Tree::new();
         let published = Tree::new();
         let mut selection = Selection::prepare(&source.0, &[NAME.into()], LIMITS).unwrap();
@@ -335,14 +335,107 @@ fn compiled_import_endpoint_publishes_only_complete_verified_files() {
             assert!(bytes.is_empty());
             assert_eq!(fs::read_dir(&published.0).unwrap().count(), 0);
         } else {
-            let receipt: Receipt = read_message(&mut receiver.channel, 1024).unwrap();
-            assert_eq!(receipt.manifest_sha256, selection.manifest().sha256());
+            if !lose_receipt {
+                let receipt: Receipt = read_message(&mut receiver.channel, 1024).unwrap();
+                assert_eq!(receipt.manifest_sha256, selection.manifest().sha256());
+            }
+            if lose_receipt {
+                assert!(receiver.child.wait().unwrap().success());
+            }
             assert_eq!(
                 fs::read(published.0.join(ID).join("files").join(NAME)).unwrap(),
                 CONTENT
             );
-            assert_eq!(fs::read_dir(&inbox.0).unwrap().count(), 0);
+            assert!(inbox.0.join(ID).join("published").is_file());
+            assert!(!inbox.0.join(ID).join("files").exists());
         }
         receiver.finish(!corrupt);
+        // The lost-receipt case closes without ever consuming the final
+        // response. A fresh endpoint must still identify the completed import.
+        drop(receiver);
+        if !corrupt {
+            use oblivion_transfer::recovery::{Request, Response, State};
+            fs::write(
+                published.0.join(ID).join("files").join(NAME),
+                b"edited after import",
+            )
+            .unwrap();
+            let mut recovered = Endpoint::spawn("recover", &inbox, Some(&published), 5000);
+            write_message(&mut recovered.channel, &Request::List { after: None }).unwrap();
+            let response: Response = read_message(&mut recovered.channel, 64 * 1024).unwrap();
+            let Response::Inventory { records, next } = response else {
+                panic!("inventory")
+            };
+            assert!(next.is_none());
+            assert_eq!(records[0].state, State::Published);
+            assert_eq!(
+                records[0].receipt.as_ref().unwrap().manifest_sha256,
+                selection.manifest().sha256()
+            );
+            assert_eq!(
+                records[0].receipt.as_ref().unwrap().bytes,
+                CONTENT.len() as u64
+            );
+            recovered.finish(true);
+        }
     }
+}
+
+#[test]
+fn killed_receiver_leaves_a_private_copy_recoverable_by_a_fresh_endpoint() {
+    use oblivion_transfer::recovery::{Request, Response, State};
+    let source = Tree::new();
+    let inbox = Tree::new();
+    let published = Tree::new();
+    fs::write(source.0.join(NAME), vec![42; 128 * 1024]).unwrap();
+    let selection = Selection::prepare(&source.0, &[NAME.into()], LIMITS).unwrap();
+    let mut receiver = Endpoint::spawn("import", &inbox, Some(&published), 5000);
+    write_message(
+        &mut receiver.channel,
+        &ReceiveRequest {
+            approval: approval(selection.manifest()),
+            limits: LIMITS,
+        },
+    )
+    .unwrap();
+    selection.manifest().write(&mut receiver.channel).unwrap();
+    let mut ready = [0; 8];
+    receiver.channel.read_exact(&mut ready).unwrap();
+    assert_eq!(&ready, b"receive\n");
+    // A second endpoint cannot inspect/discard while the receiver owns the
+    // inbox. This lock is released by the kernel when that process dies.
+    let mut busy = Endpoint::spawn("recover", &inbox, Some(&published), 5000);
+    write_message(&mut busy.channel, &Request::List { after: None }).unwrap();
+    busy.finish(false);
+    receiver.channel.write_all(&vec![42; 64 * 1024]).unwrap();
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while !fs::metadata(inbox.0.join(ID).join("pending").join(NAME))
+        .is_ok_and(|m| m.len() == 64 * 1024)
+    {
+        assert!(
+            std::time::Instant::now() < deadline,
+            "receiver did not write partial data"
+        );
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    receiver.child.kill().unwrap();
+    receiver.child.wait().unwrap();
+    let mut recovered = Endpoint::spawn("recover", &inbox, Some(&published), 5000);
+    write_message(&mut recovered.channel, &Request::List { after: None }).unwrap();
+    let response: Response = read_message(&mut recovered.channel, 64 * 1024).unwrap();
+    let Response::Inventory { records, next } = response else {
+        panic!("inventory")
+    };
+    assert!(next.is_none());
+    assert_eq!(records.len(), 1);
+    assert_eq!(records[0].state, State::Private);
+    assert!(records[0].receipt.is_none());
+    recovered.finish(true);
+    let mut discard = Endpoint::spawn("recover", &inbox, Some(&published), 5000);
+    write_message(&mut discard.channel, &Request::Discard { id: ID.into() }).unwrap();
+    let response: Response = read_message(&mut discard.channel, 1024).unwrap();
+    assert!(matches!(response, Response::Discarded { id } if id == ID));
+    discard.finish(true);
+    assert!(!inbox.0.join(ID).exists());
+    assert!(fs::read_dir(&published.0).unwrap().next().is_none());
 }

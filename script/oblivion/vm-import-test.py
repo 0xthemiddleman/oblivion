@@ -134,6 +134,17 @@ try:
     send(PASSWORD + b"\r", "Ripeti la password")
     send(PASSWORD + b"\r", "OBLIVION_GUEST_READY")
     session_pid = systemctl("show", "oblivion-session.service", "-p", "MainPID", "--value")
+    send(b"\x1e", "OBLIVION - importa documenti")
+    listing = send(b"u", "OBLIVION - copie della sessione")
+    assert b"Privata, non consegnata" in listing and b"00000000" in listing
+    cleaned()
+    send(b"d", "Conferma eliminazione")
+    send(b"\x1b", "OBLIVION - copie della sessione")
+    send(b"d", "Conferma eliminazione")
+    send(b"d", "Nessuna copia registrata")
+    cleaned()
+    send(b"\x1b", "OBLIVION | SESSIONE APERTA")
+    check("manager detects a SIGKILL-interrupted receiver and deletes its private copy only after confirmation")
     first = offer()
     assert status()["session_open"]
     source_pid = systemctl("show", "oblivion-import-vm.service", "-p", "MainPID", "--value")
@@ -158,6 +169,16 @@ try:
     cleaned()
     guest("imports-check", "OBLIVION_IMPORT_VERIFIED")
     check("confirmed files are verified, group-editable and visible only inside the session")
+    send(b"\x1e", "OBLIVION - importa documenti")
+    listing = send(b"u", "OBLIVION - copie della sessione")
+    assert b"Pubblicata, modificabile dalla chat" in listing and copied.encode() in listing
+    cleaned()
+    # D is deliberately unavailable for an exposed copy, including edited files.
+    listing = send(b"d", "OBLIVION - copie della sessione")
+    assert b"Conferma eliminazione" not in listing
+    send(b"\x1b", "OBLIVION | SESSIONE APERTA")
+    guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
+    check("reconciliation reads a private durable receipt without rehashing or deleting later chat edits")
     offer()
     source_pid = int(systemctl("show", "oblivion-import-vm.service", "-p", "MainPID", "--value"))
     os.kill(source_pid, signal.SIGKILL)
@@ -170,6 +191,17 @@ try:
     send(PASSWORD + b"\r", "OBLIVION_GUEST_READY")
     guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
     check("imported documents and later edits survive a fresh VM and LUKS reopening")
+    send(b"\x1e", "OBLIVION - importa documenti")
+    listing = send(b"u", "OBLIVION - copie della sessione")
+    assert b"Pubblicata, modificabile dalla chat" in listing and copied.encode() in listing
+    assert b"Privata, non consegnata" not in listing
+    cleaned()
+    send(b"b", "Archivio generale bloccato")
+    send(b"\r", "Password del volume generale")
+    send(GENERAL + b"\r", "Sessioni protette")
+    send(b"\r", "Password della sessione")
+    send(PASSWORD + b"\r", "OBLIVION_GUEST_READY")
+    check("receipt and confirmed cleanup survive LUKS reopening and the recovery menu can lock both volumes")
     offer()
     frozen = int(systemctl("show", "oblivion-session.service", "-p", "MainPID", "--value"))
     os.kill(frozen, signal.SIGSTOP)

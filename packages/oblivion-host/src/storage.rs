@@ -81,13 +81,7 @@ pub fn main() -> Result<()> {
             !recovery_required()? && mapping_open("oblivion-session")? && !crate::vm::stopped()?,
             "session_not_open",
         )?;
-        return crate::transfer_host::serve(
-            config
-                .import
-                .as_ref()
-                .ok_or(Error("transfers_not_configured"))?,
-            config.manager_uid,
-        );
+        return crate::transfer_host::serve(config.import.as_ref(), config.manager_uid);
     }
     if args.len() == 3 && op == "gateway-host-run" {
         require(!recovery_required()?, "recovery_required")?;
@@ -285,6 +279,14 @@ pub fn main() -> Result<()> {
                         .ok_or(Error("transfers_not_configured"))?
                         .validate()?;
                     let started = crate::transfer_host::start(&source, &config.general_image)?;
+                    println!(
+                        "{}",
+                        serde_json::to_string(&started).map_err(|_| Error("encode_failed"))?
+                    );
+                    Ok(())
+                }
+                transfers::Command::Recover => {
+                    let started = crate::transfer_host::start_recovery()?;
                     println!(
                         "{}",
                         serde_json::to_string(&started).map_err(|_| Error("encode_failed"))?

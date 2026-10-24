@@ -78,7 +78,7 @@ renderla disponibile alla chat richiede un'operazione esplicita successiva.
 Errori di lettura, corruzione e interruzione provocano la rimozione della
 transazione parziale. Un errore della pulizia viene restituito, non nascosto.
 Arresto forzato del processo o power loss possono lasciare una transazione:
-il recupero del servizio dovrà gestirla senza presentarla come copia riuscita.
+il menu di riconciliazione descritto sotto la distingue da una copia pubblicata.
 La destinazione deve essere nel volume della sessione o in RAM, secondo la
 modalità; la libreria non sceglie né verifica il tipo di storage.
 
@@ -114,7 +114,7 @@ poter terminare l'ambiente anche quando un disco o `fsync` non risponde.
 Se la copia viene pubblicata ma la ricevuta si perde, il mittente segnala
 errore e la copia completa può restare nel deposito privato del destinatario.
 Non si ripete automaticamente la copia e non si presenta l'esito come certo;
-il recupero del servizio deve riconciliare questi casi prima della consegna.
+il servizio di riconciliazione distingue il deposito privato dalla pubblicazione.
 
 ## Relay host e revoca
 
@@ -232,7 +232,7 @@ di un proprietario interrompono il relay.
 Il ricevitore è UID 1001/GID 1000, distinto dalla chat UID 1000. L’inbox
 `/vault/.oblivion-inbox` è 0700; dopo hash, fine stream e sincronizzazione,
 `publish` rende accessibile `/vault/imports/<id>/files`: file 0660 e directory
-0770. La chat può modificarli ma non accedere all’inbox né sostituire gli ID
+0770; il contenitore `<id>` è 0750. La chat può modificarli ma non accedere all’inbox né sostituire gli ID
 nel genitore `/vault/imports`, 0750 del ricevitore. Il servizio vede un solo
 mount scrivibile `/vault`: due bind separati per inbox/imports impedirebbero
 la rename atomica con `EXDEV`. I permessi 0700 delle directory della chat
@@ -252,10 +252,44 @@ Linux riproduce una coda piena con socket reali; il limite usa
 Una ricevuta persa dopo la pubblicazione non significa che la copia sia
 assente: il manager segnala esito incerto e non riprova automaticamente.
 Un errore durante la pubblicazione può lasciare un ID privato riservato;
-non viene sovrascritto. Restano da realizzare la riconciliazione di questi
-resti, export con flush/smontaggio, copia A→B e OnionShare. Rimozione USB,
+non viene sovrascritto. La riconciliazione ora segue il percorso descritto sotto.
+Restano export con flush/smontaggio, copia A→B e OnionShare. Rimozione USB,
 ENOSPC del destinatario, guasti I/O, FAT/exFAT e hardware fisico restano gate
 di verifica. Nessuna delle prove trasforma l’originale esterno in un file cifrato.
+
+### Riconciliazione nel manager
+
+Nel menu Documenti, **U — Copie della sessione** apre un elenco paginato.
+Il controller crea una porta monouso verso il ricevitore della sola VM attiva;
+non avvia una VM sorgente, non monta il vault sull’host e non collega una USB.
+Il relay valida richieste e risposte, osserva il pidfd della VM e la connessione
+del manager e conserva la stessa scadenza dell’operazione. Importazione e
+manutenzione prendono un lock sul descrittore dell’inbox: una copia ancora
+in corso non può essere rimossa da una seconda operazione.
+
+Dopo la verifica dei byte, il ricevitore scrive una ricevuta 0600 nella propria
+inbox: ID, digest del manifest, numero di voci e byte originali. Non contiene
+nomi né contenuti dei documenti. La scrittura usa file temporaneo, fsync e
+rename dentro lo stesso volume cifrato. Dopo la pubblicazione e la relativa
+sincronizzazione registra un marcatore privato; la ricevuta inviata al manager
+viene dopo questi passi. In modalità effimera anche questi metadati sono in RAM.
+
+| Stato | Significato e azione |
+| --- | --- |
+| Pubblicata | Pubblicazione registrata; la chat può aver modificato i documenti. La ricevuta descrive l’importazione originale, non certifica i byte attuali. |
+| Disponibile, conferma interrotta | Contenitore già esposto senza marcatore finale, oppure importazione precedente al registro. Nessun completamento dedotto e nessuna rimozione. |
+| Privata, non consegnata | Tentativo nell’inbox o contenitore ancora 0700, mai esposto. **D**, seguito da una seconda conferma **D**, lo elimina; ogni altra copia resta intatta. |
+| Da verificare | Marcatore di pubblicazione senza contenitore accessibile coerente. Si conserva per diagnosi. |
+
+L’elenco non percorre né ricalcola hash del contenuto modificabile dalla chat.
+La cancellazione ricontrolla lo stato sotto lock e rifiuta copie pubblicate,
+link e metadati incoerenti. Non esistono ripresa, nuovo invio o sovrascrittura
+automatici. Se una cancellazione perde la risposta, rileggere l’elenco: il
+silenzio non è una conferma. Le pagine contengono al massimo 64 record; ogni
+radice è limitata a 4.096 ID durante l’ispezione. Oltre tale limite o con un
+registro danneggiato l’operazione fallisce, senza pulizia automatica.
+Le prove di processo interrotto non sostituiscono quelle di power loss, USB
+rimossa o guasti I/O del supporto, che restano aperte.
 
 Il core accetta un `Read`/`Write` limitato dal chiamante e non apre socket o
 device di trasporto. L'endpoint dispone ora del canale con deadline; le porte

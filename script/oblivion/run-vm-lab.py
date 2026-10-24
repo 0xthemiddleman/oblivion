@@ -280,7 +280,7 @@ markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVIO
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
 if import_source:
     assert hashlib.sha256(import_source.read_bytes()).hexdigest() == import_digest, "Import source changed"
-    markers.extend([b"OBLIVION_USB_SELECTED_CANARY_82f1", b"OBLIVION_USB_EDIT_CANARY_1b72", b"OBLIVION_USB_UNSELECTED_CANARY_29a1"])
+    markers.extend([b"OBLIVION_USB_SELECTED_CANARY_82f1", b"OBLIVION_USB_EDIT_CANARY_1b72", b"OBLIVION_USB_UNSELECTED_CANARY_29a1", b"OBLIVION_IMPORT_PARTIAL_CANARY_c26a"])
 if args.stream:
     markers.extend([b"OBLIVION_STREAM_REQUEST", b"Synthetic open stream"])
     markers.extend([b"OBLIVION_WEB_TOOLS_REQUEST", b"OBLIVION_WEB_TOOLS_VERIFIED", b"OBLIVION_WEB_HTTP", b"OBLIVION_WEB_HTTPS"])

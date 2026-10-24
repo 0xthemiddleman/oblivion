@@ -59,7 +59,16 @@ pub fn accept(channel: &mut Channel, root: &Path) -> io::Result<()> {
 /// approval explicitly covers copying and making the selected files usable by
 /// the chat; the peer cannot supply the publication root or filesystem paths.
 pub fn import(channel: &mut Channel, root: &Path, published: &Path) -> io::Result<()> {
+    let guard = crate::directory::Directory::open(root)?;
+    guard.require_private()?;
+    guard.lock()?;
     accept_into(channel, root, Some(published))
+}
+
+pub fn recover(channel: &mut Channel, root: &Path, published: &Path) -> io::Result<()> {
+    let request = read_message(channel, 1024)?;
+    let response = crate::recovery::execute(root, published, request)?;
+    write_message(channel, &response)
 }
 
 fn accept_into(channel: &mut Channel, root: &Path, published: Option<&Path>) -> io::Result<()> {

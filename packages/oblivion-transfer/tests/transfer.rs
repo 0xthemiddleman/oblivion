@@ -425,7 +425,8 @@ fn verified_copy_is_published_once_with_chat_group_access() {
     receive(&mut Cursor::new(bytes), &manifest, &inbox.0, ID).unwrap();
     assert_eq!(fs::read_dir(&published.0).unwrap().count(), 0);
     publish(&inbox.0, &published.0, ID, &manifest).unwrap();
-    assert_eq!(fs::read_dir(&inbox.0).unwrap().count(), 0);
+    assert!(inbox.0.join(ID).join("receipt.json").is_file());
+    assert!(inbox.0.join(ID).join("published").is_file());
     let path = published.0.join(ID).join("files/docs/note.txt");
     assert_eq!(fs::read(&path).unwrap(), b"document");
     assert_eq!(fs::metadata(&path).unwrap().mode() & 0o777, 0o660);
@@ -435,10 +436,10 @@ fn verified_copy_is_published_once_with_chat_group_access() {
     );
     assert_eq!(
         fs::metadata(published.0.join(ID)).unwrap().mode() & 0o777,
-        0o770
+        0o750
     );
     let (_, bytes) = encode(&source, &["docs"]);
-    receive(&mut Cursor::new(bytes), &manifest, &inbox.0, ID).unwrap();
+    assert!(receive(&mut Cursor::new(bytes), &manifest, &inbox.0, ID).is_err());
     fs::write(&path, b"chat edit").unwrap();
     assert!(publish(&inbox.0, &published.0, ID, &manifest).is_err());
     assert_eq!(fs::read(&path).unwrap(), b"chat edit");
