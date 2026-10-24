@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 """Unprivileged guest probe for the real host grant and gateway network."""
 import http.client
+import hashlib
 import json
 import os
 import select
@@ -29,6 +30,8 @@ def request(bearer, body):
     return code, payload
 
 
+with Path('/usr/bin/oblivion').open('rb') as binary:
+    print('OBLIVION_SESSION_CLIENT_SHA256 ' + hashlib.file_digest(binary, 'sha256').hexdigest(), flush=True)
 print('OBLIVION_SESSION_READY', flush=True)
 stream_child = None
 stream_output = b''

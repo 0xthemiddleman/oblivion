@@ -229,10 +229,10 @@ jobs:
           if-no-files-found: warn
 
   host-x64:
-    name: x86 host LUKS and manager lifecycle
+    name: x86 host LUKS, manager and SOCKS streams
     needs: repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -278,7 +278,7 @@ jobs:
             --output type=local,dest=artifacts/ci/host .
           docker buildx build --platform linux/amd64 --progress plain \
             -f script/oblivion/Dockerfile.vm-lab --target artifacts \
-            --build-arg HOST=tui-host --build-arg GUEST=tui-guest \
+            --build-arg HOST=stream-host --build-arg GUEST=tui-guest \
             --build-arg OPENCODE_BINARY=artifacts/oblivion-build/cli-linux-x64-baseline/bin/opencode \
             --build-arg OPENCODE_BUILD_EVIDENCE=artifacts/oblivion-build/build-evidence.json \
             --output type=local,dest=artifacts/ci/host-image .
@@ -293,6 +293,21 @@ jobs:
           sg kvm -c 'python3 -u script/oblivion/run-vm-lab.py --architecture x86_64 --accelerator kvm
           --image artifacts/ci/host-image --services-bundle artifacts/ci/host
           --output artifacts/ci/host-results'
+      - name: Build current-client session and external SOCKS gateway
+        run: >-
+          docker buildx build --platform linux/amd64 --progress plain
+          -f script/oblivion/Dockerfile.vm-lab --target stream-artifacts
+          --build-arg STREAM_GATEWAY=stream-gateway-base
+          --build-arg OPENCODE_BINARY=artifacts/oblivion-build/cli-linux-x64-baseline/bin/opencode
+          --build-arg OPENCODE_BUILD_EVIDENCE=artifacts/oblivion-build/build-evidence.json
+          --output type=local,dest=artifacts/ci/stream-images .
+      - name: Exercise saved SOCKS transport through real encrypted sessions
+        run: >-
+          sg kvm -c 'python3 -u script/oblivion/run-vm-lab.py --architecture x86_64 --accelerator kvm
+          --image artifacts/ci/host-image --services-bundle artifacts/ci/host
+          --gateway-image artifacts/ci/stream-images/gateway
+          --session-image artifacts/ci/stream-images/session --stream --stream-socks
+          --output artifacts/ci/stream-results'
       - name: Retain synthetic x86 host evidence, including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -303,6 +318,14 @@ jobs:
             artifacts/ci/tui-boot/serial.log
             artifacts/ci/host-results/summary.json
             artifacts/ci/host-results/serial.log
+            artifacts/ci/stream-results/summary.json
+            artifacts/ci/stream-results/serial.log
+            artifacts/ci/stream-images/gateway/SHA256SUMS
+            artifacts/ci/stream-images/gateway/stream.json
+            artifacts/ci/stream-images/gateway/trust.diff
+            artifacts/ci/stream-images/session/SHA256SUMS
+            artifacts/ci/stream-images/session/build-evidence.json
+            artifacts/ci/stream-images/session/opencode.sha256
             artifacts/ci/host-image/SHA256SUMS
             artifacts/ci/host-image/sources.sha256
             artifacts/ci/host/SHA256SUMS

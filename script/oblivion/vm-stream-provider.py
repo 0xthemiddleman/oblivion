@@ -12,6 +12,8 @@ import tty
 from pathlib import Path
 
 ROOT = Path("/usr/lib/oblivion-stream-fixture")
+EXTERNAL = sys.argv[1:] == ["--external"]
+assert EXTERNAL or sys.argv[1:] == []
 KEYS = {b"Bearer OBLIVION_API_KEY_CANARY_5c91": "initial", b"Bearer OBLIVION_API_NEXT_CANARY_86ab": "alternate"}
 lock = threading.Lock()
 active = set()
@@ -43,9 +45,12 @@ def serve(connection):
             assert 2 in methods
             connection.sendall(b"\x05\x02")
             assert exact(connection, 1) == b"\x01"
-            assert exact(connection, exact(connection, 1)[0]) == b"oblivion-api"
+            assert exact(connection, exact(connection, 1)[0]) == (b"OBLIVION_PROXY_USER_CANARY_31d2" if EXTERNAL else b"oblivion-api")
             token = exact(connection, exact(connection, 1)[0])
-            assert len(token) == 64 and all(byte in b"0123456789abcdef" for byte in token)
+            if EXTERNAL:
+                assert token == b"OBLIVION_PROXY_PASSWORD_CANARY_72a4"
+            else:
+                assert len(token) == 64 and all(byte in b"0123456789abcdef" for byte in token)
             connection.sendall(b"\x01\x00")
             assert exact(connection, 4) == b"\x05\x01\x00\x03"
             assert exact(connection, exact(connection, 1)[0]) == b"api.abliteration.ai"
@@ -122,12 +127,33 @@ listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 listener.bind(("127.0.0.1", 9050))
 listener.listen(16)
 threading.Thread(target=accept, args=(listener,), daemon=True).start()
-tty.setraw(0)
-for line in sys.stdin:
+
+
+def status(line):
     request = json.loads(line)
     assert set(request) == {"operation", "id"} and request["operation"] == "status"
     with lock:
         value = {"id": request["id"], "active": sorted(active), "closed": sorted(closed), "errors": errors.copy(), "credentials": credentials.copy()}
     value["fixture_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-    value["api_sha256"] = hashlib.sha256(Path("/usr/bin/oblivion-api").read_bytes()).hexdigest()
-    print("OBLIVION_STREAM " + json.dumps(value, separators=(",", ":")), flush=True)
+    if not EXTERNAL:
+        value["api_sha256"] = hashlib.sha256(Path("/usr/bin/oblivion-api").read_bytes()).hexdigest()
+    return json.dumps(value, separators=(",", ":"))
+
+
+if EXTERNAL:
+    os.umask(0o077)
+    with socket.socket(socket.AF_UNIX) as control:
+        control.bind("/run/oblivion-stream-provider.sock")
+        control.listen(1)
+        while True:
+            channel, _ = control.accept()
+            with channel:
+                channel.settimeout(5)
+                with channel.makefile("rb") as reader:
+                    line = reader.readline(1024)
+                    assert line.endswith(b"\n")
+                    channel.sendall(status(line).encode() + b"\n")
+else:
+    tty.setraw(0)
+    for line in sys.stdin:
+        print("OBLIVION_STREAM " + status(line), flush=True)

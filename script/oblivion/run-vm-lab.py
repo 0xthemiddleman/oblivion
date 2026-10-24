@@ -77,8 +77,11 @@ parser.add_argument("--session-image", type=Path,
     help="With --gateway-image, exercise a networked session and grant rotation")
 parser.add_argument("--tor-state", action="store_true", help="Exercise selective Tor state persistence in real LUKS")
 parser.add_argument("--stream", action="store_true", help="With laboratory gateway/session images, verify active streams through real storage revocation")
+parser.add_argument("--stream-socks", action="store_true", help="With --stream and stream-host, use an external synthetic SOCKS proxy in the offline host")
 parser.add_argument("--tor-online", action="store_true", help="With --tor-state, allow Tor bootstrap and capture the outer uplink")
 args = parser.parse_args()
+if args.stream_socks and not args.stream:
+    parser.error("--stream-socks requires --stream")
 if args.stream and (not args.session_image or args.tor_state):
     parser.error("--stream requires --session-image and excludes --tor-state")
 if args.adapter_binary and not args.gateway_bundle:
@@ -190,6 +193,8 @@ if args.refresh_tui_test or bundle:
                 shutil.copy2(source / name, root / ("scripts/" + role + "-image") / name)
             if args.stream and role == "gateway":
                 shutil.copy2(source / "stream.json", root / "scripts/gateway-image/stream.json")
+            if role == "session":
+                shutil.copy2(source / "opencode.sha256", root / "scripts/session-image/opencode.sha256")
             metadata = {name: {"sha256": hashlib.sha256((source / name).read_bytes()).hexdigest(),
                 "bytes": (source / name).stat().st_size} for name in ["kernel", "initrd", role + ".squashfs"]}
             (root / ("scripts/" + role + "-image/manifest.json")).write_text(json.dumps(metadata))
@@ -200,6 +205,8 @@ if args.refresh_tui_test or bundle:
             bundle_hook += "touch /run/oblivion-tor-online\n"
         if args.stream:
             bundle_hook += "touch /run/oblivion-stream-lab\n"
+        if args.stream_socks:
+            bundle_hook += "touch /run/oblivion-stream-socks\n"
         if adapter_manifest:
             (root / "scripts/adapter.json").write_text(json.dumps(adapter_manifest))
             bundle_hook += ('mkdir /run/oblivion-adapter\n'
@@ -306,6 +313,8 @@ summary = {
     "session_image_manifest": session_manifest,
     "tor_online": args.tor_online,
     "synthetic_streams": args.stream,
+    "external_socks_streams": args.stream_socks,
+    "session_opencode_sha256": (session_image / "opencode.sha256").read_text().split()[0] if session_image else None,
     "captures": captures,
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

@@ -21,6 +21,11 @@ NEXT = b"OBLIVION_API_NEXT_CANARY_86ab"
 OWNER = "oblivion-gateway-host.service"
 VM = "oblivion-gateway-vm.service"
 STREAM = Path("/run/oblivion-stream-lab").exists()
+SOCKS = Path("/run/oblivion-stream-socks").exists()
+PROXY_USER = b"OBLIVION_PROXY_USER_CANARY_31d2"
+PROXY_PASSWORD = b"OBLIVION_PROXY_PASSWORD_CANARY_72a4"
+PROXY = {"mode": "socks5", "endpoint": "10.0.2.2:9050", "authentication": {
+    "username": PROXY_USER.decode(), "password": PROXY_PASSWORD.decode()}}
 
 
 def run(*args, **kwargs):
@@ -75,7 +80,7 @@ def ready():
     for process in [pid, owner]:
         for name in ["cmdline", "environ"]:
             value = Path(f"/proc/{process}/{name}").read_bytes()
-            assert KEY not in value and NEXT not in value
+            assert not any(secret in value for secret in [KEY, NEXT, PROXY_USER, PROXY_PASSWORD])
     return pid, owner
 
 
@@ -87,6 +92,16 @@ def digest(path):
 def stream_status():
     expected = json.loads(Path("/run/oblivion-gateway-image/stream.json").read_text())
     identifier = time.monotonic_ns()
+    if SOCKS:
+        with socket.socket(socket.AF_UNIX) as client:
+            client.settimeout(10)
+            client.connect("/run/oblivion-stream-provider.sock")
+            client.sendall(json.dumps({"operation": "status", "id": identifier}).encode() + b"\n")
+            with client.makefile("rb") as reader:
+                value = json.loads(reader.readline(65536))
+        assert value["id"] == identifier and value["fixture_sha256"] == expected["provider_sha256"]
+        assert not value["errors"], value
+        return value
     with socket.socket(socket.AF_UNIX) as client:
         client.settimeout(10)
         client.connect("/run/oblivion-gateway-vm/console.sock")
@@ -152,15 +167,20 @@ shutil.copytree("/usr/lib/oblivion/vm/qemu-root", root, symlinks=True, dirs_exis
 (root / "run/oblivion-gateway-vm").mkdir(mode=0o755)
 root.chmod(0o755)
 run("mount", "-o", "remount,ro", str(root))
-# The old immutable host also predates the dedicated numeric account. Install
-# the same public account entries as the new host image, only in laboratory RAM.
+# Older retained host images need the public account in laboratory RAM. New
+# images already contain it: validate that identity instead of duplicating it.
 for name, entry in {
     "passwd": "oblivion-gateway-vm:x:1101:1101::/nonexistent:/usr/sbin/nologin\n",
     "group": "oblivion-gateway-vm:x:1101:\n",
 }.items():
     source = Path("/etc") / name
     content = source.read_text()
-    assert not any(line.split(":")[2] == "1101" for line in content.splitlines())
+    existing = [line.split(":") for line in content.splitlines() if line.split(":")[0] == "oblivion-gateway-vm" or line.split(":")[2] == "1101"]
+    if existing:
+        assert len(existing) == 1 and existing[0][0] == "oblivion-gateway-vm" and existing[0][2] == "1101"
+        if name == "passwd":
+            assert existing[0][3] == "1101" and existing[0][-1] == "/usr/sbin/nologin"
+        continue
     target = Path("/run") / ("oblivion-lab-" + name)
     target.write_text(content + entry)
     target.chmod(0o644)
@@ -169,7 +189,7 @@ for name, entry in {
 run("mkfs.ext4", "-q", "-m", "0", "/dev/vdb")
 run("mount", "/dev/vdb", "/data")
 Path(CONFIG).write_text(json.dumps({"general_image": "/data/general.luks", "general_mib": 768,
-    "session_mib": 128, "pbkdf_memory_kib": 65536, "manager_uid": 1000,
+    "session_mib": 128, "pbkdf_memory_kib": 65536, "manager_uid": 1000, "gateway_network": SOCKS,
     "vm": {"root": str(root), "kernel": "/run/oblivion-session-image/kernel",
         "initrd": "/run/oblivion-session-image/initrd", "filesystem": "/run/oblivion-session-image/session.squashfs",
         "memory_mib": 1536, "cpus": 2, "accelerator": "tcg"},
@@ -181,12 +201,31 @@ unit = (bundle / OWNER).read_text().replace(
 unit = unit.replace("StandardError=null", "StandardError=journal")
 Path("/run/systemd/system/" + OWNER).write_text(unit)
 run("systemctl", "daemon-reload")
+if SOCKS:
+    # The outer VM has no NIC. QEMU's 10.0.2.2 host alias reaches only this
+    # synthetic loopback listener; neither Tor nor a real provider is contacted.
+    assert digest("/usr/lib/oblivion-stream-fixture/provider.py") == json.loads((image / "stream.json").read_text())["provider_sha256"]
+    provider = subprocess.Popen(["python3", "/usr/lib/oblivion-stream-fixture/provider.py", "--external"],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    deadline = time.monotonic() + 10
+    while not Path("/run/oblivion-stream-provider.sock").exists():
+        assert provider.poll() is None and time.monotonic() < deadline, "external provider startup"
+        time.sleep(0.05)
+    assert stream_status()["active"] == []
 assert status()["api_key_present"] is None
 command("init-general", secret=GENERAL)
 command("unlock", secret=GENERAL)
 assert status()["api_key_present"] is False
 stopped()
 check("general unlock without an API key leaves gateway services and VM stopped")
+
+if SOCKS:
+    command("egress", secret=json.dumps({"action": "save", "transport": PROXY}).encode())
+    assert status()["egress"] == {"saved": {"mode": "socks5", "endpoint": "10.0.2.2:9050", "authenticated": True},
+        "selected": {"mode": "socks5", "endpoint": "10.0.2.2:9050", "authenticated": True}, "temporary": False}
+    # Invalid Tor state must be ignored, not imported or rewritten in SOCKS mode.
+    Path("/run/oblivion/general/profile/tor-state").write_bytes(b"unused-tor-state-fixture")
+    check("encrypted external SOCKS profile is selected before the key starts the gateway")
 
 command("set-api-key", secret=KEY)
 ready()
@@ -207,7 +246,9 @@ def console():
     client = socket.socket(socket.AF_UNIX)
     client.settimeout(180)
     client.connect("/run/oblivion-session/console.sock")
-    receive(client, b"OBLIVION_SESSION_READY")
+    data = receive(client, b"OBLIVION_SESSION_READY")
+    expected = Path("/run/oblivion-session-image/opencode.sha256").read_text().split()[0]
+    assert ("OBLIVION_SESSION_CLIENT_SHA256 " + expected).encode() in data
     return client
 
 
@@ -294,7 +335,7 @@ assert not Path(f"/proc/{chat}/root/run/oblivion-gateway-vm/control.sock").exist
 assert not Path(f"/proc/{chat}/root/run/oblivion/gateway-control.sock").exists()
 client = console()
 first = probe(client)
-check("A receives a RAM token privately; real broker authenticates it, rejects bad tokens and cannot reach provider while Tor is disabled")
+check("A receives a RAM token privately; real broker authenticates it, rejects bad tokens and reports the synthetic provider's offline probe")
 client.sendall(b"adapter\n")
 receive(client, b"OBLIVION_ADAPTER_AUTHENTICATED")
 check("compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error")
@@ -306,6 +347,11 @@ if STREAM:
     observed = stream_status()
     assert observed["active"] == [1] and observed["credentials"] == {"1": "initial"}
     check("compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker")
+    if SOCKS:
+        previous_gateway, _ = ready()
+        assert command("egress", secret=b'{"action":"select","transport":{"mode":"tor"}}', success=False) == "session_must_be_closed"
+        assert ready()[0] == previous_gateway and stream_status()["active"] == [1]
+        check("active streaming blocks a transport change without interrupting or replacing its gateway")
 
 # Keep the old guest alive while requesting close: the VM interlock rejects
 # closing its disk, but revocation must already have removed its API listener.
@@ -340,13 +386,14 @@ if STREAM:
     client.sendall(b"stream\n")
     receive(client, b"OBLIVION_STREAM_STARTED")
     observed = stream_status()
-    assert observed["active"] == [1] and observed["credentials"] == {"1": "alternate"}
+    alternate_stream = 2 if SOCKS else 1
+    assert observed["active"] == [alternate_stream] and observed["credentials"][str(alternate_stream)] == "alternate"
     check("explicit key selection replaces the gateway VM; the real compiled adapter sends the alternate key only through the broker")
 os.kill(chat, signal.SIGKILL)
 client.close()
 await_revocation(owner)
 if STREAM:
-    stream_closed(1)
+    stream_closed(alternate_stream)
     assert status()["session_open"]
     check("session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure")
 assert command("enter", a, secret=PASSWORD, success=False) == "session_already_open"
@@ -376,6 +423,10 @@ assert not status()["general_open"]
 check("reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings")
 
 command("unlock", secret=GENERAL)
+if SOCKS:
+    assert status()["egress"]["selected"]["mode"] == "socks5" and not status()["egress"]["temporary"]
+    assert Path("/run/oblivion/general/profile/tor-state").read_bytes() == b"unused-tor-state-fixture"
+    check("unlock restores the persisted SOCKS route and credentials without reading or changing Tor state")
 command("enter", b, secret=b"synthetic-session-password-b")
 client = console()
 fourth = probe(client)
@@ -443,13 +494,19 @@ check("fragmented private requests expire despite continued progress; the owner 
 command("lock")
 assert not status()["general_open"]
 
+if SOCKS:
+    assert stream_status()["active"] == []
+    provider.terminate()
+    provider.wait(timeout=10)
+    Path("/run/oblivion-stream-provider.sock").unlink()
+
 for path in Path("/run").rglob("*"):
     if path.is_symlink() or not path.is_file():
         continue
     with path.open("rb") as stream:
         tail = b""
         while chunk := stream.read(1024 * 1024):
-            assert not any(secret in tail + chunk for secret in [KEY, NEXT, first, second, third, fourth, fifth]), str(path)
+            assert not any(secret in tail + chunk for secret in [KEY, NEXT, PROXY_USER, PROXY_PASSWORD, first, second, third, fourth, fifth]), str(path)
             tail = chunk[-128:]
 check("runtime regular files contain none of the synthetic provider keys or session tokens after closure")
 run("umount", "/data")
