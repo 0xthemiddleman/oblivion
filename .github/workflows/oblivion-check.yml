@@ -105,34 +105,78 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           compression-level: 0
+
+  network:
+    name: Network ${{ matrix.kind }} ${{ matrix.authentication }} ${{ matrix.fault }}
+    needs: linux
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include:
+          - { kind: socks, authentication: required, fault: revoke }
+          - { kind: socks, authentication: required, fault: egress-crash }
+          - { kind: socks, authentication: required, fault: broker-crash }
+          - { kind: socks, authentication: required, fault: supervisor-crash }
+          - { kind: socks, authentication: required, fault: control-disconnect }
+          - { kind: socks, authentication: required, fault: reconfigure }
+          - { kind: socks, authentication: none, fault: revoke }
+          - { kind: socks, authentication: none, fault: egress-crash }
+          - { kind: socks, authentication: none, fault: broker-crash }
+          - { kind: socks, authentication: none, fault: supervisor-crash }
+          - { kind: socks, authentication: none, fault: control-disconnect }
+          - { kind: socks, authentication: none, fault: reconfigure }
+          - { kind: tor, authentication: isolation, fault: disconnect }
+          - { kind: tor, authentication: isolation, fault: shutdown }
+          - { kind: tor, authentication: isolation, fault: malformed }
+          - { kind: tor, authentication: isolation, fault: oversized }
+          - { kind: tor, authentication: isolation, fault: partial }
+          - { kind: tor, authentication: isolation, fault: duplicate-grant }
+          - { kind: tor, authentication: isolation, fault: supervisor-crash }
+          - { kind: tor, authentication: isolation, fault: broker-crash }
+          - { kind: tor, authentication: isolation, fault: egress-crash }
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: oblivion-transport-lab-arm64-${{ github.sha }}
+          path: artifacts/ci
+      - name: Verify build provenance and image checksums
+        run: |
+          test "$(cat artifacts/ci/source-commit.txt)" = "$GITHUB_SHA"
+          mkdir artifacts/ci/transport
+          tar -xzf artifacts/ci/transport.tar.gz -C artifacts/ci/transport
+          cd artifacts/ci/transport
+          sha256sum --check SHA256SUMS
       - name: Install software-emulated VM laboratory
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends qemu-system-arm
-      - name: SOCKS transport and stream fault matrix
+      - name: Exercise transport and lifecycle fault in fresh VMs
         shell: bash
+        env:
+          TEST_KIND: ${{ matrix.kind }}
+          TEST_AUTHENTICATION: ${{ matrix.authentication }}
+          TEST_FAULT: ${{ matrix.fault }}
         run: |
           set -euo pipefail
-          for authentication in required none; do
-            for fault in revoke egress-crash broker-crash supervisor-crash control-disconnect reconfigure; do
-              timeout --kill-after=20s 240s python3 -u script/oblivion/run-transport-lab.py \
-                --accelerator tcg --image artifacts/ci/transport \
-                --output "artifacts/ci/results/socks-$authentication-$fault" \
-                --authentication "$authentication" --fault "$fault"
-            done
-          done
-      - name: Offline Tor regression and control fault matrix
-        shell: bash
-        run: |
-          set -euo pipefail
-          for fault in disconnect shutdown malformed oversized partial duplicate-grant supervisor-crash broker-crash egress-crash; do
+          if [ "$TEST_KIND" = socks ]; then
+            timeout --kill-after=20s 240s python3 -u script/oblivion/run-transport-lab.py \
+              --accelerator tcg --image artifacts/ci/transport \
+              --output artifacts/ci/results/case \
+              --authentication "$TEST_AUTHENTICATION" --fault "$TEST_FAULT"
+          else
             timeout --kill-after=20s 240s python3 -u script/oblivion/run-network-lab.py \
               --accelerator tcg --image artifacts/ci/transport \
-              --output "artifacts/ci/results/tor-$fault" --control-fault "$fault"
-          done
+              --output artifacts/ci/results/case --control-fault "$TEST_FAULT"
+          fi
       - name: Retain synthetic VM evidence, including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: oblivion-network-evidence-${{ github.sha }}
+          name: oblivion-network-evidence-${{ matrix.kind }}-${{ matrix.authentication }}-${{ matrix.fault }}-${{ github.sha }}
           path: |
             artifacts/ci/results/**/*.json
             artifacts/ci/results/**/*.pcap

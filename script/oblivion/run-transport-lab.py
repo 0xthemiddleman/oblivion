@@ -153,11 +153,13 @@ def main():
             proxy.wait("stream_closed", 1)
             proxy.wait("finished", contacts + 1)
             assert chat.call("stream-closed") == {"closed": True}
-            assert chat.call("disconnected")["disconnected"]
             check(args.fault + " closes an established upstream TLS stream and the chat response")
             if args.fault == "revoke":
                 assert not control.call("shutdown")["active"]
+            # EOF from a crashed connector precedes the supervisor's child-exit
+            # observation. Require its bounded shutdown before checking listeners.
             summary["stopped"] = gateway.call("supervisor-stopped")
+            assert chat.call("disconnected")["disconnected"]
             state = gateway.call("transport-state")
             assert not state["tor_state_file"] and state["tor"] in ["inactive", "failed"]
             check("shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state")
