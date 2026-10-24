@@ -120,7 +120,8 @@ if args.accelerator == "tcg" and platform.system() != "Linux":
     raise SystemExit("The TCG laboratory backend requires Linux.")
 if args.accelerator == "kvm" and (platform.system() != "Linux" or platform.machine() != args.architecture
         or not os.access("/dev/kvm", os.R_OK | os.W_OK)):
-    raise SystemExit("KVM requires Linux, the matching CPU architecture and accessible /dev/kvm; no fallback.")
+    raise SystemExit(f"KVM unavailable: system={platform.system()}, host={platform.machine()}, target={args.architecture}, "
+        f"readable={os.access('/dev/kvm', os.R_OK)}, writable={os.access('/dev/kvm', os.W_OK)}; no fallback.")
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 image = args.image.resolve()
 for line in (image / "SHA256SUMS").read_text().splitlines():

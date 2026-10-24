@@ -226,9 +226,9 @@ jobs:
           test "$(uname -m)" = x86_64
           test -c /dev/kvm
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends qemu-system-x86 libarchive-tools squashfs-tools e2fsprogs acl
-          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
-          test -r /dev/kvm && test -w /dev/kvm
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 libarchive-tools squashfs-tools e2fsprogs
+          sudo -u "$(id -un)" -g kvm -- test -r /dev/kvm
+          sudo -u "$(id -un)" -g kvm -- test -w /dev/kvm
       - uses: ./.github/actions/setup-bun
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Compile the x86 chat client with the Oblivion profile
@@ -268,13 +268,13 @@ jobs:
             --output type=local,dest=artifacts/ci/host-image .
       - name: Boot the compiled x86 chat
         run: >-
-          python3 -u script/oblivion/run-tui-boot-lab.py --architecture x86_64 --accelerator kvm
+          sudo -u "$(id -un)" -g kvm -- python3 -u script/oblivion/run-tui-boot-lab.py --architecture x86_64 --accelerator kvm
           --image artifacts/ci/host-image --output artifacts/ci/tui-boot
       - name: Exercise protected profiles and trusted manager
         # KVM accelerates the Debian host. Its dedicated session VM still uses
         # the explicit lab-only TCG backend; this is not a production KVM proof.
         run: >-
-          python3 -u script/oblivion/run-vm-lab.py --architecture x86_64 --accelerator kvm
+          sudo -u "$(id -un)" -g kvm -- python3 -u script/oblivion/run-vm-lab.py --architecture x86_64 --accelerator kvm
           --image artifacts/ci/host-image --services-bundle artifacts/ci/host
           --output artifacts/ci/host-results
       - name: Retain synthetic x86 host evidence, including failures

@@ -21,7 +21,8 @@ args = parser.parse_args()
 if platform.system() != "Linux":
     parser.error("This CI diagnostic requires Linux")
 if args.accelerator == "kvm" and (platform.machine() != args.architecture or not os.access("/dev/kvm", os.R_OK | os.W_OK)):
-    parser.error("KVM requires the matching CPU architecture and accessible /dev/kvm; no fallback")
+    parser.error(f"KVM unavailable: host={platform.machine()}, target={args.architecture}, "
+        f"readable={os.access('/dev/kvm', os.R_OK)}, writable={os.access('/dev/kvm', os.W_OK)}; no fallback")
 image = args.image.resolve()
 output = args.output.resolve()
 if any("," in str(path) for path in [image, output]):
