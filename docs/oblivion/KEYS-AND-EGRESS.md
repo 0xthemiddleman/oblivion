@@ -4,7 +4,8 @@ Requisiti aggiunti il 24 ottobre 2026: salvare più API key Abliteration e
 scegliere tra Tor, predefinito, e un proxy SOCKS5 globale per Oblivion.
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager e nel
 controller. Il percorso online usa ancora Tor: la scelta di un SOCKS5 esterno
-resta da implementare e le prove precedenti non attestano quel trasporto.
+non è ancora attiva. Il [connettore](EGRESS-CONNECTOR.md) ha prove separate,
+ma storage, manager, supervisore e firewall devono ancora essere collegati.
 
 ## Chiavi salvate
 
@@ -107,6 +108,8 @@ SOCKS verrà mostrato come non disponibile, senza avviare Tor di nascosto.
    dal broker e dal futuro proxy dei tool. Separare il token locale e le
    credenziali di isolamento Tor dall'autenticazione del SOCKS esterno.
    Le credenziali esterne non devono essere trasmesse al guest o in argv/log.
+   **Componente implementato e verificato separatamente** per il solo origin API;
+   integrazione operativa e canale del futuro proxy dei tool ancora aperti.
 4. Applicare firewall e lifecycle per modalità: nessuna uscita Tor in SOCKS,
    nessun accesso al SOCKS esterno in Tor, revoca delle connessioni già aperte,
    recupero dopo crash e salvataggio dello stato Tor solo dove pertinente.

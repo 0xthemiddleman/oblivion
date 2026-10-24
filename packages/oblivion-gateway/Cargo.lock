@@ -500,6 +500,7 @@ dependencies = [
  "hyper-util",
  "libc",
  "oblivion-tor-state",
+ "oblivion-transport",
  "rcgen",
  "reqwest",
  "rustls",
@@ -515,6 +516,14 @@ dependencies = [
 [[package]]
 name = "oblivion-tor-state"
 version = "0.1.0"
+
+[[package]]
+name = "oblivion-transport"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "zeroize",
+]
 
 [[package]]
 name = "once_cell"

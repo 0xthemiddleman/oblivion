@@ -10,7 +10,9 @@ rilascio, non un blocco allo sviluppo sul Mac.
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager fidato:
 archivio versionato, migrazione, scelta per apertura e nessuna rotazione
 automatica. Il [SOCKS5 globale](KEYS-AND-EGRESS.md) viene prima del proxy dei
-tool e resta da implementare; il percorso online attuale usa Tor.
+tool: il [connettore](EGRESS-CONNECTOR.md) è compilato e verificato separatamente,
+ma configurazione host, supervisore e firewall restano da integrare. Il percorso
+online attuale usa Tor.
 
 Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
 OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;

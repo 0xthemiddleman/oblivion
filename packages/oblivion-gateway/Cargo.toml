@@ -11,6 +11,7 @@ lab-emulation = []
 
 [dependencies]
 oblivion-tor-state = { path = "../oblivion-tor-state" }
+oblivion-transport = { path = "../oblivion-transport" }
 bytes = "1"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 http-body-util = "0.1"
@@ -38,6 +39,10 @@ path = "src/main.rs"
 [[bin]]
 name = "oblivion-gateway-control"
 path = "src/control.rs"
+
+[[bin]]
+name = "oblivion-egress"
+path = "src/egress_main.rs"
 
 [profile.dev]
 debug = 0

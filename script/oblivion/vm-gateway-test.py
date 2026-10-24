@@ -62,7 +62,16 @@ def wait(pid):
     raise AssertionError("broker did not exit")
 
 
-def production(drop_identity):
+def exact(stream, count):
+    value = b""
+    while len(value) < count:
+        chunk = stream.recv(count - len(value))
+        assert chunk
+        value += chunk
+    return value
+
+
+def production(drop_identity, binary="oblivion-api", proxy=None):
     control, inherited = socket.socketpair()
     listener = socket.socket()
     listener.bind(("127.0.0.1", 0))
@@ -82,7 +91,7 @@ def production(drop_identity):
             os.setgroups([])
             os.setgid(1000)
             os.setuid(1000)
-        os.execve(str(BUNDLE / "oblivion-api"), [str(BUNDLE / "oblivion-api")], {})
+        os.execve(str(BUNDLE / binary), [str(BUNDLE / binary)], {})
     for fd in (write, channel, incoming):
         os.close(fd)
     inherited.close()
@@ -90,14 +99,14 @@ def production(drop_identity):
     control.settimeout(10)
     if not drop_identity:
         assert wait(pid) == 1
-        assert os.read(output, 8192) == b"oblivion-api: service_failed\n"
+        assert os.read(output, 8192) == (binary + ": service_failed\n").encode()
         os.close(output)
         control.close()
-        check("production binary rejects execution as root")
+        check(binary + ": production binary rejects execution as root")
         return
     try:
-        control.sendall((json.dumps({"api_key": KEY, "session_token": TOKEN,
-                                    "socks": "127.0.0.1:1"}) + "\n").encode())
+        config = {"api_key": KEY, "session_token": TOKEN, "socks": "127.0.0.1:1"} if binary == "oblivion-api" else {"transport": {"mode": "tor"}, "session_token": TOKEN}
+        control.sendall((json.dumps(config) + "\n").encode())
         assert control.recv(128) == b'{"ready":true}\n'
         status = Path(f"/proc/{pid}/status").read_text()
         assert re.search(r"^Uid:\s+1000\s+1000\s+1000\s+1000$", status, re.M)
@@ -107,27 +116,59 @@ def production(drop_identity):
         core = next(line for line in limits.splitlines() if line.startswith("Max core file size"))
         assert core.split()[-3:] == ["0", "0", "bytes"]
         assert KEY.encode() not in Path(f"/proc/{pid}/cmdline").read_bytes()
-        check("production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero")
-        for token, expected in [("invalid", b"HTTP/1.1 401"), (TOKEN, b"HTTP/1.1 502")]:
-            body = json.dumps({"model": "abliterated-model", "messages": [
-                {"role": "user", "content": "synthetic prompt"}], "stream": True})
+        check(binary + ": production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero")
+        if binary == "oblivion-api":
+            for token, expected in [("invalid", b"HTTP/1.1 401"), (TOKEN, b"HTTP/1.1 502")]:
+                body = json.dumps({"model": "abliterated-model", "messages": [
+                    {"role": "user", "content": "synthetic prompt"}], "stream": True})
+                with socket.create_connection(address, timeout=10) as client:
+                    client.sendall(("POST /v1/chat/completions HTTP/1.1\r\nHost: gateway\r\n"
+                        f"Authorization: Bearer {token}\r\nContent-Type: application/json\r\n"
+                        f"Content-Length: {len(body)}\r\n\r\n{body}").encode())
+                    response = b""
+                    while chunk := client.recv(65536):
+                        response += chunk
+                    assert response.startswith(expected)
+                    assert KEY.encode() not in response
+            check("production API rejects a wrong token and fails closed with SOCKS unavailable")
+        else:
             with socket.create_connection(address, timeout=10) as client:
-                client.sendall(("POST /v1/chat/completions HTTP/1.1\r\nHost: gateway\r\n"
-                    f"Authorization: Bearer {token}\r\nContent-Type: application/json\r\n"
-                    f"Content-Length: {len(body)}\r\n\r\n{body}").encode())
-                response = b""
-                while chunk := client.recv(65536):
-                    response += chunk
-                assert response.startswith(expected)
-                assert KEY.encode() not in response
-        check("production API rejects a wrong token and fails closed with SOCKS unavailable")
+                client.sendall(bytes([5, 1, 2]))
+                assert client.recv(2) == bytes([5, 2])
+                client.sendall(bytes([1, len(b"oblivion-api")]) + b"oblivion-api" + bytes([64]) + TOKEN.encode())
+                assert client.recv(2) == bytes([1, 0])
+                host = b"api.abliteration.ai"
+                client.sendall(bytes([5, 1, 0, 3, len(host)]) + host + struct.pack("!H", 443))
+                if proxy is None:
+                    assert client.recv(1) == b""
+                else:
+                    upstream, _ = proxy.accept()
+                    with upstream:
+                        upstream.settimeout(10)
+                        assert exact(upstream, 3) == bytes([5, 1, 2])
+                        upstream.sendall(bytes([5, 2]))
+                        assert exact(upstream, 1) == bytes([1])
+                        assert exact(upstream, exact(upstream, 1)[0]) == b"oblivion-api"
+                        assert exact(upstream, exact(upstream, 1)[0]) == TOKEN.encode()
+                        upstream.sendall(bytes([1, 0]))
+                        assert exact(upstream, 5) == bytes([5, 1, 0, 3, len(host)])
+                        assert exact(upstream, len(host) + 2) == host + struct.pack("!H", 443)
+                        # Exercise a domain-form bound address as well; it is
+                        # unrelated to destination identity or local DNS.
+                        upstream.sendall(bytes([5, 0, 0, 3, 3]) + b"bnd" + bytes([0, 1]))
+                        assert exact(client, 10) == bytes([5, 0, 0, 1, 0, 0, 0, 0, 0, 0])
+                        client.sendall(b"opaque-TLS-bytes")
+                        assert exact(upstream, len(b"opaque-TLS-bytes")) == b"opaque-TLS-bytes"
+                        upstream.sendall(b"reply")
+                        assert exact(client, 5) == b"reply"
+            check("production egress sends the grant isolation identity and remote domain to the synthetic Tor SOCKS entry" if proxy else "production egress authenticates the local grant and fails closed with Tor unavailable")
         control.close()
         assert wait(pid) == 0
         pid = None
         assert os.read(output, 8192) == b""
         with socket.socket() as client:
             assert client.connect_ex(address) != 0
-        check("production controller disconnect removes the listener and exits without stdout or stderr")
+        check(binary + ": production controller disconnect removes the listener and exits without stdout or stderr")
     finally:
         control.close()
         os.close(output)
@@ -156,7 +197,8 @@ try:
     target = Path("/tmp/target/debug/oblivion-api")
     target.parent.mkdir(parents=True)
     target.symlink_to(BUNDLE / "oblivion-api-lab")
-    for executable, expected in [("gateway-tests", 10), ("activation-tests", 4)]:
+    (target.parent / "oblivion-egress").symlink_to(BUNDLE / "oblivion-egress-lab")
+    for executable, expected in [("gateway-tests", 15), ("activation-tests", 6)]:
         result = subprocess.run(["setpriv", "--reuid=1000", "--regid=1000", "--clear-groups",
             "--no-new-privs", "--", str(BUNDLE / executable)],
             capture_output=True, text=True, timeout=120, env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})
@@ -167,6 +209,13 @@ try:
             check(executable + ": " + test)
     production(False)
     production(True)
+    production(False, "oblivion-egress")
+    production(True, "oblivion-egress")
+    with socket.socket() as proxy:
+        proxy.bind(("127.0.0.1", 9050))
+        proxy.listen()
+        proxy.settimeout(10)
+        production(True, "oblivion-egress", proxy)
     # Only public executable bytes cross this read-only virtual block device.
     # Application state stays in guest RAM; there is no host filesystem share.
     guest = Path("/run/oblivion-adapter")

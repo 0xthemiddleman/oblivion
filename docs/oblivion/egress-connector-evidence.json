@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-24",
+  "repository_parent": "56a73b1a54d6cef6aedac1d2c5a637591b4b526d",
+  "scope": "Standalone per-grant Tor/SOCKS5 connector, typed transport configuration, private inherited-FD activation and regression tests for the existing broker/compiled adapter.",
+  "integration_status": "The connector is not wired into the supervisor, host settings or runtime firewall. Operational sessions still use the original broker-to-local-Tor path. This does not establish global external SOCKS support.",
+  "production_kvm_tested": false,
+  "environment": "Native macOS ARM64 plus Debian ARM64/HVF with loopback only, no external NIC or swap; synthetic credentials and SOCKS/TLS peers.",
+  "boundaries": {
+    "configuration": "Explicit literal IPv4 external proxy only; no hostname/IPv6 endpoint, direct mode or environment proxy. Unknown fields, invalid endpoint and invalid authentication fail. Default transport type is Tor.",
+    "credential_separation": "Local token authenticates the connector. External mode sends configured proxy authentication only, never the local token. Tor mode sends the grant isolation identity to the fixed local entry.",
+    "admission": "Only domain-form CONNECT to api.abliteration.ai:443 is accepted, after local authentication and before proxy contact. Future tools need a separately authorized path.",
+    "revocation": "Control EOF/byte and SIGTERM tested in real processes. Library stream test verifies both TCP peers close after revoke; one absolute handshake deadline remains effective while fragments continue arriving.",
+    "activation": "Production binaries reject root, missing inherited descriptors and bad configuration; privileged controller supplies the private channel, child has UID 1000, no effective capabilities, NoNewPrivs and zero core limit.",
+    "test_endpoints": "Library tests construct private internal state with a dynamic loopback external proxy. Production Egress::new rejects such a proxy; no shipped bypass. Linux production connector also exercises the fixed Tor SOCKS endpoint with a synthetic peer.",
+    "capture_scope": "Packet counters cover the two compiled adapter cases only, not all connector tests. Full transport/firewall/DNS tracing remains an integration gate."
+  },
+  "bundle": {
+    "directory": "artifacts/oblivion-egress/bundle-02",
+    "manifest_sha256": "d18459cb65526af943fafc8d0185dfc39bd85803eac0b8f8f4341aed2ad11fd1",
+    "files": {
+      "activation-tests": "d8d722cd0618509db3d0e6ec2698c4544fb1dd79a2c9384d8548c3c846ae3b7c",
+      "compiler.txt": "6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88",
+      "gateway-tests": "6495173f1294f0a8df709f55e93579cf22d58ee5cdc499d12226b39dda40fb92",
+      "oblivion-api": "ec9edb3987e90d6df45c2a3a31cef9f3fdeab2124b9e75fe7b8e84e8ce28afa9",
+      "oblivion-api-lab": "7934e7e1d748e89531da700d3c3edfd32ea8f02cb2decc2c126edef3b53f9f8c",
+      "oblivion-egress": "07dd7f09305fa3c9f63af34f4d8bd339d2c93d41d20fccba1dd1c3e57a9b122f",
+      "oblivion-egress-lab": "f17b963753d0f114830a13d2c88e09a07a39f1bc9d03bfc35dd1a5404108bbfc",
+      "oblivion-gateway-control": "552275f5ff2adf0d277b9057685358ec14fbc0de8112d3eff89e64462a46b9e2",
+      "sources.sha256": "d689994223b50d75e40f9d62385cd145a593504af9e9b038b691ab22a69842bb"
+    }
+  },
+  "run": {
+    "directory": "artifacts/oblivion-egress/run-03",
+    "summary_sha256": "e2adbe9bee6033f47c43cf1e51de1a0846b1df6635b19d306aae16b07ae8eb13",
+    "serial_sha256": "4744c86c97118108674bcd65122526fcde2cb00520aa70a18d1764c4cb84320f",
+    "seconds": 13.8,
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "fixture_verified": true,
+    "adapter_verified": true,
+    "adapter_capture": {
+      "dropped": 0,
+      "ipv4": 770,
+      "ipv6": 0,
+      "kernel_packets": 770,
+      "non_loopback": 0,
+      "other": 0,
+      "packets": 770,
+      "tcp": 770,
+      "truncated": 0,
+      "udp": 0
+    },
+    "runtime_fixture_override": {
+      "file": "vm-gateway-test.py",
+      "sha256": "efd9e92d84bbc8d086422f21d8a121f5bed5a55188df8ef6c489b786cfabfef0"
+    },
+    "checks": [
+      "PASS: Debian ARM laboratory has no swap, no external network interface and verified gateway binaries",
+      "PASS: gateway-tests: broker::tests::denies_auth_endpoints_and_encoding_without_network",
+      "PASS: gateway-tests: broker::tests::client_disconnect_cancels_upstream_inference",
+      "PASS: gateway-tests: broker::tests::accepts_inline_images_pdf_and_normalizes_duplicate_keys",
+      "PASS: gateway-tests: broker::tests::limits_concurrency_and_revokes_requests_waiting_for_response_headers",
+      "PASS: gateway-tests: broker::tests::rejects_provider_features_and_remote_media_before_contacting_socks",
+      "PASS: gateway-tests: broker::tests::rejects_untrusted_tls_and_does_not_fall_back_when_proxy_is_down",
+      "PASS: gateway-tests: broker::tests::refuses_oversized_and_malformed_requests_before_socks",
+      "PASS: gateway-tests: broker::tests::refuses_redirects_and_sanitizes_provider_errors",
+      "PASS: gateway-tests: egress::tests::local_admission_rejects_before_any_proxy_connection",
+      "PASS: gateway-tests: egress::tests::proxy_downgrade_bad_password_and_connect_failure_do_not_retry",
+      "PASS: gateway-tests: egress::tests::remote_dns_and_distinct_proxy_authentication_relay_and_revoke",
+      "PASS: gateway-tests: egress::tests::transport_validation_and_metadata_never_expose_proxy_secrets",
+      "PASS: gateway-tests: broker::tests::streams_native_tool_history_through_remote_dns_and_replaces_credentials",
+      "PASS: gateway-tests: broker::tests::revocation_closes_streams_and_old_token_is_rejected_by_next_grant",
+      "PASS: gateway-tests: egress::tests::fragmented_handshake_has_an_absolute_deadline_and_listener_recovers",
+      "PASS: activation-tests: egress_invalid_configuration_and_missing_descriptors_fail_without_secrets",
+      "PASS: activation-tests: inherited_control_grants_once_and_eof_revokes_without_logs",
+      "PASS: activation-tests: missing_inherited_sockets_fail_before_runtime_allocates_descriptors",
+      "PASS: activation-tests: control_byte_and_sigterm_both_revoke_the_process",
+      "PASS: activation-tests: egress_private_configuration_and_revocation_do_not_log_secrets",
+      "PASS: activation-tests: invalid_startup_has_no_credential_or_payload_diagnostics",
+      "PASS: oblivion-api: production binary rejects execution as root",
+      "PASS: oblivion-api: production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero",
+      "PASS: production API rejects a wrong token and fails closed with SOCKS unavailable",
+      "PASS: oblivion-api: production controller disconnect removes the listener and exits without stdout or stderr",
+      "PASS: oblivion-egress: production binary rejects execution as root",
+      "PASS: oblivion-egress: production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero",
+      "PASS: production egress authenticates the local grant and fails closed with Tor unavailable",
+      "PASS: oblivion-egress: production controller disconnect removes the listener and exits without stdout or stderr",
+      "PASS: oblivion-egress: production binary accepts a root-owned control channel as UID 1000 with no capabilities, no-new-privileges and core limit zero",
+      "PASS: production egress sends the grant isolation identity and remote domain to the synthetic Tor SOCKS entry",
+      "PASS: oblivion-egress: production controller disconnect removes the listener and exits without stdout or stderr",
+      "PASS: compiled adapter: broker::tests::adapter::compiled_adapter_observes_revocation_of_active_stream",
+      "PASS: compiled adapter: broker::tests::adapter::compiled_adapter_streams_tools_and_resumes"
+    ]
+  },
+  "adapter_binary": {
+    "path": "artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/bin/opencode",
+    "sha256": "4b701ecfa2fd2eaec592b1ef2aa4b68448dbb4c6ec2676628f8e10d613351398"
+  },
+  "validation": {
+    "native": "cargo test --locked --offline --features lab-emulation: 15 library and 6 activation tests passed; 2 adapter cases ignored natively and executed successfully in Debian.",
+    "lint": "cargo clippy --locked --offline --all-targets --features lab-emulation -- -D warnings and cargo fmt passed.",
+    "linux": "Pinned Debian Rust 1.85 toolchain builds production/lab binaries and runs library tests. Exported bundle and current source hashes verified; activation and adapter tests executed in the swap-free VM.",
+    "repository": "bun run check in pinned oblivion-tui-tests:v2.1.4 passed; 34/34 typecheck tasks cached, lint passed.",
+    "logs": {
+      "artifacts/oblivion-egress/native-tests-final.log": "3e66d73a987f9a61b4bc26db3fc2a0b2e877ee2cdccc92835aff36f5ab8f8b32",
+      "artifacts/oblivion-egress/native-clippy-final.log": "7494592e4ed13d4e23a35fd61f29f7131a46815142c728e33fc8dc4ef54ca733",
+      "artifacts/oblivion-egress/build-bundle-02.log": "9c1dc5defe032de1dca17fe2971943afb94da9133186df76ef0c0c98f8f8734f",
+      "artifacts/oblivion-egress/root-check.log": "3c92cdab18e4ea0138f59374e6a36ec659028bc3eb757235d38f23154e3787e8"
+    }
+  },
+  "source_hashes": {
+    "packages/oblivion-tor-state/Cargo.toml": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf",
+    "packages/oblivion-tor-state/src/lib.rs": "5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5",
+    "packages/oblivion-transport/Cargo.toml": "8dc68df0af76d6c99fd25b61200e584dda3f93139b2b6530ae9c36b3fda4e56d",
+    "packages/oblivion-transport/src/lib.rs": "d555e50dfcae8b2263b6f5003fdcddf99e151366b484d3e715e3d6ec6212e3a5",
+    "packages/oblivion-gateway/.cargo/config.toml": "aabd2af12e26033cb8de9b63841b54574718406e4479b47e41bc0d92fc6f14e0",
+    "packages/oblivion-gateway/Cargo.lock": "de82fb8f9ff568dd9e22b25632d272829f6870be8c30ae8d9aca3f8044c21005",
+    "packages/oblivion-gateway/Cargo.toml": "d4336cde87d589182890c172c933ea2c94bc0cfcca3aeaf1498ac50074b3a568",
+    "packages/oblivion-gateway/src/activation.rs": "05731629d764ef951feb078d49489683a0670c46f74981e2ac163fc6a37c01c5",
+    "packages/oblivion-gateway/src/broker.rs": "07aa5ef007032add91dc2a12200f4164c62080de45ace048baf45f4018dd3d32",
+    "packages/oblivion-gateway/src/broker/tests.rs": "3b2f9633ab88a9be5c3916d02f12a07868981d84c05990c32a56bee0b6d4b91e",
+    "packages/oblivion-gateway/src/broker/tests/adapter.rs": "b0f627f1d613f7428b83a75011dbdde074bfce7f46085440a0f8591d7c5c4f7e",
+    "packages/oblivion-gateway/src/control.rs": "76d28a1c78b6bde4fc6f076617bdaa74e97391ec7cb80c165200881c8981ff87",
+    "packages/oblivion-gateway/src/egress.rs": "781ae9e21793e2b478ed72e0371e5f484db26c8e0d9de2c6d90f3f4022f4c186",
+    "packages/oblivion-gateway/src/egress/tests.rs": "d3e464402861d59bcb1c3564dfeb7f83e324d789dcd65fe233559b1fa86e77b5",
+    "packages/oblivion-gateway/src/egress_main.rs": "5a85a6f17cee848024138ba1c9ef60cb88eb7bba8fe66be649a7201177f127c5",
+    "packages/oblivion-gateway/src/lib.rs": "25d70a4c7d2fe1ff04fc01ad8770e6c76426be4a8bd016c65d92ac4f88d19eb3",
+    "packages/oblivion-gateway/src/main.rs": "1e5d8782af58bef22f7b068bd267ca7b7f6f0f76fd87fee4a7a64e8e785631cf",
+    "packages/oblivion-gateway/src/request.rs": "b74e8927bd78e8378a164e37f1d5fa2a461bc93bee1075d4a2c896592252c2c0",
+    "packages/oblivion-gateway/src/supervisor.rs": "79c82f64fa8f7a18132c83dfc9873e9a61e6cf6ea0c8fa0edcfcadf617a4acf2",
+    "packages/oblivion-gateway/src/tor.rs": "7745e69e3e2373c7fd6e751aaf00e4b33d27faba68442df2d8075fda8683588d",
+    "packages/oblivion-gateway/tests/activation.rs": "0400a89128331a189d8b9654bb531fecfad0c7be3d9d874ea3ef222a8c9d76e2",
+    "script/oblivion/Dockerfile.vm-lab": "49c5eed387ca62db0e65d2875f5e1acf67949d7e9956a47d15cf0b514e92af88",
+    "script/oblivion/Dockerfile.vm-lab.dockerignore": "413071634f6c89e5b22f62d6806d969a585d28a1562b8e23946929f3a81f1aac",
+    "script/oblivion/vm-gateway-test.py": "efd9e92d84bbc8d086422f21d8a121f5bed5a55188df8ef6c489b786cfabfef0",
+    "script/oblivion/run-vm-lab.py": "28d4629296c0d3e807fb495952d36959869c4248577016bbeb6c45bc9b121187"
+  },
+  "artifact_retention": {
+    "path": "artifacts/oblivion-egress/retention.json",
+    "sha256": "52314faa49b122f787706ed1a4aa43a7933de6c4f6f1429353a0991e4c65c27f",
+    "note": "Only verified superseded project test artifacts were removed; reports/manifests/serial retained. Native host package build cache was cleared. Targeted Docker cache cleanup reclaimed zero bytes; no global prune or unrelated data removal."
+  },
+  "remaining": [
+    "Encrypted transport settings, readonly selection and trusted manager UI.",
+    "Supervisor activation with separate connector UID; transport-specific firewall and Tor service/state lifecycle.",
+    "Production broker through connector, revocation of both processes, one immutable selected route per opening.",
+    "Dual-VM authenticated/unauthenticated proxy, outage/downgrade/error/recovery tests plus complete packet and syscall captures.",
+    "Real Tor/Abliteration and KVM validation; tool proxy and remaining roadmap gates unchanged."
+  ]
+}

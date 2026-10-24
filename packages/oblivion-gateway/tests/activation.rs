@@ -60,6 +60,10 @@ impl Drop for Process {
 }
 
 fn launch() -> (Process, UnixStream, SocketAddr) {
+    launch_binary(env!("CARGO_BIN_EXE_oblivion-api"))
+}
+
+fn launch_binary(binary: &str) -> (Process, UnixStream, SocketAddr) {
     let (control, inherited) = UnixStream::pair().unwrap();
     control
         .set_read_timeout(Some(Duration::from_secs(10)))
@@ -74,7 +78,7 @@ fn launch() -> (Process, UnixStream, SocketAddr) {
     };
     let inherited = duplicate(inherited.as_raw_fd());
     let listener = duplicate(listener.as_raw_fd());
-    let mut command = Command::new(env!("CARGO_BIN_EXE_oblivion-api"));
+    let mut command = Command::new(binary);
     command
         .env_clear()
         .env("HTTPS_PROXY", "http://192.0.2.1:9")
@@ -187,4 +191,60 @@ fn missing_inherited_sockets_fail_before_runtime_allocates_descriptors() {
     assert_eq!(output.status.code(), Some(1));
     assert!(output.stdout.is_empty());
     assert_eq!(output.stderr, b"oblivion-api: service_failed\n");
+}
+
+#[test]
+fn egress_private_configuration_and_revocation_do_not_log_secrets() {
+    for revoke in [0, 1, 2] {
+        let (mut process, mut control, address) =
+            launch_binary(env!("CARGO_BIN_EXE_oblivion-egress"));
+        let config = json!({"transport":{"mode":"socks5","endpoint":"192.0.2.1:1080","authentication":{"username":"fixture-user","password":"fixture-proxy-secret"}},"session_token":TOKEN});
+        writeln!(control, "{config}").unwrap();
+        let mut line = String::new();
+        BufReader::new(&mut control).read_line(&mut line).unwrap();
+        assert_eq!(line, "{\"ready\":true}\n");
+        let mut client = TcpStream::connect(address).unwrap();
+        client
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+        client.write_all(&[5, 1, 0]).unwrap();
+        let mut reply = [0; 2];
+        client.read_exact(&mut reply).unwrap();
+        assert_eq!(reply, [5, 255]);
+        if revoke == 1 {
+            control.write_all(b"revoke").unwrap();
+        }
+        if revoke == 2 {
+            assert_eq!(
+                unsafe { libc::kill(process.0.id() as i32, libc::SIGTERM) },
+                0
+            );
+        }
+        if revoke == 0 {
+            drop(control);
+        }
+        let output = process.finish();
+        assert!(output.status.success());
+        assert!(output.stdout.is_empty() && output.stderr.is_empty());
+        assert!(TcpStream::connect(address).is_err());
+    }
+}
+
+#[test]
+fn egress_invalid_configuration_and_missing_descriptors_fail_without_secrets() {
+    let (mut process, mut control, _) = launch_binary(env!("CARGO_BIN_EXE_oblivion-egress"));
+    let config = json!({"transport":{"mode":"socks5","endpoint":"127.0.0.1:9050","authentication":{"username":"fixture-user","password":"fixture-proxy-secret"}},"session_token":TOKEN});
+    writeln!(control, "{config}").unwrap();
+    let output = process.finish();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr, b"oblivion-egress: service_failed\n");
+    let output = Command::new(env!("CARGO_BIN_EXE_oblivion-egress"))
+        .env_clear()
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr, b"oblivion-egress: service_failed\n");
 }

@@ -146,7 +146,8 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
 L'estensione [chiavi multiple e SOCKS5 globale](KEYS-AND-EGRESS.md)
 ha ora la selezione nella UI fidata: il broker riceve soltanto la chiave scelta
 e viene distrutto prima del cambio. Resta da implementare il trasporto
-configurabile nel gateway.
+configurabile nel gateway. Il [connettore separato](EGRESS-CONNECTOR.md) è ora
+compilato e verificato, ma non ancora usato da questo broker nel ciclo delle VM.
 Il broker attuale accetta un SOCKS loopback con credenziale di isolamento Tor;
 non è già un client per proxy esterni configurabili. Non si cambia il suo
 origin né si consegnano chiavi o credenziali proxy alla chat.
