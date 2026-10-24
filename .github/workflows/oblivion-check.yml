@@ -237,7 +237,7 @@ jobs:
           OPENCODE_CHANNEL: oblivion-ci
           TURBO_TELEMETRY_DISABLED: "1"
         run: >-
-          bun run script/build.ts --target=cli-linux-x64-baseline --skip-install --skip-web-ui --oblivion
+          bun run script/build.ts --target=opencode-linux-x64-baseline --skip-install --skip-web-ui --oblivion
           --outdir="$GITHUB_WORKSPACE/artifacts/oblivion-build"
       - name: Record the compiled client provenance
         run: |
