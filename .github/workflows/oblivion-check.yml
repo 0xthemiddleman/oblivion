@@ -375,6 +375,10 @@ jobs:
           - { kind: socks, authentication: none, fault: supervisor-crash }
           - { kind: socks, authentication: none, fault: control-disconnect }
           - { kind: socks, authentication: none, fault: reconfigure }
+          - { kind: tools, authentication: required, fault: revoke }
+          - { kind: tools, authentication: none, fault: revoke }
+          - { kind: tools, authentication: required, fault: tools-crash }
+          - { kind: tools, authentication: required, fault: egress-crash }
           - { kind: tor, authentication: isolation, fault: disconnect }
           - { kind: tor, authentication: isolation, fault: shutdown }
           - { kind: tor, authentication: isolation, fault: malformed }
@@ -409,11 +413,13 @@ jobs:
           TEST_FAULT: ${{ matrix.fault }}
         run: |
           set -euo pipefail
-          if [ "$TEST_KIND" = socks ]; then
+          if [ "$TEST_KIND" = socks ] || [ "$TEST_KIND" = tools ]; then
+            tools=()
+            if [ "$TEST_KIND" = tools ]; then tools=(--tools); fi
             timeout --kill-after=20s 240s python3 -u script/oblivion/run-transport-lab.py \
               --accelerator tcg --image artifacts/ci/transport \
               --output artifacts/ci/results/case \
-              --authentication "$TEST_AUTHENTICATION" --fault "$TEST_FAULT"
+              --authentication "$TEST_AUTHENTICATION" --fault "$TEST_FAULT" "${tools[@]}"
           else
             timeout --kill-after=20s 240s python3 -u script/oblivion/run-network-lab.py \
               --accelerator tcg --image artifacts/ci/transport \

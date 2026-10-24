@@ -211,6 +211,29 @@ Per il prodotto rimangono regressione Tor online, persistenza delle guardie,
 lifecycle host e volumi e proxy dei tool. Finché questi gate restano aperti
 non è dichiarato il supporto SOCKS globale.
 
+Il runner aggiunge ora `--tools` per attivare esplicitamente il terzo processo
+con una policy sintetica. Sono preparati quattro casi CI: revoca con SOCKS
+autenticato e senza autenticazione, crash del proxy tool e crash del connettore.
+La verifica completa nelle VM è ancora da eseguire. Le fixture locali passano
+otto scambi HTTP/HTTPS con verifica del certificato e chiusura degli stream;
+questa prova non esegue i binari Rust o il firewall.
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 script/oblivion/run-transport-lab.py \
+  --image artifacts/oblivion-transport-runtime/image-tools \
+  --output artifacts/oblivion-transport-runtime/tools-revoke \
+  --authentication required --fault revoke --tools
+```
+
+L'immagine deve essere ricostruita dai sorgenti correnti. Il caso verifica
+UID/capability/ambiente dei tre processi, `deny`/`ask`/destinazioni sconosciute,
+porte e indirizzi privati, token precedente rifiutato, HTTP e CONNECT/TLS
+autorizzati e chiusura contemporanea degli stream API e tool. Il certificato
+pubblico della fixture viene passato solo al client Python di laboratorio;
+il proxy tool non termina TLS. Le catture esterne devono mostrare soltanto il
+proxy selezionato, senza DNS/UDP/IPv6 o token locali. La prova usa client Python,
+non verifica ancora Bun/OpenCode né la selezione di policy nel manager.
+
 ## Integrazione successiva
 
 1. Collaudare il salvataggio nel generale cifrato, i soli metadati nel manager

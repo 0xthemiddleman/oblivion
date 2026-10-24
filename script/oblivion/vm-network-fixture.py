@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 """Typed diagnostics in a lab-only image. No user documents or real API keys."""
+import base64
 import hashlib
 import json
 import os
 import signal
 import socket
+import ssl
 import subprocess
 import sys
 import time
@@ -13,8 +15,10 @@ from pathlib import Path
 
 ROLE = sys.argv[1]
 API = ("10.88.0.1", 8111)
+TOOLS = ("10.88.0.1", 8112)
 canaries = []
 stream = None
+tools_streams = []
 
 
 def run(*command, **options):
@@ -62,6 +66,40 @@ def request(token):
         return {"status": int(data.split(b" ", 2)[1]), "body": data.split(b"\r\n\r\n", 1)[1].decode()}
 
 
+def open_tools(token, scheme, host="api.abliteration.ai", port=None):
+    connection = socket.create_connection(TOOLS, timeout=10)
+    auth = base64.b64encode(("oblivion-tools:" + token).encode()).decode()
+    if scheme == "https":
+        target = f"{host}:{port or 443}"
+        connection.sendall((f"CONNECT {target} HTTP/1.1\r\nHost: {target}\r\n"
+            f"Proxy-Authorization: Basic {auth}\r\n\r\n").encode())
+        header = b""
+        while not header.endswith(b"\r\n\r\n"):
+            byte = connection.recv(1)
+            assert byte and len(header) < 16384
+            header += byte
+        if not header.startswith(b"HTTP/1.1 200"):
+            return connection, header
+        context = ssl.create_default_context(cafile="/usr/lib/oblivion-transport-fixture/cert.pem")
+        connection = context.wrap_socket(connection, server_hostname=host)
+        connection.sendall(f"GET /tools HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n".encode())
+        return connection, b""
+    assert scheme == "http" and port is None
+    connection.sendall((f"GET http://{host}/tools HTTP/1.1\r\nHost: {host}\r\n"
+        f"Proxy-Authorization: Basic {auth}\r\nConnection: close, X-Local-Hop\r\n"
+        "X-Local-Hop: synthetic-hop-header\r\n\r\n").encode())
+    return connection, b""
+
+
+def tools_request(token, scheme, host="api.abliteration.ai", port=None):
+    connection, data = open_tools(token, scheme, host, port)
+    with connection:
+        while chunk := connection.recv(4096):
+            data += chunk
+            assert len(data) < 65536
+    return {"status": int(data.split(b" ", 2)[1]), "body": data.split(b"\r\n\r\n", 1)[1].decode()}
+
+
 def probes():
     # Treat the chat VM as compromised: root may replace routes and its firewall.
     run("ip", "route", "replace", "default", "via", "10.88.0.1", "dev", "chat0")
@@ -90,7 +128,10 @@ def gateway(operation, configuration):
     if operation == "supervisor-info":
         pid = int(run("systemctl", "show", "oblivion-gateway-control.service", "--property=MainPID", "--value"))
         children = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
-        assert len(children) == 2
+        expected = {"oblivion-api": 1300, "oblivion-egress": 1201}
+        if configuration.get("tools", False):
+            expected["oblivion-tools"] = 1301
+        assert len(children) == len(expected)
         parent_status = Path(f"/proc/{pid}/status").read_text()
         assert "CapEff:\t00000000000010e3" in parent_status and "NoNewPrivs:\t1" in parent_status
         assert "Uid:\t0\t0\t0\t0" in parent_status
@@ -98,8 +139,8 @@ def gateway(operation, configuration):
         for value in children:
             child = Path("/proc") / value
             name = (child / "comm").read_text().strip()
-            assert name in ["oblivion-api", "oblivion-egress"]
-            uid = 1300 if name == "oblivion-api" else 1201
+            assert name in expected
+            uid = expected[name]
             status = (child / "status").read_text()
             assert f"Uid:\t{uid}\t{uid}\t{uid}\t{uid}" in status
             assert all(f"{field}:\t0000000000000000" in status for field in ["CapInh", "CapPrm", "CapEff", "CapAmb"])
@@ -107,15 +148,16 @@ def gateway(operation, configuration):
             assert (child / "cmdline").read_bytes() == f"/usr/bin/{name}\0".encode()
             assert next(line.split()[4:6] for line in (child / "limits").read_text().splitlines() if line.startswith("Max core file size")) == ["0", "0"]
             processes[name] = int(value)
-        assert set(processes) == {"oblivion-api", "oblivion-egress"}
+        assert set(processes) == set(expected)
         return {"supervisor_pid": pid, "broker_pid": processes["oblivion-api"], "broker_uid": 1300, "broker_caps": 0,
-            "egress_pid": processes["oblivion-egress"], "egress_uid": 1201, "egress_caps": 0}
-    if operation in ["supervisor-crash", "broker-crash", "egress-crash"]:
+            "egress_pid": processes["oblivion-egress"], "egress_uid": 1201, "egress_caps": 0,
+            **({"tools_pid": processes["oblivion-tools"], "tools_uid": 1301, "tools_caps": 0} if "oblivion-tools" in processes else {})}
+    if operation in ["supervisor-crash", "broker-crash", "egress-crash", "tools-crash"]:
         pid = int(run("systemctl", "show", "oblivion-gateway-control.service", "--property=MainPID", "--value"))
         if operation != "supervisor-crash":
-            name = "oblivion-api" if operation == "broker-crash" else "oblivion-egress"
+            name = {"broker-crash": "oblivion-api", "egress-crash": "oblivion-egress", "tools-crash": "oblivion-tools"}[operation]
             children = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
-            assert len(children) == 2
+            assert len(children) in [2, 3]
             pid = next(int(value) for value in children if Path(f"/proc/{value}/comm").read_text().strip() == name)
         os.kill(pid, signal.SIGKILL)
         return {"signalled": True}
@@ -128,10 +170,10 @@ def gateway(operation, configuration):
                 break
             assert time.monotonic() < deadline, (state, tor_state)
             time.sleep(0.01)
-        assert not any(path.read_text().strip() in ["oblivion-api", "oblivion-egress"] for path in Path("/proc").glob("[0-9]*/comm"))
+        assert not any(path.read_text().strip() in ["oblivion-api", "oblivion-egress", "oblivion-tools"] for path in Path("/proc").glob("[0-9]*/comm"))
         selectors = gateway("transport-state", {})["selectors"]
         assert all(not values for values in selectors.values())
-        return {"supervisor": state, "tor": tor_state, "broker_absent": True, "egress_absent": True, "routes_empty": True}
+        return {"supervisor": state, "tor": tor_state, "broker_absent": True, "egress_absent": True, "tools_absent": True, "routes_empty": True}
     if operation == "transport-state":
         active = run("systemctl", "show", "oblivion-tor.service", "--property=ActiveState", "--value").decode().strip()
         sets = {entry["set"]["name"]: entry["set"].get("elem", []) for entry in json.loads(run("nft", "-j", "list", "ruleset"))["nftables"] if "set" in entry}
@@ -145,12 +187,13 @@ def gateway(operation, configuration):
             canary.bind(("127.0.0.1", 9050))
             canary.listen()
             for uid, address, target in [(1300, "10.0.2.2", port), (1200, "10.0.2.2", port),
-                (1201, "10.0.2.2", other), (1300, "127.0.0.1", 9050), (1201, "127.0.0.1", 9050)]:
+                (1201, "10.0.2.2", other), (1300, "127.0.0.1", 9050), (1201, "127.0.0.1", 9050),
+                (1301, "10.0.2.2", port), (1301, "127.0.0.1", 9050)]:
                 result = subprocess.run(["setpriv", f"--reuid={uid}", f"--regid={uid}", "--clear-groups", "--",
                     "python3", "-c", "import socket,sys; s=socket.socket(); s.settimeout(.4); assert s.connect_ex((sys.argv[1],int(sys.argv[2]))) != 0", address, str(target)],
                     capture_output=True, timeout=5, env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})
                 assert result.returncode == 0
-        return {"denied": 5}
+        return {"denied": 7}
     if operation == "rules":
         return json.loads(run("nft", "-j", "list", "ruleset"))
     if operation == "forwarding-on":
@@ -220,7 +263,7 @@ else:
 reply({"ready": ROLE, "fixture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})
 for line in sys.stdin:
     command = json.loads(line)
-    assert set(command) <= {"id", "operation", "api_key", "token", "port", "other_port"}
+    assert set(command) <= {"id", "operation", "api_key", "token", "port", "other_port", "tools", "scheme"}
     try:
         if command["operation"] == "poweroff":
             reply({"id": command["id"], "ok": True})
@@ -229,6 +272,38 @@ for line in sys.stdin:
             result = gateway(command["operation"], command)
         elif command["operation"] == "request":
             result = request(command["token"])
+        elif command["operation"] == "tools-request":
+            result = tools_request(command["token"], command["scheme"])
+        elif command["operation"] == "tools-probes":
+            assert tools_request("invalid", "https")["status"] == 407
+            for host, port, expected in [("denied.example.com", 443, 403), ("ask.example.com", 443, 403),
+                ("unknown.example.com", 443, 403), ("api.abliteration.ai", 444, 403), ("127.0.0.1", 443, 400)]:
+                assert tools_request(command["token"], "https", host, port)["status"] == expected
+            result = {"denied": 6}
+        elif command["operation"] == "tools-stream-start":
+            assert not tools_streams
+            for scheme in ["http", "https"]:
+                connection, data = open_tools(command["token"], scheme)
+                tools_streams.append(connection)
+                while b"Synthetic tools response" not in data:
+                    chunk = connection.recv(4096)
+                    assert chunk and len(data) < 65536
+                    data += chunk
+                assert data.startswith(b"HTTP/1.1 200")
+            result = {"active": 2}
+        elif command["operation"] == "tools-stream-closed":
+            assert len(tools_streams) == 2
+            for connection in tools_streams:
+                size = 0
+                try:
+                    while chunk := connection.recv(4096):
+                        size += len(chunk)
+                        assert size < 65536
+                except (ssl.SSLEOFError, ConnectionResetError):
+                    pass
+                connection.close()
+            tools_streams.clear()
+            result = {"closed": 2}
         elif command["operation"] == "stream-start":
             assert stream is None
             stream = open_request(command["token"])
@@ -255,9 +330,10 @@ for line in sys.stdin:
         elif command["operation"] == "probes":
             result = probes()
         elif command["operation"] == "disconnected":
-            with socket.socket() as connection:
-                connection.settimeout(1)
-                assert connection.connect_ex(API) != 0
+            for address in [API, TOOLS]:
+                with socket.socket() as connection:
+                    connection.settimeout(1)
+                    assert connection.connect_ex(address) != 0
             result = {"disconnected": True}
         else:
             raise AssertionError("unknown chat operation")

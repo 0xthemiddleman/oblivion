@@ -27,8 +27,10 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--accelerator", choices=["hvf", "tcg"], default="hvf", help="Explicit lab backend: Mac HVF or Linux software emulation; never falls back")
     parser.add_argument("--authentication", choices=["required", "none"], default="required")
-    parser.add_argument("--fault", choices=["revoke", "egress-crash", "broker-crash", "supervisor-crash", "control-disconnect", "reconfigure"], default="egress-crash")
+    parser.add_argument("--tools", action="store_true", help="Also exercise the supervised HTTP/CONNECT tools path with an explicit synthetic policy")
+    parser.add_argument("--fault", choices=["revoke", "egress-crash", "broker-crash", "tools-crash", "supervisor-crash", "control-disconnect", "reconfigure"], default="egress-crash")
     args = parser.parse_args()
+    assert args.fault != "tools-crash" or args.tools
     network.validate_accelerator(args.accelerator)
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     image, output = args.image.resolve(), args.output.resolve()
@@ -44,7 +46,7 @@ def main():
     fixture_hash = hashlib.sha256(Path(__file__).with_name("vm-network-fixture.py").read_bytes()).hexdigest()
     summary = {"scope": "two read-only Debian ARM VMs with native loopback SOCKS/TLS fixture; no LUKS, host profile or OpenCode lifecycle",
         "accelerator": args.accelerator, "host_system": platform.system(), "hardware_isolation_verified": False,
-        "passed": False, "checks": checks, "authentication": args.authentication, "fault": args.fault,
+        "passed": False, "checks": checks, "authentication": args.authentication, "fault": args.fault, "tools": args.tools,
         "provider_requests": False, "real_tor": False, "image_manifest": (image / "SHA256SUMS").read_text(),
         "fixture_sha256": fixture_hash,
         "sources": {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
@@ -54,7 +56,14 @@ def main():
         checks.append(message)
         print("PASS: " + message, flush=True)
 
-    proxy = Proxy(args.authentication == "required")
+    proxy = Proxy(args.authentication == "required", args.tools)
+    tools = {"tools": {"session": "a" * 32, "policy": {"version": 1, "rules": [
+        {"destination": "api.abliteration.ai", "port": port, "action": "allow", "session": "a" * 32}
+        for port in [80, 443]
+    ] + [
+        {"destination": "denied.example.com", "port": 443, "action": "deny"},
+        {"destination": "ask.example.com", "port": 443, "action": "ask"}
+    ]}}} if args.tools else {}
     vms = []
     control = None
     try:
@@ -92,9 +101,9 @@ def main():
             assert state["selectors"]["tor_owners"] == state["selectors"]["tor_connectors"] == []
             assert state["selectors"]["proxy4"] == [{"concat": ["10.0.2.2", proxy.port]}]
             token = secrets.token_hex(32)
-            assert control.call("grant", token=token)["active"]
-            summary["processes"] = gateway.call("supervisor-info")
-            check("SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint")
+            assert control.call("grant", token=token, **tools)["active"]
+            summary["processes"] = gateway.call("supervisor-info", tools=args.tools)
+            check("SOCKS selection starts the expected grant processes, with distinct unprivileged UIDs and one firewall endpoint")
             assert chat.call("request", token="invalid")["status"] == 401
             assert proxy.snapshot().get("contacts", 0) == 0
             response = chat.call("request", token=token)
@@ -102,17 +111,28 @@ def main():
             proxy.wait("finished", 1)
             assert proxy.snapshot()["http_requests"] == 1
             check("valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy")
+            if args.tools:
+                assert chat.call("tools-probes", token=token) == {"denied": 6}
+                assert proxy.snapshot()["contacts"] == 1
+                check("tools reject invalid tokens, denied/ask/unknown destinations, wrong ports and private addresses before contacting SOCKS")
+                for index, scheme in enumerate(["http", "https"], start=2):
+                    response = chat.call("tools-request", token=token, scheme=scheme)
+                    assert response["status"] == 200 and "Synthetic tools response" in response["body"]
+                    proxy.wait("finished", index)
+                assert proxy.snapshot()["tools_http"] == proxy.snapshot()["tools_https"] == 1
+                check("tools HTTP and verified client-side HTTPS cross the real supervisor, firewall and policy connector without API key or local proxy headers at the destination")
+            initial_contacts = proxy.snapshot()["contacts"]
             gateway.call("forwarding-on")
             probes = chat.call("probes")
             assert probes["interfaces"] == ["chat0", "lo"] and probes["ipv6_denied"]
-            assert gateway.call("proxy-probes", port=proxy.port, other_port=canary.getsockname()[1]) == {"denied": 5}
+            assert gateway.call("proxy-probes", port=proxy.port, other_port=canary.getsockname()[1]) == {"denied": 7}
             assert not select.select([canary], [], [], 0)[0]
-            assert proxy.snapshot()["contacts"] == 1
+            assert proxy.snapshot()["contacts"] == initial_contacts
             rules = gateway.call("rules")
             assert network.drops(rules, "input") > 0 and network.drops(rules, "forward") > 0
             (output / "rules-after-probes.json").write_text(json.dumps(rules, indent=2) + "\n")
             gateway.call("forwarding-off")
-            check("compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor")
+            check("compromised chat cannot forward; API/tools/Tor UIDs cannot use external SOCKS; API/tools/connector cannot bypass through local Tor")
             for mode in ["method-rejected", *(["auth-rejected"] if proxy.authenticated else []), "connect-rejected"]:
                 proxy.mode = mode
                 contacts = proxy.snapshot()["contacts"]
@@ -133,13 +153,18 @@ def main():
             assert not control.call("revoke")["active"]
             assert chat.call("disconnected")["disconnected"]
             next_token = secrets.token_hex(32)
-            assert control.call("grant", token=next_token)["active"]
+            assert control.call("grant", token=next_token, **tools)["active"]
             assert chat.call("request", token=token)["status"] == 401
+            if args.tools:
+                assert chat.call("tools-request", token=token, scheme="https")["status"] == 407
             check("proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token")
             proxy.mode = "hold"
             contacts = proxy.snapshot()["contacts"]
             assert chat.call("stream-start", token=next_token) == {"active": True}
             proxy.wait("stream_started", 1)
+            if args.tools:
+                assert chat.call("tools-stream-start", token=next_token) == {"active": 2}
+                proxy.wait("tools_stream_started", 2)
             if args.fault == "revoke":
                 assert not control.call("revoke")["active"]
             elif args.fault == "control-disconnect":
@@ -151,7 +176,11 @@ def main():
             else:
                 gateway.call(args.fault)
             proxy.wait("stream_closed", 1)
-            proxy.wait("finished", contacts + 1)
+            if args.tools:
+                proxy.wait("tools_stream_closed", 2)
+                assert chat.call("tools-stream-closed") == {"closed": 2}
+                check(args.fault + " closes both active tools HTTP and CONNECT/TLS streams at the external peer and chat")
+            proxy.wait("finished", contacts + (3 if args.tools else 1))
             assert chat.call("stream-closed") == {"closed": True}
             check(args.fault + " closes an established upstream TLS stream and the chat response")
             if args.fault == "revoke":
@@ -162,7 +191,7 @@ def main():
             assert chat.call("disconnected")["disconnected"]
             state = gateway.call("transport-state")
             assert not state["tor_state_file"] and state["tor"] in ["inactive", "failed"]
-            check("shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state")
+            check("shutdown removes all grant processes and route permissions; SOCKS never starts or writes Tor state")
             gateway.stop()
             chat.call("poweroff")
             chat.process.wait(timeout=30)

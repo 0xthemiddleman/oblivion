@@ -56,16 +56,26 @@ class Handler(socketserver.BaseRequestHandler):
                 self.request.sendall(b"\x01\x00")
             assert exact(self.request, 4) == b"\x05\x01\x00\x03"
             assert exact(self.request, exact(self.request, 1)[0]) == b"api.abliteration.ai"
-            assert struct.unpack("!H", exact(self.request, 2))[0] == 443
+            port = struct.unpack("!H", exact(self.request, 2))[0]
+            assert port == 443 or (fixture.tools and port == 80)
             if mode == "connect-rejected":
                 self.request.sendall(b"\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00")
                 assert self.request.recv(1) == b"", "client continued after CONNECT rejection"
                 fixture.record("connect_rejected")
                 return
             self.request.sendall(b"\x05\x00\x00\x01\x7f\x00\x00\x01\x00\x00")
+            if port == 80:
+                with self.request.makefile("rb") as reader:
+                    assert reader.readline(8192) == b"GET /tools HTTP/1.1\r\n"
+                    self.tools_response(self.request, reader, mode, False)
+                return
             with fixture.context.wrap_socket(self.request, server_side=True) as tls:
                 with tls.makefile("rb") as reader:
-                    assert reader.readline(8192) == b"POST /v1/chat/completions HTTP/1.1\r\n"
+                    request = reader.readline(8192)
+                    if request == b"GET /tools HTTP/1.1\r\n":
+                        self.tools_response(tls, reader, mode, True)
+                        return
+                    assert request == b"POST /v1/chat/completions HTTP/1.1\r\n"
                     headers = {}
                     while True:
                         line = reader.readline(8192)
@@ -110,10 +120,41 @@ class Handler(socketserver.BaseRequestHandler):
         finally:
             fixture.record("finished")
 
+    def tools_response(self, connection, reader, mode, tls):
+        fixture = self.server.fixture
+        assert fixture.tools and mode in ["normal", "hold"]
+        headers = {}
+        while True:
+            line = reader.readline(8192)
+            if line == b"\r\n":
+                break
+            assert line.endswith(b"\r\n") and len(headers) < 32
+            name, value = line.split(b":", 1)
+            assert name.lower() not in headers
+            headers[name.lower()] = value.strip()
+        assert headers[b"host"] == b"api.abliteration.ai"
+        assert not any(name in headers for name in [b"authorization", b"proxy-authorization", b"x-local-hop"])
+        assert int(headers.get(b"content-length", b"0")) == 0
+        fixture.record("tools_requests")
+        fixture.record("tools_https" if tls else "tools_http")
+        connection.sendall(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n")
+        payload = b"Synthetic tools response\n"
+        connection.sendall(f"{len(payload):x}\r\n".encode() + payload + b"\r\n")
+        if mode == "normal":
+            connection.sendall(b"0\r\n\r\n")
+            return
+        fixture.record("tools_stream_started")
+        try:
+            assert connection.recv(1) == b"", "unexpected bytes during held tools response"
+        except (ssl.SSLEOFError, ConnectionResetError):
+            pass
+        fixture.record("tools_stream_closed")
+
 
 class Proxy:
-    def __init__(self, authenticated):
+    def __init__(self, authenticated, tools=False):
         self.authenticated = authenticated
+        self.tools = tools
         self.condition = threading.Condition()
         self.events = {}
         self.errors = []

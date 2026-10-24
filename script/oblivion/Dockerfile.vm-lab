@@ -264,6 +264,7 @@ COPY --from=stream-pack /stream-out/gateway/ /
 FROM gateway-network-lab AS transport-network-lab
 COPY --from=stream-compiler /stream-bundle/oblivion-api /usr/bin/oblivion-api
 COPY --from=stream-compiler /stream-bundle/trust.diff /usr/lib/oblivion-transport-fixture/trust.diff
+COPY script/oblivion/vm-stream-cert.pem /usr/lib/oblivion-transport-fixture/cert.pem
 
 FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS transport-network-pack
 RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
