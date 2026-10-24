@@ -43,6 +43,7 @@ script/*
 !script/oblivion/
 script/oblivion/*
 !script/oblivion/run-vm-lab.py
+!script/oblivion/run-tui-boot-lab.py
 !script/oblivion/packet_capture.py
 !script/oblivion/vm-*.sh
 !script/oblivion/vm-*.py
@@ -60,6 +61,11 @@ artifacts/oblivion-build/cli-linux-arm64/*
 !artifacts/oblivion-build/cli-linux-arm64/bin/
 artifacts/oblivion-build/cli-linux-arm64/bin/*
 !artifacts/oblivion-build/cli-linux-arm64/bin/opencode
+!artifacts/oblivion-build/cli-linux-x64-baseline/
+artifacts/oblivion-build/cli-linux-x64-baseline/*
+!artifacts/oblivion-build/cli-linux-x64-baseline/bin/
+artifacts/oblivion-build/cli-linux-x64-baseline/bin/*
+!artifacts/oblivion-build/cli-linux-x64-baseline/bin/opencode
 !artifacts/oblivion-adapter-broker/
 artifacts/oblivion-adapter-broker/*
 !artifacts/oblivion-adapter-broker/cli-01/

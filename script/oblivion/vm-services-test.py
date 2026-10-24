@@ -7,6 +7,7 @@ import fcntl
 import hashlib
 import json
 import os
+import platform
 import pwd
 import select
 import shutil
@@ -41,6 +42,7 @@ terminal = pyte.Screen(100, 30)
 stream = pyte.Stream(terminal)
 decoder = codecs.getincrementaldecoder("utf-8")("replace")
 output = bytearray()
+AUDIT_ARCH, WRITE_SYSCALLS = {"aarch64": (0xc00000b7, [64, 68]), "x86_64": (0xc000003e, [1, 18])}[platform.machine()]
 
 
 def check(label):
@@ -206,10 +208,10 @@ def interrupt_creation(operation, secret, executable):
             assert os.WIFSTOPPED(state) and os.WSTOPSIG(state) == signal.SIGTRAP | 0x80
             info = ctypes.create_string_buffer(88)
             assert trace(0x420e, target, info, len(info)) >= 33  # GET_SYSCALL_INFO
-            assert struct.unpack_from("=I", info.raw, 4)[0] == 0xc00000b7  # lab ABI: AArch64
+            assert struct.unpack_from("=I", info.raw, 4)[0] == AUDIT_ARCH
             if info.raw[0] == 1:  # syscall entry: union at byte 24, then nr and fd
                 number, fd = struct.unpack_from("=QQ", info.raw, 24)
-                writing_block = number in [64, 68] and Path(f"/proc/{target}/fd/{fd}").resolve() == block
+                writing_block = number in WRITE_SYSCALLS and Path(f"/proc/{target}/fd/{fd}").resolve() == block
             if info.raw[0] == 2 and writing_block and struct.unpack_from("=q", info.raw, 24)[0] > 0:
                 break  # successful write/pwrite64 exit; mkfs has not completed
         print("OBLIVION_FAULT_AFTER_BLOCK_WRITE " + operation, flush=True)

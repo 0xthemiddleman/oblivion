@@ -15,9 +15,13 @@ from pathlib import Path
 parser = argparse.ArgumentParser()
 parser.add_argument("--image", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
+parser.add_argument("--architecture", choices=["aarch64", "x86_64"], default="aarch64")
+parser.add_argument("--accelerator", choices=["tcg", "kvm"], default="tcg")
 args = parser.parse_args()
 if platform.system() != "Linux":
-    parser.error("This CI diagnostic uses Linux TCG")
+    parser.error("This CI diagnostic requires Linux")
+if args.accelerator == "kvm" and (platform.machine() != args.architecture or not os.access("/dev/kvm", os.R_OK | os.W_OK)):
+    parser.error("KVM requires the matching CPU architecture and accessible /dev/kvm; no fallback")
 image = args.image.resolve()
 output = args.output.resolve()
 if any("," in str(path) for path in [image, output]):
@@ -43,13 +47,14 @@ markers = [b"Conversazioni e documenti", b"/exit blocca"]
 received = bytearray()
 with (output / "serial.log").open("xb") as log:
     with subprocess.Popen([
-        "qemu-system-aarch64", "-machine", "virt,dump-guest-core=off,mem-merge=off",
-        "-accel", "tcg", "-cpu", "cortex-a72", "-m", "1536", "-smp", "2",
+        "qemu-system-" + args.architecture, "-machine", ("virt" if args.architecture == "aarch64" else "q35") + ",dump-guest-core=off,mem-merge=off",
+        "-accel", args.accelerator, "-cpu", "host" if args.accelerator == "kvm" else "cortex-a72" if args.architecture == "aarch64" else "max",
+        "-m", "1536", "-smp", "2",
         "-nodefaults", "-no-reboot", "-display", "none", "-monitor", "none",
         "-nic", "none", "-serial", "stdio",
         "-object", "rng-random,filename=/dev/urandom,id=rng", "-device", "virtio-rng-pci,rng=rng",
         "-kernel", str(guest / "kernel"), "-initrd", str(guest / "initrd"),
-        "-append", "root=/dev/vda ro rootfstype=squashfs console=ttyAMA0 loglevel=4 systemd.show_status=true panic=-1",
+        "-append", "root=/dev/vda ro rootfstype=squashfs console=" + ("ttyAMA0" if args.architecture == "aarch64" else "ttyS0") + " loglevel=4 systemd.show_status=true panic=-1",
         "-drive", f"file={guest / 'guest.squashfs'},format=raw,if=none,id=root,readonly=on",
         "-device", "virtio-blk-pci,drive=root,serial=oblivion-root",
         "-drive", f"file={vault},format=raw,if=none,id=vault,cache=none",
@@ -82,7 +87,7 @@ with (output / "serial.log").open("xb") as log:
 plain = re.sub(rb"\x1b\[[0-9;?]*[A-Za-z]", b"", received)
 summary = {
     "scope": "compiled chat TUI boot only; synthetic plaintext vault, no LUKS or host lifecycle assertion",
-    "accelerator": "tcg", "nested": False, "network_interfaces": 0,
+    "accelerator": args.accelerator, "architecture": args.architecture, "nested": False, "network_interfaces": 0,
     "seconds": round(time.monotonic() - started, 2),
     "markers": {marker.decode(): marker in plain for marker in markers},
     "passed": all(marker in plain for marker in markers),

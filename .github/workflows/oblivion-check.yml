@@ -167,8 +167,8 @@ jobs:
           compression-level: 0
 
   host:
-    name: Host LUKS and manager lifecycle
-    needs: [repository, linux]
+    name: ARM64 compiled chat boot
+    needs: repository
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     steps:
@@ -180,19 +180,11 @@ jobs:
         with:
           name: oblivion-cli-arm64-${{ github.sha }}
           path: artifacts/ci/cli-input
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: oblivion-host-arm64-${{ github.sha }}
-          path: artifacts/ci/host-input
       - name: Verify and unpack current-commit inputs
         run: |
           test "$(cat artifacts/ci/cli-input/source-commit.txt)" = "$GITHUB_SHA"
-          test "$(cat artifacts/ci/host-input/source-commit.txt)" = "$GITHUB_SHA"
-          mkdir -p artifacts/oblivion-build artifacts/ci/host
+          mkdir -p artifacts/oblivion-build
           tar -xzf artifacts/ci/cli-input/cli.tar.gz -C artifacts/oblivion-build
-          tar -xzf artifacts/ci/host-input/host.tar.gz -C artifacts/ci/host
-          cd artifacts/ci/host
-          sha256sum --check SHA256SUMS
       - name: Build the host and real chat guest laboratory
         run: >-
           docker buildx build --platform linux/arm64 --progress plain
@@ -206,16 +198,90 @@ jobs:
         run: >-
           python3 -u script/oblivion/run-tui-boot-lab.py
           --image artifacts/ci/host-image --output artifacts/ci/tui-boot
-      - name: Exercise protected profiles and trusted manager
-        run: >-
-          python3 -u script/oblivion/run-vm-lab.py --accelerator tcg
-          --image artifacts/ci/host-image --services-bundle artifacts/ci/host
-          --output artifacts/ci/host-results
-      - name: Retain synthetic host evidence, including failures
+      - name: Retain synthetic ARM64 boot evidence, including failures
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: oblivion-host-evidence-${{ github.sha }}
+          name: oblivion-tui-arm64-evidence-${{ github.sha }}
+          path: |
+            artifacts/ci/tui-boot/summary.json
+            artifacts/ci/tui-boot/serial.log
+            artifacts/ci/host-image/SHA256SUMS
+            artifacts/ci/host-image/sources.sha256
+            artifacts/oblivion-build/build-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+
+  host-x64:
+    name: x86 host LUKS and manager lifecycle
+    needs: repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Require hardware acceleration for the laboratory host
+        run: |
+          test "$(uname -m)" = x86_64
+          test -c /dev/kvm
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 libarchive-tools squashfs-tools e2fsprogs acl
+          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - uses: ./.github/actions/setup-bun
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Compile the x86 chat client with the Oblivion profile
+        working-directory: packages/cli
+        env:
+          OPENCODE_CHANNEL: oblivion-ci
+          TURBO_TELEMETRY_DISABLED: "1"
+        run: >-
+          bun run script/build.ts --target=cli-linux-x64-baseline --skip-install --skip-web-ui --oblivion
+          --outdir="$GITHUB_WORKSPACE/artifacts/oblivion-build"
+      - name: Record the compiled client provenance
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          root = Path("artifacts/oblivion-build")
+          with (root / "cli-linux-x64-baseline/bin/opencode").open("rb") as binary:
+              digest = hashlib.file_digest(binary, "sha256").hexdigest()
+          (root / "build-evidence.json").write_text(json.dumps({
+              "source_commit": os.environ["GITHUB_SHA"], "profile": "oblivion",
+              "binary_sha256": digest, "architecture": "x86_64",
+              "scope": "CI laboratory build, not a signed release"
+          }, indent=2) + "\n")
+          PY
+      - name: Build the x86 host bundle and real chat guest
+        run: |
+          docker buildx build --platform linux/amd64 --progress plain \
+            -f script/oblivion/Dockerfile.vm-lab --target host-artifacts \
+            --output type=local,dest=artifacts/ci/host .
+          docker buildx build --platform linux/amd64 --progress plain \
+            -f script/oblivion/Dockerfile.vm-lab --target artifacts \
+            --build-arg HOST=tui-host --build-arg GUEST=tui-guest \
+            --build-arg OPENCODE_BINARY=artifacts/oblivion-build/cli-linux-x64-baseline/bin/opencode \
+            --build-arg OPENCODE_BUILD_EVIDENCE=artifacts/oblivion-build/build-evidence.json \
+            --output type=local,dest=artifacts/ci/host-image .
+      - name: Boot the compiled x86 chat
+        run: >-
+          python3 -u script/oblivion/run-tui-boot-lab.py --architecture x86_64 --accelerator kvm
+          --image artifacts/ci/host-image --output artifacts/ci/tui-boot
+      - name: Exercise protected profiles and trusted manager
+        # KVM accelerates the Debian host. Its dedicated session VM still uses
+        # the explicit lab-only TCG backend; this is not a production KVM proof.
+        run: >-
+          python3 -u script/oblivion/run-vm-lab.py --architecture x86_64 --accelerator kvm
+          --image artifacts/ci/host-image --services-bundle artifacts/ci/host
+          --output artifacts/ci/host-results
+      - name: Retain synthetic x86 host evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oblivion-host-x64-evidence-${{ github.sha }}
           path: |
             artifacts/ci/tui-boot/summary.json
             artifacts/ci/tui-boot/serial.log
@@ -223,6 +289,8 @@ jobs:
             artifacts/ci/host-results/serial.log
             artifacts/ci/host-image/SHA256SUMS
             artifacts/ci/host-image/sources.sha256
+            artifacts/ci/host/SHA256SUMS
+            artifacts/ci/host/sources.sha256
             artifacts/oblivion-build/build-evidence.json
           retention-days: 7
           if-no-files-found: warn

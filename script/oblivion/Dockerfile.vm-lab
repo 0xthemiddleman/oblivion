@@ -41,9 +41,10 @@ RUN sh /usr/lib/oblivion/guest/install.sh
 FROM guest AS opencode-guest
 ARG TARGETARCH
 ARG OPENCODE_BUILD_EVIDENCE=docs/oblivion/privacy-evidence.json
-RUN test "$TARGETARCH" = arm64 && apt-get update && apt-get install -y --no-install-recommends \
+ARG OPENCODE_BINARY=artifacts/oblivion-build/cli-linux-arm64/bin/opencode
+RUN case "$TARGETARCH" in arm64|amd64) ;; *) exit 1;; esac && apt-get update && apt-get install -y --no-install-recommends \
     python3 git ripgrep && rm -rf /var/lib/apt/lists/*
-COPY artifacts/oblivion-build/cli-linux-arm64/bin/opencode /usr/bin/oblivion
+COPY ${OPENCODE_BINARY} /usr/bin/oblivion
 COPY ${OPENCODE_BUILD_EVIDENCE} /usr/lib/oblivion/build-evidence.json
 COPY script/oblivion/vm-chat-probe.py /usr/libexec/oblivion-chat-probe
 RUN python3 -c 'import hashlib,json; from pathlib import Path; assert hashlib.sha256(Path("/usr/bin/oblivion").read_bytes()).hexdigest() == json.loads(Path("/usr/lib/oblivion/build-evidence.json").read_text())["binary_sha256"]'

@@ -60,8 +60,9 @@ def online_vm(command, log, output):
 parser = argparse.ArgumentParser()
 parser.add_argument("--image", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
-parser.add_argument("--accelerator", choices=["hvf", "tcg"], default="hvf",
-    help="Explicit laboratory backend: ARM Mac HVF or Linux software emulation")
+parser.add_argument("--architecture", choices=["aarch64", "x86_64"], default="aarch64")
+parser.add_argument("--accelerator", choices=["hvf", "kvm", "tcg"], default="hvf",
+    help="Explicit laboratory backend: ARM Mac HVF, Linux KVM or Linux software emulation")
 parser.add_argument("--refresh-tui-test", action="store_true",
     help="Load the current synthetic TUI test into the lab initramfs, without rebuilding Debian")
 parser.add_argument("--services-bundle", type=Path,
@@ -113,10 +114,13 @@ if gateway_image:
         digest, name = line.split()
         if Path(name).name != name or hashlib.sha256((gateway_image / name).read_bytes()).hexdigest() != digest:
             raise SystemExit("Gateway image integrity check failed")
-if args.accelerator == "hvf" and (platform.system(), platform.machine()) != ("Darwin", "arm64"):
+if args.accelerator == "hvf" and ((platform.system(), platform.machine()) != ("Darwin", "arm64") or args.architecture != "aarch64"):
     raise SystemExit("HVF requires macOS ARM64.")
 if args.accelerator == "tcg" and platform.system() != "Linux":
     raise SystemExit("The TCG laboratory backend requires Linux.")
+if args.accelerator == "kvm" and (platform.system() != "Linux" or platform.machine() != args.architecture
+        or not os.access("/dev/kvm", os.R_OK | os.W_OK)):
+    raise SystemExit("KVM requires Linux, the matching CPU architecture and accessible /dev/kvm; no fallback.")
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 image = args.image.resolve()
 for line in (image / "SHA256SUMS").read_text().splitlines():
@@ -218,12 +222,12 @@ if disk:
 started = time.monotonic()
 with (output / "serial.log").open("xb") as log:
     command = [
-        "qemu-system-aarch64", "-machine", "virt", "-accel", args.accelerator,
-        "-cpu", "host" if args.accelerator == "hvf" else "max",
+        "qemu-system-" + args.architecture, "-machine", "virt" if args.architecture == "aarch64" else "q35", "-accel", args.accelerator,
+        "-cpu", "max" if args.accelerator == "tcg" else "host",
         "-m", "2048" if args.gateway_bundle else "4096", "-smp", "4", "-nodefaults", "-no-reboot", "-display", "none",
         "-monitor", "none", "-serial", "stdio", "-nic", "none",
         "-kernel", str(image / "kernel"), "-initrd", str(initrd),
-        "-append", "console=ttyAMA0 root=/dev/vda rootfstype=squashfs ro panic=-1 systemd.getty_auto=no systemd.show_status=false",
+        "-append", "console=" + ("ttyAMA0" if args.architecture == "aarch64" else "ttyS0") + " root=/dev/vda rootfstype=squashfs ro panic=-1 systemd.getty_auto=no systemd.show_status=false",
         "-drive", f"file={image / 'host.squashfs'},format=raw,if=none,id=root,readonly=on",
         "-device", "virtio-blk-pci,drive=root",
     ] + ([
@@ -254,6 +258,7 @@ adapter_verified = not args.gateway_bundle or ("OBLIVION_ADAPTER_BINARY_SHA256 "
 adapter_capture = next((json.loads(line.removeprefix("OBLIVION_ADAPTER_CAPTURE ")) for line in serial.splitlines() if line.startswith("OBLIVION_ADAPTER_CAPTURE ")), None)
 markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVION_VM_TEMP_CANARY_d9ae",
            b"OBLIVION_API_KEY_CANARY_5c91", b"OBLIVION_API_NEXT_CANARY_86ab",
+           b"OBLIVION_PROXY_USER_CANARY_31d2", b"OBLIVION_PROXY_PASSWORD_CANARY_72a4",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
 if (image / "opencode.sha256").exists():
     markers.append(b"OBLIVION_GUEST_CHAT_CANARY_7eaf")
@@ -280,7 +285,7 @@ if args.tor_online:
 summary = {
     "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
     "workload": "selective Tor state persistence and bootstrap" if args.tor_state else "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
-    "outer_accelerator": args.accelerator, "host_system": platform.system(),
+    "outer_accelerator": args.accelerator, "host_system": platform.system(), "architecture": args.architecture,
     "inner_accelerator": None if args.gateway_bundle else "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
     "checks": [line.strip() for line in serial.splitlines() if line.startswith("PASS:")],
