@@ -98,16 +98,32 @@ jobs:
           import os
           import re
           import subprocess
+          from pathlib import Path
+
+          def network_configuration(source):
+              before, host, after = source.partition("\n  host:\n")
+              host_jobs, network, after = after.partition("\n  network:\n")
+              if any(job != "host-x64" for job in re.findall(r"(?m)^  ([\w-]+):$", host_jobs)):
+                  return None
+              return before + network + after if host and network else None
+
           base = os.environ["BASE_SHA"]
           network = True
-          # Unknown/new history and workflow/component changes run the matrix.
-          # Only these two independent host test drivers can skip it.
-          host_only = {"script/oblivion/vm-services-test.py", "script/oblivion/run-vm-lab.py", "PLAN.md"}
+          # Unknown history and changes outside host drivers/jobs run the matrix.
+          host_only = {"script/oblivion/vm-services-test.py", "script/oblivion/run-vm-lab.py",
+                       "script/oblivion/run-tui-boot-lab.py", "PLAN.md"}
           if re.fullmatch(r"[0-9a-f]{40}", base) and base != "0" * 40:
               fetched = subprocess.run(["git", "fetch", "--no-tags", "--depth=1", "origin", base], capture_output=True, timeout=30)
               if fetched.returncode == 0:
                   paths = subprocess.check_output(["git", "diff", "--name-only", "-z", base, "HEAD"]).decode().split("\0")
-                  network = any(path and path not in host_only and not path.startswith("docs/oblivion/") for path in paths)
+                  relevant = [path for path in paths if path and path not in host_only and not path.startswith("docs/oblivion/")]
+                  network = bool(relevant)
+                  workflow = ".github/workflows/oblivion-check.yml"
+                  if relevant == [workflow]:
+                      previous = subprocess.run(["git", "show", base + ":" + workflow], capture_output=True, text=True)
+                      before = network_configuration(previous.stdout) if previous.returncode == 0 else None
+                      after = network_configuration(Path(workflow).read_text())
+                      network = before is None or after is None or before != after
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write("network=" + str(network).lower() + "\n")
           PY
