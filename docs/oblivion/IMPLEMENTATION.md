@@ -34,7 +34,12 @@ ora profilo cifrato, client corrente, gateway e proxy/provider sintetico
 esterno: **18 controlli passati**, inclusi cambio chiave, revoca dello stream,
 crash, ripristino del profilo e stato Tor invariato. Tutti i 25 job della
 relativa CI sono verdi. Non è una prova del provider remoto o della
-transizione host Tor↔SOCKS.
+transizione host Tor↔SOCKS. La [prova successiva della transizione](host-transport-transition-evidence.json)
+supera 21 controlli: guardia salvata preservata, Tor offline che blocca
+l'apertura prima del volume, ritorno al SOCKS salvato e nuovo token/stream.
+Non trova nessuno dei 14 marcatori sintetici cercati sul disco, inclusi prompt
+e risposta. I quattro job eseguiti passano; la matrice di rete invariata viene
+esclusa. La conversazione reale via Tor rimane da verificare.
 
 Il motore puro delle regole in `oblivion-transport::policy` aggiunge nove
 test passati sul Mac e in Debian ARM/x86 a quelli host precedenti; passa
@@ -45,7 +50,9 @@ questo nucleo dal proxy dei tool, dalle conferme e dalla persistenza ancora
 da collegare. La [CI successiva](network-policy-ci-evidence.json) copre il
 motore puro e ripete il ciclo SOCKS completo: tutti i 25 job passano.
 Il connettore ha ora un canale tool con policy esplicita, ancora da collaudare;
-il supervisore non lo abilita e il proxy HTTP del guest non è implementato.
+il supervisore non lo abilita. È scritto anche il proxy HTTP/CONNECT come
+componente, con otto test ancora da eseguire; servizio, firewall, policy del
+manager e client Bun restano da integrare.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

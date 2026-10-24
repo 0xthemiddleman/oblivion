@@ -85,8 +85,15 @@ privata esplicita, verifica sessione, destinazione e porta prima di contattare
 il trasporto. `ask` e `deny` chiudono la richiesta; soltanto `allow` inoltra.
 La configurazione privata è limitata a 128 KiB e la policy a 128 regole.
 Il supervisore corrente omette questa configurazione: il canale non è ancora
-disponibile al guest. Persistenza nel generale, IPC host, proxy HTTP/CONNECT,
-conferme, scadenze e revoca dei singoli permessi restano da implementare.
+disponibile al guest. Il modulo `oblivion-gateway::tools` implementa ora il
+proxy HTTP/CONNECT come componente, ancora da compilare e collaudare: Basic
+con token locale, verifica dell'authority e dell'header Host, rimozione degli
+header riservati al proxy, streaming senza file intermedi e revoca anche dei
+tunnel già passati a CONNECT. Otto nuovi test usano socket reali e un
+connettore sintetico. Il binario del servizio, il suo avvio nel supervisore,
+il firewall e la compatibilità di Bun/webfetch non sono ancora collegati.
+Persistenza nel generale, IPC host, conferme, scadenze e revoca dei singoli
+permessi restano da implementare.
 La revoca dell'intero grant continua a interrompere tutte le sue connessioni.
 
 **Servizio API e significato delle autorizzazioni**

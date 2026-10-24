@@ -1,0 +1,134 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "6f7ba815e8e72bca203b28fbb922aa220b37e626",
+  "status": "passed",
+  "scope": "Host-managed SOCKS-to-Tor-to-saved-SOCKS transition through real LUKS volumes and gateway replacement. Tor imports a synthetic saved guard but remains offline; session admission stays closed until returning explicitly to SOCKS.",
+  "ci": {
+    "run_id": 40103094838,
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40103094838",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 120899085488,
+        "name": "Debian ARM64 builds",
+        "conclusion": "success"
+      },
+      {
+        "id": 120899085706,
+        "name": "Repository checks",
+        "conclusion": "success"
+      },
+      {
+        "id": 120899615203,
+        "name": "ARM64 compiled chat boot",
+        "conclusion": "success"
+      },
+      {
+        "id": 120899615262,
+        "name": "x86 host LUKS, manager and SOCKS streams",
+        "conclusion": "success"
+      },
+      {
+        "id": 120899748604,
+        "name": "Network ${{ matrix.kind }} ${{ matrix.authentication }} ${{ matrix.fault }}",
+        "conclusion": "skipped"
+      }
+    ],
+    "network_matrix": "Skipped for host-fixture-only changes; previous complete 21-case matrix passed at source 190287d1d3acf1da91deb8091621e297c395a19a, run 40101190628."
+  },
+  "verification": {
+    "stream_checks": 21,
+    "stream_seconds": 552.35,
+    "storage_checks": 28,
+    "storage_seconds": 314.26,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: encrypted external SOCKS profile is selected before the key starts the gateway",
+      "PASS: reselecting the current key records the RAM choice without restarting its gateway or Tor bootstrap",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and reports the synthetic provider's offline probe",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+      "PASS: compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker",
+      "PASS: active streaming blocks a transport change without interrupting or replacing its gateway",
+      "PASS: controller revocation closes the provider TLS stream and the adapter reports failure while QEMU and its LUKS mapping are still open",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: explicit key selection replaces the gateway VM; the real compiled adapter sends the alternate key only through the broker",
+      "PASS: session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure",
+      "PASS: B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: unlock restores the persisted SOCKS route and credentials without reading or changing Tor state",
+      "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+      "PASS: normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes",
+      "PASS: SOCKS-to-Tor imports its saved guard and replaces the gateway; absent bootstrap still rejects opening before any session mapping or VM, with no SOCKS fallback",
+      "PASS: restoring the saved SOCKS profile closes the Tor gateway and completes its selective state checkpoint before replacement",
+      "PASS: restored SOCKS serves a fresh-token client stream, rejects the prior token and revokes without mutating the saved Tor checkpoint",
+      "PASS: fragmented private requests expire despite continued progress; the owner destroys its gateway VM and leaves storage state explicit",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ],
+    "disk_scan_canaries": [
+      "OBLIVION_VM_A_CANARY_4d02",
+      "OBLIVION_VM_B_CANARY_b0ca",
+      "OBLIVION_VM_TEMP_CANARY_d9ae",
+      "OBLIVION_API_KEY_CANARY_5c91",
+      "OBLIVION_API_NEXT_CANARY_86ab",
+      "OBLIVION_PROXY_USER_CANARY_31d2",
+      "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+      "synthetic-general-password",
+      "synthetic-session-password-a",
+      "synthetic-session-password-b",
+      "OBLIVION_STREAM_REQUEST",
+      "Synthetic open stream",
+      "OBLIVION_GUEST_CHAT_CANARY_7eaf",
+      "OBLIVION_TUI_CANARY_8ac4"
+    ],
+    "plaintext_markers_on_disk": [],
+    "outer_accelerator": "kvm",
+    "inner_accelerator": "tcg",
+    "client": {
+      "source_commit": "6f7ba815e8e72bca203b28fbb922aa220b37e626",
+      "profile": "oblivion",
+      "binary_sha256": "035339733a7fbc6659b71452396f97ab28b5ba2b322e6c194eed3b6e4f89d7a3",
+      "architecture": "x86_64",
+      "scope": "CI laboratory build, not a signed release"
+    },
+    "fixture_verified": true
+  },
+  "source_sha256": {
+    "script/oblivion/vm-session-network-test.py": "e5c901113eb266d0543e7b9b1e957437c871aa2372ff2503feafca878ef3939b",
+    "script/oblivion/run-vm-lab.py": "e14dba04bfb9c6dd581c851f757cd66d77632074b59c25da8d3fab4a299ed745"
+  },
+  "retained_evidence": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-6f7ba81/jobs.json",
+      "sha256": "a1c6a086a5d72cf508d7b44757f46b1f1b141c954f4226fbf4bf705a9258874a"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-6f7ba81/host-job.log",
+      "sha256": "67fa1db3b0c5899da3d617943a816fb3fbef9f26e000aa6d684fef45d19b9846"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-6f7ba81/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "b5ea7dc5376d49d6c8b2067904b55f17f81fe6db616052515ea4e5e7aaa87bd3"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-6f7ba81/x64-evidence/ci/stream-results/serial.log",
+      "sha256": "b7ce1bc64c386b0f9bedf266e923291d4575fec5b8a53fe7d13cf8e379f36dca"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-6f7ba81/x64-evidence/ci/host-results/summary.json",
+      "sha256": "8d26a6ff5f8f9fafade4f309c829445571cb5efc03220fadd9aaea2cf951ab85"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-6f7ba81/x64-evidence/ci/stream-images/session/build-evidence.json",
+      "sha256": "4ad679c58e8449190f01adff4424d780874f6252c9228362630fa20f87d2a289"
+    }
+  ],
+  "limits": [
+    "Outer laboratory host uses KVM; nested gateway/session VMs use TCG. This does not establish production session KVM isolation.",
+    "The outer host has no network interface; no real Tor bootstrap or remote Abliteration request occurs.",
+    "The Tor guard and API/proxy credentials are synthetic. This validates offline refusal and explicit transport replacement, not a successful provider conversation over Tor.",
+    "The disk scan searches named canaries only and does not prove absence of every possible disclosure.",
+    "No PCAP is collected in this full lifecycle fixture; packet captures belong to the separate transport matrix.",
+    "Tools connector and HTTP proxy changes were added after this source and are not covered here.",
+    "Global shutdown, real USB, file transfers, live image and remaining roadmap gates are still open."
+  ]
+}

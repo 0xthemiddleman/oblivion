@@ -7,7 +7,9 @@ in [Debian ARM64 tramite CI](linux-ci-evidence.json). Supervisore e firewall
 superano inoltre la [matrice con due VM](transport-vm-evidence.json): 12 casi
 SOCKS e 9 Tor offline. Il [lifecycle Linux dei volumi](host-lifecycle-ci-evidence.json)
 supera 28 controlli e il [percorso SOCKS completo](host-socks-stream-ci-evidence.json)
-ne supera 18. Il cambio effettivo Tor↔SOCKS attraverso il manager è ora in collaudo.
+ne supera 18. La [successiva prova Tor↔SOCKS](host-transport-transition-evidence.json)
+ne supera 21: Tor senza bootstrap impedisce di aprire il volume; il ritorno
+esplicito al profilo salvato ripristina SOCKS con nuovo token e stream.
 I componenti della chat OpenCode non cambiano.
 
 ## Confini implementati
@@ -37,11 +39,14 @@ tool non ampliano il ruolo API, che mantiene origine e porta fisse.
 Tor riceve username distinti per API e tool e il token per apertura; un
 SOCKS esterno riceve soltanto le proprie credenziali configurate. Questa
 distinzione non prova l'isolamento effettivo dei circuiti Tor. Il supervisore
-corrente non invia `tools`, il firewall non apre un nuovo ingresso e manca il
-proxy HTTP/CONNECT del guest: questa aggiunta non completa il SOCKS globale.
+corrente non invia `tools` e il firewall non apre un nuovo ingresso. Il
+componente HTTP/CONNECT è ora scritto con otto test dedicati, ancora da
+eseguire; manca l'integrazione del suo servizio con il guest. Questa aggiunta
+non completa il SOCKS globale.
 Le nuove prove di componente usano socket reali per autorizzazione, indirizzi,
 separazione delle credenziali e revoca; i risultati precedenti non le coprono.
-Sono aggiunti cinque test di libreria e due di attivazione del processo: un
+Oltre agli otto test HTTP/CONNECT, sono aggiunti cinque test del connettore
+e due di attivazione del processo: un
 profilo privato con 128 regole oltre il precedente limite di 4 KiB e il rifiuto
 di frame oltre 128 KiB. La CI ARM ora esegue anche il laboratorio gateway
 senza swap e le due prove dell'adapter compilato, oltre a costruire i binari.

@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.39 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.40 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -49,7 +49,13 @@ gateway e proxy/provider sintetico esterno alla VM gateway. Conferma cambio
 esplicito della chiave, token nuovi, revoca degli stream prima della chiusura
 del volume, ripristino del profilo dopo lock/unlock e mancata modifica dello
 stato Tor. Sono verdi tutti i 25 job della relativa CI. Il cambio effettivo
-Tor↔SOCKS, provider reale e isolamento KVM della sessione restano da collaudare.
+Tor↔SOCKS è ora verificato nella [suite successiva](docs/oblivion/host-transport-transition-evidence.json):
+**21 controlli**, con importazione della guardia Tor salvata, rifiuto prima
+di aprire il volume quando manca il bootstrap, ritorno esplicito a SOCKS e
+nuovo stream revocabile. Nessuno dei 14 marcatori sintetici cercati sul disco,
+inclusi prompt e risposta, viene trovato. Passano i quattro job eseguiti;
+la matrice di rete invariata è esclusa in questa esecuzione. La chat reale via
+Tor e l'isolamento KVM della sessione restano da collaudare.
 
 Il [motore delle regole](docs/oblivion/NETWORK-AND-FILES.md) ora valida domini,
 IP, porte e ambiti, con nove test passati sul Mac e in Debian ARM/x86:
@@ -57,8 +63,9 @@ divieti prioritari e destinazioni sconosciute senza autorizzazione implicita.
 La [CI successiva](docs/oblivion/network-policy-ci-evidence.json) supera tutti
 i 25 job, ripetendo anche i 18 controlli SOCKS. È ora scritto il collegamento
 delle regole al connettore dei tool, ancora da collaudare e non attivato dal
-supervisore: `ask` rimane bloccato. Proxy HTTP/CONNECT, integrazione nel manager,
-persistenza, conferme e scadenze rimangono da implementare.
+supervisore: `ask` rimane bloccato. Il proxy HTTP/CONNECT è scritto come
+componente con otto test ancora da eseguire; servizio, firewall, client Bun,
+integrazione nel manager, persistenza, conferme e scadenze rimangono da completare.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
 Nessuna modifica ai componenti della chat TUI.
