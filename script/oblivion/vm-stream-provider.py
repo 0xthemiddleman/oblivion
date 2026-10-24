@@ -9,6 +9,7 @@ import ssl
 import struct
 import sys
 import threading
+import traceback
 import tty
 from pathlib import Path
 
@@ -198,7 +199,8 @@ def serve(connection):
                 closed.add(identifier)
     except BaseException as error:
         with lock:
-            errors.append(type(error).__name__)
+            # Retain the failing fixture line, never the request or credentials.
+            errors.append({"type": type(error).__name__, "line": traceback.extract_tb(error.__traceback__)[-1].lineno})
 
 
 def accept(listener):

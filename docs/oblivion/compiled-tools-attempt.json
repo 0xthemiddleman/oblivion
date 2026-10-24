@@ -1,0 +1,98 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "f2f7a1b101ee348656b1ea465339be7758096653",
+  "status": "compiled-tools-subprocess-failed-diagnosis-pending",
+  "scope": "Synthetic provider and web peer, compiled OpenCode client, production host/session/gateway. Outer x86 KVM, inner guests TCG. No real provider.",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40112365110",
+    "run_id": 40112365110,
+    "host_job": 120927166134,
+    "host_conclusion": "failure",
+    "full_run_conclusion": "pending"
+  },
+  "storage": {
+    "passed": true,
+    "checks": 33,
+    "seconds": 316.77,
+    "plaintext_markers_on_disk": []
+  },
+  "tui": {
+    "passed": true,
+    "seconds": 6.28
+  },
+  "stream": {
+    "passed": false,
+    "checks_completed": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: encrypted external SOCKS profile is selected before the key starts the gateway",
+      "PASS: a scoped web policy is saved in the encrypted profile without restarting an idle gateway",
+      "PASS: reselecting the current key records the RAM choice without restarting its gateway or Tor bootstrap",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and reports the synthetic provider's offline probe",
+      "PASS: the host grant activates the actual tools listener; invalid tokens, denied/unknown targets and private addresses fail closed, and policy changes are blocked while open",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error"
+    ],
+    "seconds": 327.57,
+    "plaintext_markers_on_disk": [],
+    "disk_scan_canaries": [
+      "OBLIVION_VM_A_CANARY_4d02",
+      "OBLIVION_VM_B_CANARY_b0ca",
+      "OBLIVION_VM_TEMP_CANARY_d9ae",
+      "OBLIVION_API_KEY_CANARY_5c91",
+      "OBLIVION_API_NEXT_CANARY_86ab",
+      "OBLIVION_PROXY_USER_CANARY_31d2",
+      "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+      "synthetic-general-password",
+      "synthetic-session-password-a",
+      "synthetic-session-password-b",
+      "OBLIVION_STREAM_REQUEST",
+      "Synthetic open stream",
+      "OBLIVION_WEB_TOOLS_REQUEST",
+      "OBLIVION_WEB_TOOLS_VERIFIED",
+      "OBLIVION_WEB_HTTP",
+      "OBLIVION_WEB_HTTPS",
+      "OBLIVION_GUEST_CHAT_CANARY_7eaf",
+      "OBLIVION_TUI_CANARY_8ac4"
+    ],
+    "opencode_sha256": "23cc51b91b3f0942247d46aad9d7a81121a2a2d6dd3595fca7022038ec37a434"
+  },
+  "failure": {
+    "stage": "guest webtools subprocess",
+    "exit_code": 1,
+    "stderr": "",
+    "stdout_retained": false,
+    "cause": "unknown; the assertion omitted JSON-mode stdout"
+  },
+  "followup": [
+    "Retain bounded synthetic stdout and stderr after checking for the local token.",
+    "Include only exception type and fixture line in peer diagnostics.",
+    "Re-run with the prepared outside QMP capture; no production capture or logging switch."
+  ],
+  "limits": [
+    "This attempt does not verify the six compiled tool calls, A/B allowed-policy separation, or the later streaming lifecycle.",
+    "No outside capture was part of this source commit.",
+    "Zero disk canary matches apply only to this failed workload; they do not establish general absence of leaks.",
+    "The previous complete e642685 lifecycle report remains a separate historical result."
+  ],
+  "retained_evidence": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-f2f7a1b/host-job.log",
+      "sha256": "64acab408335439a002b32ee31d651b3b40c9a9d4301d73756df9a0f0930c7e1"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-f2f7a1b/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "fdaafa8dde32a4bc2db924d44c9d018718b93c3b0b22cbe0194509831504fd29"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-f2f7a1b/x64-evidence/ci/stream-results/serial.log",
+      "sha256": "cc4895c70b1655bc55f5b003111db8c73cebf5133760bd2708d8b03a669c9ee3"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-f2f7a1b/x64-evidence/ci/host-results/summary.json",
+      "sha256": "458de64271f0905d206a4e9c39655520f61917c2f3148effc1998034e76e4196"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-f2f7a1b/x64-evidence/ci/tui-boot/summary.json",
+      "sha256": "7fdd3153b738697aa6e39c884f9db22be37a528c3f2da5b7e328c0bbe8c2e44a"
+    }
+  ]
+}

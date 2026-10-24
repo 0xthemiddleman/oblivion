@@ -295,6 +295,9 @@ def receive(client, marker):
             raise AssertionError(diagnostic[-4000:]) from error
         assert chunk, "console closed"
         data += chunk
+        if re.search(rb"OBLIVION_WEBTOOLS_FAILED [^\r\n]*\r?\n", data):
+            diagnostic = re.sub(rb"[0-9a-f]{64}", b"<local-token>", data).replace(KEY, b"<provider-key>").replace(NEXT, b"<provider-key>")
+            raise AssertionError(diagnostic[-10000:])
     assert KEY not in data and NEXT not in data
     return data
 
@@ -380,7 +383,12 @@ receive(client, b"OBLIVION_ADAPTER_AUTHENTICATED")
 check("compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error")
 if SOCKS:
     client.sendall(b"webtools\n")
-    receive(client, b"OBLIVION_COMPILED_WEBTOOLS_VERIFIED")
+    try:
+        receive(client, b"OBLIVION_COMPILED_WEBTOOLS_VERIFIED")
+    except AssertionError:
+        # Counters/fixture locations are synthetic diagnostics, not user logs.
+        print("OBLIVION_WEBTOOLS_FIXTURE " + json.dumps(stream_status()), flush=True)
+        raise
     assert stream_status()["web"] == {"http": 1, "https": 1, "redirect": 1, "shell": 1, "completed": 1}
     check("compiled OpenCode webfetch and a shell client use the local proxy for HTTP and verified HTTPS; redirected, unknown and wrong-port targets fail without external contact or a direct fallback")
 

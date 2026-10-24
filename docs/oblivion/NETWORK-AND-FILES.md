@@ -69,7 +69,11 @@ la sessione B deve poi rifiutare le destinazioni autorizzate solo per A.
 Il solo subprocess di prova aggiunge il certificato pubblico della fixture
 tramite `NODE_EXTRA_CA_CERTS`; non si disabilita la verifica TLS e non cambia
 la fiducia dell'immagine di produzione. Due test nativi della fixture passano
-con socket e TLS reali; la prova Bun/OpenCode nelle VM è ancora da eseguire.
+con socket e TLS reali. Il [primo tentativo Bun/OpenCode nelle VM](compiled-tools-attempt.json)
+fallisce con exit 1 durante il subprocess degli strumenti. L'assert riportava
+solo stderr, vuoto, senza il JSON su stdout; la diagnosi rimane aperta.
+Il driver ora conserva stdout sintetico limitato e la posizione degli errori
+della fixture. Non aggiunge registrazione al client o al gateway di produzione.
 
 La prova host ora prepara anche una cattura esterna della prima apertura di A,
 dalle richieste iniziali fino alla revoca e chiusura. Solo il driver di

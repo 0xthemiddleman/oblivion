@@ -76,7 +76,14 @@ Senza profilo il servizio tool resta spento. `ask` blocca; conferme interattive,
 scadenze e revoca dei singoli permessi restano da collegare. Le variabili proxy
 sono ora nel launcher del guest, con il solo token locale. Due test nativi
 della fixture passano; la nuova prova del client compilato, di `webfetch`,
-redirect, shell e regole distinte A/B è preparata ma non ancora eseguita nelle VM.
+redirect, shell e regole distinte A/B è stata eseguita nelle VM, ma il
+[primo tentativo](compiled-tools-attempt.json) fallisce nel subprocess degli
+strumenti con exit 1 e stderr vuoto. Il vecchio assert non conservava stdout,
+dove il client JSON pubblica gli errori; la causa non è ancora determinata.
+Sono aggiunti diagnostici limitati ai dati sintetici del laboratorio, senza
+log nel prodotto. I 33 controlli storage/manager passano ancora, ma la sequenza
+stream si ferma dopo sette controlli: né Bun/proxy né i successivi casi A/B
+sono validati da questo tentativo.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

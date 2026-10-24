@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.46 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.47 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
@@ -32,8 +32,13 @@ fino al blocco generale. Senza profilo il servizio tool rimane spento;
 Il launcher prepara ora le variabili proxy con il solo token locale, escludendo
 loopback e broker API. È pronta una prova con OpenCode compilato: `webfetch`
 HTTP/HTTPS, redirect vietato, dominio e porta non autorizzati, shell e regole
-separate A/B. I due test nativi della fixture passano; la nuova prova nelle VM
-non è ancora eseguita. La CI permette di proseguire mentre il Docker locale
+separate A/B. I due test nativi della fixture passano; il primo tentativo nelle
+VM (`f2f7a1b`) si ferma nel subprocess degli strumenti con exit 1. Il vecchio
+assert mostrava solo stderr, vuoto, perdendo l'errore JSON su stdout: la causa
+resta da diagnosticare. I 33 controlli storage/manager passano nuovamente;
+questa esecuzione non valida il percorso Bun né le prove successive A/B.
+Le [evidenze del tentativo](docs/oblivion/compiled-tools-attempt.json) conservano
+il fallimento. La CI permette di proseguire mentre il Docker locale
 rimane fermo per spazio insufficiente ed errori I/O.
 È preparata anche la cattura esterna del traffico della prima apertura di A:
 attivazione esclusivamente nel laboratorio, controllo del percorso SOCKS e

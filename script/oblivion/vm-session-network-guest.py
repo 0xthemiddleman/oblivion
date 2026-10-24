@@ -82,7 +82,12 @@ for command in sys.stdin:
                 'HTTP_PROXY': 'http://127.0.0.1:1', 'https_proxy': 'http://127.0.0.1:1',
                 'NO_PROXY': '*', 'no_proxy': '*'})
         assert token not in result.stdout + result.stderr
-        assert result.returncode == 0, (result.returncode, result.stderr[-2000:])
+        # JSON-mode failures are emitted on stdout, so stderr alone hides the
+        # cause. This laboratory contains only synthetic prompts and secrets.
+        if result.returncode != 0:
+            print('OBLIVION_WEBTOOLS_FAILED ' + json.dumps({'exit': result.returncode,
+                'stdout': result.stdout[-6000:], 'stderr': result.stderr[-2000:]}), flush=True)
+            raise AssertionError('compiled web tools failed')
         assert 'OBLIVION_WEB_TOOLS_VERIFIED' in result.stdout, result.stdout[-4000:]
         print('OBLIVION_COMPILED_WEBTOOLS_VERIFIED', flush=True)
     elif command.startswith('old '):
