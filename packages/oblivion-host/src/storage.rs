@@ -176,7 +176,7 @@ pub fn main() -> Result<()> {
             // Failed startup keeps the vault interlocked until explicit leave/lock.
             let result = (|| {
                 let token = if config.gateway.is_some() {
-                    Some(crate::gateway::grant()?)
+                    Some(crate::gateway::prepare()?)
                 } else {
                     None
                 };

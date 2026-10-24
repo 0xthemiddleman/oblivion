@@ -122,6 +122,7 @@ impl Config {
             let mut channel = UnixStream::connect("/run/oblivion-session/token.sock")
                 .map_err(|_| Error("session_channel_unavailable"))?;
             crate::gateway::peer(&channel, VM_UID)?;
+            crate::gateway::grant(token)?;
             channel
                 .set_read_timeout(Some(Duration::from_secs(60)))
                 .and_then(|()| channel.set_write_timeout(Some(Duration::from_secs(5))))

@@ -15,7 +15,7 @@ rilascio, non un blocco allo sviluppo sul Mac.
 | VM della sessione        | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md); recupero dopo crash manager/controller e VM non responsiva             | KVM/hardware x86, OOM, shutdown completo e power loss                                 |
 | Console e manager        | [Prototipo Rust](MANAGER.md): password nascoste, IPC, console filtrata, TUI interattiva e stato di recupero persistente fra riavvii dei servizi                               | Paste esteso/resize, guasti I/O e console fisica                                      |
 | Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest          | Altri download/plugin, credenziale esterna e rifinitura della TUI                     |
-| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | Streaming/provider reale, proxy e crash VM                                            |
+| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | Streaming/provider reale, proxy e shutdown completo                                   |
 | Credenziale API          | [Gestione nella TUI fidata](CREDENTIALS.md), file root 0600 nel generale, aggiornamento atomico e blocchi readonly/recupero/sessione aperta                                   | Provider reale e configurazione Wi-Fi                                                 |
 | Documenti                | Flussi concordati                                                                                                                                                             | USB, copie A→B, OnionShare, quote e annullamento                                      |
 | Effimero                 | Solo sblocco RO del profilo implementato                                                                                                                                      | Guest RAM completo e zero scritture end-to-end                                        |
@@ -39,3 +39,9 @@ generale scrivibile e acquisito anche alla chiusura ordinata. Il bootstrap
 e la presenza delle guardie precedono nuove autorizzazioni online. Il collaudo
 del provider reale resta aperto. Lint e i 34 task di
 typecheck passano nell’ambiente Debian/Bun fissato dal repository.
+
+Il grant ora nasce soltanto dopo l'avvio di QEMU sospeso e resta associato al
+suo pidfd. La [revoca all'uscita del processo](session-exit-evidence.json)
+copre SIGKILL e uscita QMP senza chiusura preventiva del controller. Il volume
+non viene dichiarato chiuso dall'osservatore; rimangono le verifiche storage
+prima di una nuova apertura.

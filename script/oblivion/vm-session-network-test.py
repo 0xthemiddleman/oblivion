@@ -6,6 +6,7 @@ import os
 import shutil
 import signal
 import socket
+import struct
 import re
 import subprocess
 import time
@@ -177,6 +178,54 @@ def receive(client, marker):
     return data
 
 
+
+def gateway_status():
+    with socket.socket(socket.AF_UNIX) as channel:
+        channel.settimeout(12)
+        channel.connect("/run/oblivion/gateway-control.sock")
+        request = b'{"operation":"check"}'
+        channel.sendall(struct.pack("!I", len(request)) + request)
+        def receive_exact(size):
+            data = b""
+            while len(data) < size:
+                chunk = channel.recv(size - len(data))
+                assert chunk
+                data += chunk
+            return data
+        size = struct.unpack("!I", receive_exact(4))[0]
+        assert size < 1024
+        return json.loads(receive_exact(size))
+
+
+def watched_pids(owner):
+    result = []
+    for path in Path(f"/proc/{owner}/fd").iterdir():
+        try:
+            target = os.readlink(path)
+        except FileNotFoundError:
+            continue
+        if target != "anon_inode:[pidfd]":
+            continue
+        try:
+            info = Path(f"/proc/{owner}/fdinfo/{path.name}").read_text()
+        except FileNotFoundError:
+            continue
+        fields = dict(line.split(":", 1) for line in info.splitlines())
+        assert int(fields["flags"], 8) & os.O_CLOEXEC
+        result.append(int(fields["Pid"]))
+    return result
+
+
+def await_revocation(owner):
+    deadline = time.monotonic() + 40
+    while gateway_status()["active"] or watched_pids(owner):
+        assert time.monotonic() < deadline, "automatic grant revocation deadline"
+        time.sleep(0.1)
+    assert int(property(OWNER, "MainPID")) == owner
+    assert status()["session_open"] and status()["general_open"]
+    assert property("oblivion-session.service", "ActiveState") in ["inactive", "failed"]
+
+
 def probe(client):
     client.sendall(b"probe\n")
     data = receive(client, b"OBLIVION_SESSION_PROBED")
@@ -217,9 +266,16 @@ second = probe(client)
 assert first != second
 client.sendall(b"old " + first + b"\n")
 receive(client, b"OBLIVION_OLD_TOKEN_DENIED")
-command("force-leave")
+_, owner = ready()
+chat = int(property("oblivion-session.service", "MainPID"))
+assert watched_pids(owner) == [chat] and gateway_status()["active"]
+os.kill(chat, signal.SIGKILL)
 client.close()
-check("B gets a new grant and rejects A's token; the Ethernet connection reconnects only through a newly started session VM")
+await_revocation(owner)
+assert command("enter", a, secret=PASSWORD, success=False) == "session_already_open"
+command("close")
+assert not status()["session_open"]
+check("B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close")
 
 command("enter", a, secret=PASSWORD)
 client = console()
@@ -253,13 +309,41 @@ assert not status()["session_open"]
 command("lock")
 check("a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume")
 
+command("unlock", secret=GENERAL)
+command("enter", a, secret=PASSWORD)
+client = console()
+fifth = probe(client)
+assert fifth not in [first, second, third, fourth]
+_, owner = ready()
+chat = int(property("oblivion-session.service", "MainPID"))
+assert watched_pids(owner) == [chat]
+# Exit QEMU normally without invoking the storage close/revoke operation.
+with socket.socket(socket.AF_UNIX) as qmp:
+    qmp.settimeout(10)
+    qmp.connect("/run/oblivion-session/qmp.sock")
+    with qmp.makefile("rwb", buffering=0) as channel:
+        assert "QMP" in json.loads(channel.readline())
+        for operation in ["qmp_capabilities", "quit"]:
+            channel.write(json.dumps({"execute": operation}).encode() + b"\n")
+            while True:
+                reply = json.loads(channel.readline())
+                if "event" in reply:
+                    continue
+                assert "return" in reply
+                break
+client.close()
+await_revocation(owner)
+command("close")
+command("lock")
+check("normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes")
+
 for path in Path("/run").rglob("*"):
     if path.is_symlink() or not path.is_file():
         continue
     with path.open("rb") as stream:
         tail = b""
         while chunk := stream.read(1024 * 1024):
-            assert not any(secret in tail + chunk for secret in [KEY, NEXT, first, second, third, fourth]), str(path)
+            assert not any(secret in tail + chunk for secret in [KEY, NEXT, first, second, third, fourth, fifth]), str(path)
             tail = chunk[-128:]
 check("runtime regular files contain none of the synthetic provider keys or session tokens after closure")
 run("umount", "/data")

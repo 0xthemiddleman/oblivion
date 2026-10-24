@@ -63,7 +63,9 @@ dal supervisore deve corrispondere a quello atteso dal proprietario host.
 `lock` richiede prima revoca e checkpoint finale, poi verifica la fine della
 VM prima di chiudere i mapping. Se il checkpoint fallisce, il gateway viene
 comunque distrutto e l’errore resta visibile; un nuovo blocco chiude il generale.
-Non c'è riavvio automatico del gateway con credenziali ancora in memoria.
+Il servizio associa inoltre ogni grant al processo QEMU della sessione tramite
+un pidfd e revoca quando quel processo termina, senza fermare Tor se la revoca
+riesce. Non c’è riavvio automatico del gateway con credenziali ancora in memoria.
 
 ## Configurazione e laboratorio Mac
 

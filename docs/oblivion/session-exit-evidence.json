@@ -1,0 +1,160 @@
+{
+  "date": "2026-10-24",
+  "scope": "Bind every session grant to the real QEMU process and revoke automatically on process exit. Development and real Linux lifecycle tests on Mac ARM; no upstream provider traffic.",
+  "source_hashes": {
+    "packages/oblivion-host/src/gateway.rs": "930cc4f6f8d78b7c2b1ca7b11e6daf8fa58411f48ce6b6227d74651478f2efe7",
+    "packages/oblivion-host/src/storage.rs": "aa391208e95d52873563bb032716edcef8887f61349a61e167e03bdb8a02a2d3",
+    "packages/oblivion-host/src/vm.rs": "badff8223851dc9466ac73b10a1edb8cb8867d6e4fa69f0aa8ce0e58eb4ef064",
+    "script/oblivion/vm-session-network-test.py": "469d63c039754a47274f19b6cad8e16b162f4ade35b898760594b40496fb1413",
+    "script/oblivion/vm-gateway-host-test.py": "b1a74d4d271c9639838a0eeaef5a6ab0385afa9b87ecec88264a70aba127bf2e",
+    "script/oblivion/run-vm-lab.py": "6f336682ed1ab96fc49521c380a56620e8b909fdd7254c7cb5f760adc47fc161"
+  },
+  "environment": {
+    "outer_accelerator": "hvf",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "outer_network": "none",
+    "tor_network": "disabled",
+    "provider_requests": false,
+    "host_bundle": "artifacts/oblivion-session-exit/bundle-01",
+    "host_manifest": "83b83f09cf6b28c47321df285be7b43114db1a6c394a256c5f17fbf8cbd9163c  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  oblivion-gateway-host.service\n30adb7902abb7dd886aec8ee34ea3e859d7e92f4efa3e329ad4c4a970d658d4c  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\nb6e727f635d3e8309450d4f8bb784be67568acfafe74ef2d97aee7bc4e5f6c7d  oblivion-storage\n42cb775018607311c975a0728b24dea4f35f7390cee01a4c3de808a54b415d11  oblivion-storage-lab\n8f647a7be98962015136e322fb020e7ccafa8da0819836c145301ef10da77d8e  sources.sha256\n",
+    "host_sources": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  ../oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  ../oblivion-tor-state/src/lib.rs\n58e0d39dbcf42cfd606853f9355e8b3ae02a5ce80b613d529c827a14def34da6  Cargo.lock\n6886ddcdaecae96a30ad5b65b178dd34899e12a6c673efdba14b97d1ecb80b02  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\n2f4d99b7904f01ec0a8f4fb2616f017c7d91e0cfb16677d4b7617bf95471a98e  src/client.rs\nc93e5eae70ae5e999ff2d885910ad22d565f0494705f432223e000617d08a0ed  src/control.rs\n930cc4f6f8d78b7c2b1ca7b11e6daf8fa58411f48ce6b6227d74651478f2efe7  src/gateway.rs\n7da8a099dd5fd947be5f17b7baa96523fda9c9b3a321a166d5e9e793aca57605  src/ipc.rs\na68fc4a96fdb02e9540208c80612033491253ed3a1fe72e29cf8a8b93040be86  src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  src/main.rs\nbf573c8ceef7648aa8323d810a8fd096cab253bcc1b4f3e9f62ed89d413e0ee6  src/manager.rs\naa391208e95d52873563bb032716edcef8887f61349a61e167e03bdb8a02a2d3  src/storage.rs\nbf147d38b44c179516573fc63be01767687ee077baa1bff94871d151b18f06ed  src/terminal.rs\nbadff8223851dc9466ac73b10a1edb8cb8867d6e4fa69f0aa8ce0e58eb4ef064  src/vm.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\n",
+    "compiled_host_sources_match_repository": true,
+    "gateway_image": "artifacts/oblivion-tor-state/image-03",
+    "gateway_manifest_sha256": "f8da3c6df2209637fecc978186d26c8003ba4381f1dd1b322082a93b897daaf0",
+    "session_image": "artifacts/oblivion-session-network/guest-03",
+    "session_manifest_sha256": "077460da4f60f246dbc558b9e874419e74698c79914b57660548b567b6a1a255",
+    "base_host": "artifacts/oblivion-tui/image",
+    "base_host_manifest_sha256": "60745c1fb4fa9f27174a4d22c7bbf36eaef87cbd56e8044fbf99bd5a24eabff2",
+    "overrides": [
+      "Current host binaries/units and public QEMU runtime overlaid in laboratory RAM.",
+      "Production gateway image; session guest has the production token receiver and launcher plus an unprivileged synthetic probe.",
+      "Host service stderr is enabled only in the volatile laboratory journal."
+    ]
+  },
+  "mechanism": {
+    "order": [
+      "Check gateway readiness before unlocking session volume.",
+      "Generate local token and prepare the private Ethernet socket; no broker grant yet.",
+      "Launch QEMU with vCPUs paused and connect the private token channel.",
+      "Host gateway owner checks the console peer UID 1100 and obtains SO_PEERPIDFD; it closes the console connection before the manager attaches.",
+      "Only after acquiring the process handle, authorize the API broker; then resume the guest and deliver the token."
+    ],
+    "monitor": "Kernel pidfd, close-on-exec, polled in the existing owner loop; no caller-supplied numeric PID, new persisted state or new service.",
+    "exit": "On readability/hangup revoke the broker, verify the supervisor reports inactive and release the pidfd. A control error terminates the owner and destroys the gateway VM.",
+    "normal_close": "Explicit revoke drops the process handle before QEMU/storage closure.",
+    "storage": "The observer never declares the vault locked. Direct controller use remains interlocked until explicit close; the trusted manager follows its existing console-exit close path.",
+    "latency": "Ordinary owner loop interval is 250 ms; IPC work adds delay. Instantaneous revocation is not claimed.",
+    "kernel_requirement": "SO_PEERPIDFD, Linux 6.5+ on supported x86_64/aarch64; tested on the Debian 6.12 laboratory kernel. Missing support rejects startup before token delivery."
+  },
+  "session_exit": {
+    "artifacts": "artifacts/oblivion-session-exit/run-01",
+    "summary_sha256": "4817fdae7c38896160148e6bf86f7ea92c6d36ebf81678de0c3087188c44c5e3",
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "seconds": 296.21,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and cannot reach provider while Tor is disabled",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+      "PASS: normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ],
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "6b42a9160fa5b740b0a2c32f3e75a9c6e8f054fcc8169284358a81156a1714b3",
+    "runtime_fixture_override": {
+      "file": "vm-session-network-test.py",
+      "sha256": "469d63c039754a47274f19b6cad8e16b162f4ade35b898760594b40496fb1413"
+    },
+    "fixture_verified": true
+  },
+  "host_lifecycle_regression": {
+    "artifacts": "artifacts/oblivion-session-exit/lifecycle-01",
+    "summary_sha256": "c8aa2fba4bef0784e6fea6344c41f083c24170a1051140638f17dedd3d8a2f08",
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "seconds": 229.38,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: saving the protected credential starts a distinct UID 1101 gateway VM and completes private configuration",
+      "PASS: credential replacement destroys the previous VM; removal stops both owner and VM before deleting the key",
+      "PASS: failed gateway startup preserves the saved key and open-state report; explicit lock and unlock recover",
+      "PASS: a legacy guest without the token receiver fails closed; its VM stays interlocked and cannot see private control or change the key",
+      "PASS: host owner death removes gateway credential memory; explicit lock then closes the general LUKS mapping",
+      "PASS: an unresponsive gateway expires the private status deadline and is killed before recovery closes storage",
+      "PASS: readonly general supplies the saved credential without modifying any byte of the encrypted profile",
+      "PASS: explicit recovery stops gateway before closing the general",
+      "PASS: controller service stop closes gateway and LUKS without a dependency deadlock or credentials in runtime files"
+    ],
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "a3f628b424fb2e1aca63b733359b4986cba6224181da0392ae3332fe0f82fdf0",
+    "runtime_fixture_override": {
+      "file": "vm-gateway-host-test.py",
+      "sha256": "b1a74d4d271c9639838a0eeaef5a6ab0385afa9b87ecec88264a70aba127bf2e"
+    },
+    "fixture_verified": true
+  },
+  "verification": {
+    "pidfd_assertions": [
+      "The host owner holds a close-on-exec pidfd whose fdinfo PID is the actual session QEMU PID.",
+      "SIGKILL of that QEMU causes the existing owner to report an inactive broker and release the pidfd without prior storage close/revoke.",
+      "The session LUKS mapping remains open and a new enter is refused until explicit close.",
+      "QMP quit causes the same automatic revocation on another opening."
+    ],
+    "revocation_observation": "Private host Check forwards a supervisor status request and validates its inactive state; the supervisor acknowledges revoke only after the API child has exited. This suite does not observe a live provider stream.",
+    "linux_build": {
+      "console_tests": 4,
+      "bins_compiled": true,
+      "log": "artifacts/oblivion-session-exit/build-bundle-01.log",
+      "sha256": "8b623393ddd5bb44e9164f1619203d25b618bf887f99fbd89ba8001dba8dd00f"
+    },
+    "canonical_root_check": {
+      "exit_code": 0,
+      "lint_errors": 0,
+      "lint_warnings": 1225,
+      "typecheck_tasks": 34,
+      "cached_typecheck_tasks": 34,
+      "log": "artifacts/oblivion-session-exit/root-check.log",
+      "sha256": "4844c83d9def836a74efa2caee911d41294a5845a35d1a0adbec17a73697e169"
+    },
+    "rust_format": "passed",
+    "python_syntax": "passed"
+  },
+  "primary_references": [
+    {
+      "url": "https://github.com/torvalds/linux/commit/7b26952a91cf65ff1cc867a2382a8964d8c0ee7d",
+      "purpose": "SO_PEERPIDFD kernel API and supported ABI value"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/torvalds/linux/v6.12/net/core/sock.c",
+      "sha256": "8493cd7cc690e18edd30ee5356bb11ed53001f2b7908a4d2438d2725af9f53a8",
+      "purpose": "Verify success returns an installed nonnegative descriptor and errors do not expose one"
+    },
+    {
+      "url": "https://man7.org/linux/man-pages/man2/pidfd_open.2.html",
+      "purpose": "pidfd lifetime and poll behavior"
+    }
+  ],
+  "remaining_gates": [
+    "Bound complete token/control frame handshakes across fragmented input, rather than only individual blocking reads.",
+    "Actual complete adapter streaming/tool calling, active upstream stream cancellation and authorized Abliteration/Tor tests.",
+    "Frozen guest with a live QEMU, I/O failures, power loss and complete hardware shutdown.",
+    "Tool proxy, file transfers/OnionShare, full ephemeral sessions, signed live image and independent/hardware audit."
+  ],
+  "artifact_retention": [
+    {
+      "artifact": "artifacts/oblivion-tor-state/session-regression/data.raw",
+      "sha256": "7dd4f7fd3b9bc82a72c1e9edd3e2861b73a8fa994f05617f685dabf0990984a3",
+      "reason": "completed synthetic regression disk; authoritative report and logs retained"
+    },
+    {
+      "artifact": "artifacts/oblivion-tor-state/manager-regression/data.raw",
+      "sha256": "cec09968173bc69dec9471b7b77dad15f95a981c855c7e76d282ea8f229dbb80",
+      "reason": "completed synthetic regression disk; authoritative report and logs retained"
+    }
+  ]
+}

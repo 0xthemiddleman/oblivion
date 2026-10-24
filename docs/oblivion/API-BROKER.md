@@ -140,8 +140,9 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
 
 1. Verificare indirizzi interni e rebinding via Tor nel percorso completo;
    [persistenza e bootstrap](TOR-STATE.md) sono integrati nel ciclo del generale.
-2. Estendere la revoca nel controller reale a stream attivi, crash spontaneo
-   della VM, shutdown globale e guasti I/O.
+2. Estendere il collaudo della revoca nel controller reale a stream attivi,
+   shutdown globale e guasti I/O; la fine del processo della VM ora revoca
+   automaticamente tramite il [riferimento al processo](SESSION-NETWORK.md).
 3. Proxy dei tool con allow/deny/ask, quote e revoca dei tunnel; nessun traffico
    o DNS prima dell'autorizzazione.
 4. Adapter reale, catture PCAP/tracing e guasti end-to-end, inclusi risposta

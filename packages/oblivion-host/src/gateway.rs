@@ -3,7 +3,7 @@ use crate::vm::{self, Role};
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
@@ -74,7 +74,7 @@ fn destroy() -> Result<()> {
     )
 }
 
-pub fn grant() -> Result<Zeroizing<String>> {
+pub fn prepare() -> Result<Zeroizing<String>> {
     require(state()? == "active", "gateway_unavailable")?;
     let mut bytes = Zeroizing::new([0u8; 32]);
     File::open("/dev/urandom")
@@ -86,7 +86,6 @@ pub fn grant() -> Result<Zeroizing<String>> {
             .map(|byte| format!("{byte:02x}"))
             .collect::<String>(),
     );
-    request(&Request::Grant { token: &token }, true)?;
     // Only the point-to-point Ethernet socket is accessible to the session VM.
     // Its parent remains private to UID 1101; systemd binds this one socket.
     let path = c"/run/oblivion-gateway-vm/inside.sock";
@@ -100,6 +99,10 @@ pub fn grant() -> Result<Zeroizing<String>> {
     )
     .map_err(|_| Error("gateway_network_unavailable"))?;
     Ok(token)
+}
+
+pub fn grant(token: &str) -> Result<()> {
+    request(&Request::Grant { token }, true)
 }
 
 pub fn revoke() -> Result<()> {
@@ -206,9 +209,18 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
         .map_err(|_| Error("gateway_socket_failed"))?;
     crate::ipc::notify_ready()?;
     let mut active = false;
+    let mut session = None;
     let mut checked = Instant::now();
     // Only privileged storage workers can request a grant or revocation.
     loop {
+        if let Some(process) = &session {
+            if session_exited(process)? {
+                send(&mut stream, b"{\"operation\":\"revoke\"}")?;
+                configured(&mut stream, false)?;
+                active = false;
+                session = None;
+            }
+        }
         match listener.accept() {
             Ok((mut client, _)) => {
                 peer(&client, 0)?;
@@ -242,6 +254,9 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
                                 && token.bytes().all(|byte| byte.is_ascii_hexdigit()),
                             "invalid_gateway_grant",
                         )?;
+                        // QEMU is already running with its vCPUs paused. Bind
+                        // this grant to that process before it can use the API.
+                        session = Some(watch_session()?);
                         true
                     }
                     Request::Revoke {} => false,
@@ -258,6 +273,9 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
                 )?;
                 configured(&mut stream, next)?;
                 active = next;
+                if !active {
+                    session = None;
+                }
                 send(
                     &mut client,
                     if active {
@@ -279,6 +297,46 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
             checked = Instant::now();
         }
     }
+}
+
+fn watch_session() -> Result<OwnedFd> {
+    // Connect only while the guest is paused, then release the console before
+    // the manager attaches. No guest output or extra virtual device is needed.
+    let console = UnixStream::connect("/run/oblivion-session/console.sock")
+        .map_err(|_| Error("session_watch_unavailable"))?;
+    peer(&console, vm::VM_UID)?;
+    let mut fd = -1;
+    let mut size = size_of::<libc::c_int>() as libc::socklen_t;
+    // SO_PEERPIDFD is Linux 6.5+; 77 is its x86_64/aarch64 ABI value, not yet
+    // exported by the pinned libc crate. This avoids reopening a recycled PID.
+    require(
+        unsafe {
+            libc::getsockopt(
+                console.as_raw_fd(),
+                libc::SOL_SOCKET,
+                77,
+                (&mut fd as *mut libc::c_int).cast(),
+                &mut size,
+            )
+        } == 0,
+        "session_watch_unavailable",
+    )?;
+    let process = unsafe { OwnedFd::from_raw_fd(fd) };
+    require(!session_exited(&process)?, "session_already_exited")?;
+    Ok(process)
+}
+
+fn session_exited(process: &OwnedFd) -> Result<bool> {
+    let mut descriptor = libc::pollfd {
+        fd: process.as_raw_fd(),
+        events: libc::POLLIN,
+        revents: 0,
+    };
+    require(
+        unsafe { libc::poll(&mut descriptor, 1, 0) } >= 0,
+        "session_watch_failed",
+    )?;
+    Ok(descriptor.revents != 0)
 }
 
 pub fn peer(stream: &UnixStream, uid: u32) -> Result<()> {

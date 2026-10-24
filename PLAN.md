@@ -1,6 +1,26 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.22 — 24 ottobre 2026. Stato: audit iniziale della base OpenCode v2.1.4 completato con inventario, revisione manuale e prove sintetiche riproducibili; implementati il controller Linux con LUKS2 a due livelli, IPC ristretto e ciclo VM dedicato, verificato con guest sintetico in laboratorio. Il primo [profilo privacy compilato](docs/oblivion/PRIVACY-PROFILE.md) ha prove sul binario ARM, ora eseguito anche nel guest con conversazione, tool e riapertura del vault. Il [primo manager fidato](docs/oblivion/MANAGER.md) gestisce password e ciclo VM da TTY, con console filtrata. Lo sviluppo prosegue sul Mac disponibile; KVM su hardware x86 resta un gate di rilascio. La prima TUI ridotta è collegata al manager e provata nel ciclo A→B→A. Le [unità di sistema](docs/oblivion/HOST-SERVICES.md) gestiscono crash del manager/controller e recupero con VM non responsiva nel laboratorio Mac; la [creazione dei volumi](docs/oblivion/STORAGE-RECOVERY.md) ora separa tentativi incompleti e archivi pronti, con pulizia confermata e prove di spazio esaurito. Il [primo broker API](docs/oblivion/API-BROKER.md) è implementato e provato separatamente sul Mac e in Debian ARM, con origin fisso, SOCKS/TLS, validazione delle richieste e revoca; il [laboratorio di rete su Mac](docs/oblivion/NETWORK-LAB.md) ora verifica due VM separate, firewall esterno alla chat e Tor reale. Il manager ora [salva e gestisce la API key](docs/oblivion/CREDENTIALS.md) nel generale cifrato, con aggiornamento atomico e divieto di modifica a sessione aperta. Il [supervisore del gateway](docs/oblivion/GATEWAY-CONTROL.md) riceve configurazione e autorizzazioni su virtio privato, avvia il broker senza privilegi e ne attende la revoca. Il [servizio host del gateway](docs/oblivion/HOST-GATEWAY.md) ora legge la credenziale dal generale, avvia la VM con un UID distinto e ne verifica la chiusura prima del blocco. La [rete della sessione](docs/oblivion/SESSION-NETWORK.md) ora usa un token locale nuovo a ogni apertura, un collegamento Ethernet privato e revoca prima della chiusura; il launcher configura l’adapter esistente verso il broker. Lo [stato Tor selettivo](docs/oblivion/TOR-STATE.md) è ora importato e salvato nel generale; l’avvio online attende bootstrap e acquisizione delle guardie prima di autorizzare una sessione. Compatibilità completa del provider e proxy dei tool restano aperti. Rifinitura della TUI, resize, errori I/O, power loss, shutdown completo e compatibilità reale Abliteration/Tor restano da collaudare. Non esiste ancora una live Oblivion pronta all'uso. Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) mantiene i gate ancora aperti; il [report di fase 0](docs/oblivion/phase-0/AUDIT.md) distingue risultati osservati, analisi statica e limiti. Questo documento raccoglie le decisioni della conversazione e la sequenza di implementazione. Lo [studio di networking e trasferimento file](docs/oblivion/NETWORK-AND-FILES.md) distingue le proposte da verificare dai requisiti già concordati.
+Versione 0.23 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
+Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
+la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
+fine imprevista del processo QEMU. Lo stato selettivo di Tor viene importato
+e salvato nel generale; le nuove sessioni online attendono il bootstrap.
+
+L'[audit iniziale](docs/oblivion/phase-0/AUDIT.md) distingue inventario, analisi
+statica e prove sintetiche. Il [profilo privacy](docs/oblivion/PRIVACY-PROFILE.md),
+la [rete delle sessioni](docs/oblivion/SESSION-NETWORK.md) e lo
+[stato Tor](docs/oblivion/TOR-STATE.md) hanno evidenze riproducibili nel laboratorio
+Mac/Debian ARM. Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md)
+raccoglie i risultati e i gate aperti.
+
+Restano da completare compatibilità e streaming Abliteration, proxy dei tool,
+trasferimenti USB e OnionShare, sessione effimera completa, rifinitura della TUI,
+gestione dei guasti e immagine live verificata. KVM e hardware x86 sono gate di
+rilascio, senza bloccare lo sviluppo sul Mac. **Non esiste ancora una live
+Oblivion pronta all'uso.** Questo piano conserva le decisioni di prodotto e
+l'intera roadmap; lo [studio di rete e trasferimenti](docs/oblivion/NETWORK-AND-FILES.md)
+distingue le proposte da verificare dai requisiti concordati.
 
 Oblivion è un ambiente personale per conversazioni private con un agente, con file e cartelle come contesto. È un fork di OpenCode: conserva il motore e i suoi strumenti, inclusa la shell, e adatta la TUI a un prodotto minimale per conversazioni. L'uso principale è conversare, leggere, cercare, elaborare e, quando richiesto, modificare documenti. L'intervento centrale riguarda isolamento, persistenza, rete e ciclo di vita delle sessioni.
 
