@@ -32,6 +32,32 @@ RUN mkdir /bundle && cp /tmp/oblivion-storage /bundle/oblivion-storage \
 FROM scratch AS host-artifacts
 COPY --from=compiler /bundle/ /
 
+# Dedicated endpoint proof. No production USB service is installed by this stage.
+FROM os AS transfer-guest
+ARG COPY_BINARY=artifacts/oblivion-transfer-endpoints/linux-arm64/oblivion-copy
+RUN apt-get update && apt-get install -y --no-install-recommends python3 cryptsetup-bin \
+    && rm -rf /var/lib/apt/lists/* && mkdir /source /destination
+COPY ${COPY_BINARY} /usr/bin/oblivion-copy
+COPY script/oblivion/vm-transfer-guest.py script/oblivion/transfer_fixture.py /usr/lib/oblivion-copy-lab/
+COPY script/oblivion/vm-transfer.service /etc/systemd/system/
+RUN systemctl enable vm-transfer.service
+
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS transfer-pack
+RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools e2fsprogs python3 \
+    && rm -rf /var/lib/apt/lists/*
+COPY script/oblivion/vm-transfer-guest.py script/oblivion/transfer_fixture.py script/oblivion/vm-transfer.service /sources/
+RUN --mount=type=bind,from=transfer-guest,source=/,target=/guest,ro \
+    mkdir /out /fixture && python3 /sources/transfer_fixture.py /fixture \
+    && truncate -s 32M /out/source.raw && mkfs.ext4 -q -m 0 -d /fixture /out/source.raw \
+    && cp /guest/boot/vmlinuz-* /out/kernel && cp /guest/boot/initrd.img-* /out/initrd \
+    && mksquashfs /guest /out/guest.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
+    && sha256sum /guest/usr/bin/oblivion-copy > /out/endpoint.sha256 \
+    && cd /sources && sha256sum * > /out/sources.sha256 \
+    && cd /out && sha256sum * > SHA256SUMS
+
+FROM scratch AS transfer-vm-artifacts
+COPY --from=transfer-pack /out/ /
+
 FROM os AS guest
 RUN groupadd --gid 1000 oblivion && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /vault/home --shell /bin/sh oblivion \
     && passwd -l root && mkdir -p /vault /usr/libexec

@@ -1,4 +1,6 @@
+pub mod channel;
 mod directory;
+pub mod endpoint;
 
 use directory::Directory;
 use serde::{Deserialize, Serialize};
@@ -13,7 +15,8 @@ const MAGIC: &[u8; 8] = b"OBLVCP01";
 const END: &[u8; 8] = b"OBLVEND1";
 const HEADER_LIMIT: usize = 1024 * 1024;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Limits {
     pub entries: usize,
     pub bytes: u64,
@@ -216,13 +219,7 @@ pub fn receive(
     root: &Path,
     id: &str,
 ) -> io::Result<Receipt> {
-    require(
-        id.len() == 32
-            && id
-                .bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
-        "invalid_transfer_id",
-    )?;
+    validate_id(id)?;
     let root = Directory::open(root)?;
     root.require_private()?;
     let transaction = root.create_directory(id)?;
@@ -239,6 +236,16 @@ pub fn receive(
         entries: manifest.entries.len(),
         bytes: manifest.bytes,
     })
+}
+
+fn validate_id(id: &str) -> io::Result<()> {
+    require(
+        id.len() == 32
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "invalid_transfer_id",
+    )
 }
 
 fn receive_transaction(

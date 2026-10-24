@@ -5,9 +5,14 @@ directories. Receives into a new private transaction, verifies SHA-256, syncs
 before publication, and never overwrites an existing transaction. No network,
 USB mounting, shell execution, logging or archive extraction in this library.
 
-This is a component, not the completed USB integration. The caller owns
+The `oblivion-copy` endpoint uses an inherited private descriptor, a monotonic
+transport deadline, approval bound to the offered manifest and a verified
+receipt. Separate send/receive processes have been exercised through VM
+virtio-serial ports with a readonly source and LUKS destination.
+
+This is not the completed USB integration. The controller still owns
 authorization, isolated source/destination environments, storage placement,
-deadlines, cancellation, receipt verification and release to the chat.
+revocation, filesystem-stall recovery and release to the chat.
 
 See [the protocol and integration boundary](../../docs/oblivion/FILE-COPY.md).
 

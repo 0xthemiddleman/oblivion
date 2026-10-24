@@ -1,0 +1,227 @@
+#!/usr/bin/env python3
+"""Copy synthetic documents between two networkless VMs through private ports."""
+import argparse
+import hashlib
+import json
+import os
+import platform
+import resource
+import socket
+import struct
+import subprocess
+import tempfile
+import time
+from contextlib import ExitStack
+from pathlib import Path
+from transfer_fixture import CANARY, FILES, ID
+
+
+def digest(path):
+    with path.open("rb") as file:
+        return hashlib.file_digest(file, "sha256").hexdigest()
+
+
+def verify(directory):
+    manifest = (directory / "SHA256SUMS").read_text()
+    for line in manifest.splitlines():
+        expected, name = line.split()
+        assert Path(name).name == name and digest(directory / name) == expected, name
+    return manifest
+
+
+def read_exact(peer, size):
+    data = bytearray()
+    while len(data) < size:
+        chunk = peer.recv(min(65536, size - len(data)))
+        assert chunk, "endpoint disconnected"
+        data.extend(chunk)
+    return bytes(data)
+
+
+def write_message(peer, message):
+    data = json.dumps(message, separators=(",", ":"), ensure_ascii=False).encode()
+    peer.sendall(struct.pack(">I", len(data)) + data)
+
+
+def read_message(peer):
+    length = struct.unpack(">I", read_exact(peer, 4))[0]
+    assert 0 < length <= 1024
+    return json.loads(read_exact(peer, length))
+
+
+class VM:
+    def __init__(self, args, sockets, role, case):
+        self.name = role + "-" + case
+        self.log_path = args.output / (self.name + ".log")
+        self.log = self.log_path.open("xb")
+        self.disk = args.image / "source.raw" if role == "send" else args.output / (self.name + ".luks")
+        if role == "receive":
+            with self.disk.open("xb") as file:
+                file.truncate(96 * 1024 * 1024)
+        endpoint = sockets / (self.name + ".sock")
+        self.peer = None
+        self.process = subprocess.Popen([
+            "qemu-system-" + args.architecture,
+            # QEMU's per-mapping DONTDUMP flag is Linux-only. The Mac laboratory
+            # still inherits RLIMIT_CORE=0; it is not a production isolation proof.
+            "-machine", ("virt" if args.architecture == "aarch64" else "q35") + (",dump-guest-core=off,mem-merge=off" if platform.system() == "Linux" else ""),
+            "-accel", args.accelerator,
+            "-cpu", "host" if args.accelerator in ("hvf", "kvm") else "cortex-a72" if args.architecture == "aarch64" else "max",
+            "-m", "512", "-smp", "1", "-nodefaults", "-no-reboot", "-display", "none", "-monitor", "none", "-nic", "none", "-serial", "stdio",
+            "-object", "rng-random,filename=/dev/urandom,id=rng", "-device", "virtio-rng-pci,rng=rng",
+            "-kernel", str(args.image / "kernel"), "-initrd", str(args.image / "initrd"),
+            "-append", "root=/dev/vda ro rootfstype=squashfs console=" + ("ttyAMA0" if args.architecture == "aarch64" else "ttyS0") + f" loglevel=4 panic=-1 oblivion.copy={role} oblivion.case={case}",
+            "-drive", f"file={args.image / 'guest.squashfs'},format=raw,if=none,id=root,readonly=on",
+            "-device", "virtio-blk-pci,drive=root,serial=oblivion-root",
+            "-drive", f"file={self.disk},format=raw,if=none,id=data,cache=none" + (",readonly=on" if role == "send" else ""),
+            "-device", "virtio-blk-pci,drive=data,serial=copy-data",
+            "-device", "virtio-serial-pci",
+            "-chardev", f"socket,id=copy,path={endpoint},server=on,wait=off",
+            "-device", "virtserialport,chardev=copy,name=oblivion.copy",
+        ], stdin=subprocess.DEVNULL, stdout=self.log, stderr=subprocess.STDOUT)
+        try:
+            deadline = time.monotonic() + 90
+            while not endpoint.exists():
+                assert self.process.poll() is None and time.monotonic() < deadline, self.name
+                time.sleep(0.05)
+            self.peer = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.peer.settimeout(30)
+            while True:
+                try:
+                    self.peer.connect(str(endpoint))
+                    break
+                except ConnectionRefusedError:
+                    assert self.process.poll() is None and time.monotonic() < deadline, self.log_path.read_text(errors="replace")[-3000:]
+                    time.sleep(0.05)
+            while b"OBLIVION_COPY_READY" not in self.log_path.read_bytes():
+                assert self.process.poll() is None and time.monotonic() < deadline, self.log_path.read_text(errors="replace")[-3000:]
+                time.sleep(0.05)
+        except BaseException:
+            self.close()
+            raise
+
+    def finish(self):
+        if self.peer:
+            self.peer.close()
+            self.peer = None
+        assert self.process.wait(timeout=45) == 0, self.name
+        data = self.log_path.read_bytes()
+        assert b"OBLIVION_COPY_PASS" in data and b"OBLIVION_COPY_FAIL" not in data, data[-4000:]
+
+    def close(self):
+        if self.peer:
+            self.peer.close()
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+        self.log.close()
+
+
+def run(args, checks):
+    original = digest(args.image / "source.raw")
+    with ExitStack() as resources:
+        sockets = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="obl-copy-", dir="/tmp")))
+        sender = VM(args, sockets, "send", "success")
+        resources.callback(sender.close)
+        receiver = VM(args, sockets, "receive", "success")
+        resources.callback(receiver.close)
+        limits = {"entries": 64, "bytes": 1024 * 1024}
+        write_message(sender.peer, {"id": ID, "limits": limits, "paths": ["documents"]})
+        assert read_exact(sender.peer, 8) == b"OBLVCP01"
+        length = struct.unpack(">I", read_exact(sender.peer, 4))[0]
+        assert 0 < length <= 1024 * 1024
+        encoded = read_exact(sender.peer, length)
+        manifest = json.loads(encoded)
+        files = {item["path"]: item for item in manifest if item["kind"] == "file"}
+        assert set(files) == set(FILES)
+        for name, data in FILES.items():
+            assert files[name]["size"] == len(data) and files[name]["sha256"] == hashlib.sha256(data).hexdigest()
+        approval = {"id": ID, "manifest_sha256": hashlib.sha256(encoded).hexdigest()}
+        write_message(receiver.peer, {"approval": approval, "limits": limits})
+        receiver.peer.sendall(b"OBLVCP01" + struct.pack(">I", len(encoded)) + encoded)
+        assert read_exact(receiver.peer, 8) == b"receive\n"
+        write_message(sender.peer, approval)
+        remaining = sum(map(len, FILES.values())) + 8
+        while remaining:
+            data = read_exact(sender.peer, min(65536, remaining))
+            receiver.peer.sendall(data)
+            remaining -= len(data)
+        receipt = read_message(receiver.peer)
+        assert receipt == {"id": ID, "manifest_sha256": approval["manifest_sha256"], "entries": len(manifest), "bytes": sum(map(len, FILES.values()))}
+        write_message(sender.peer, receipt)
+        assert read_exact(sender.peer, 7) == b"copied\n"
+        sender.finish()
+        receiver.finish()
+        checks.append("Real compiled endpoints copy only selected files through separate virtio-serial ports and a bounded host relay; the receiver verifies bytes and the sender verifies its receipt.")
+        checks.append("Both guests verify readonly system images, no network interface beyond loopback, no swap and no shared filesystem mount.")
+        checks.append("The receiver publishes the verified tree inside its LUKS2 volume, flushes, unmounts and closes the mapping before normal VM shutdown.")
+        assert digest(args.image / "source.raw") == original
+        checks.append("The synthetic external source disk is passed readonly and remains byte-identical after the transfer.")
+
+        cancelled = VM(args, sockets, "receive", "cancel")
+        resources.callback(cancelled.close)
+        write_message(cancelled.peer, {"approval": approval, "limits": limits})
+        cancelled.peer.sendall(b"OBLVCP01" + struct.pack(">I", len(encoded)) + encoded)
+        assert read_exact(cancelled.peer, 8) == b"receive\n"
+        cancelled.peer.sendall(b"x")
+        cancelled.peer.close()
+        cancelled.peer = None
+        cancelled.finish()
+        checks.append("Disconnecting a real virtio-serial transfer leaves no partial transaction; the receiver closes its encrypted volume and powers down.")
+
+    for path in args.output.glob("*.luks"):
+        with path.open("rb") as file:
+            assert file.read(6) == b"LUKS\xba\xbe"
+            file.seek(0)
+            tail = b""
+            while chunk := file.read(8 * 1024 * 1024):
+                assert CANARY not in tail + chunk, path.name
+                tail = chunk[-len(CANARY):]
+    checks.append("The synthetic document canary is absent from both closed recipient disk images; the source copy intentionally remains on its original plaintext fixture disk.")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", type=Path, required=True)
+    parser.add_argument("--bundle", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--architecture", choices=["aarch64", "x86_64"], default="aarch64")
+    parser.add_argument("--accelerator", choices=["hvf", "kvm", "tcg"], default="hvf")
+    args = parser.parse_args()
+    if args.accelerator == "hvf" and (platform.system(), platform.machine(), args.architecture) != ("Darwin", "arm64", "aarch64"):
+        parser.error("HVF requires macOS ARM64")
+    if args.accelerator == "kvm" and (platform.system() != "Linux" or platform.machine() != args.architecture or not os.access("/dev/kvm", os.R_OK | os.W_OK)):
+        parser.error("Requested KVM unavailable; no fallback")
+    args.image = args.image.resolve()
+    args.bundle = args.bundle.resolve()
+    args.output = args.output.resolve()
+    assert not any("," in str(p) for p in (args.image, args.output)), "QEMU option separator in path"
+    manifest = verify(args.image)
+    bundle = verify(args.bundle)
+    endpoint = digest(args.bundle / "oblivion-copy")
+    assert endpoint == (args.image / "endpoint.sha256").read_text().split()[0]
+    args.output.mkdir(parents=True, exist_ok=False)
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    started = time.monotonic()
+    checks = []
+    summary = {"passed": False, "architecture": args.architecture, "accelerator": args.accelerator,
+               "scope": "Synthetic virtual disks and separate VM endpoints; no physical USB, trusted manager, production controller grant or chat delivery tested.",
+               "endpoint_sha256": endpoint, "bundle_manifest": bundle, "image_manifest": manifest,
+               "source_manifest": (args.bundle / "sources.sha256").read_text(),
+               "runner_sha256": digest(Path(__file__)), "checks": checks}
+    try:
+        run(args, checks)
+        summary["passed"] = True
+    finally:
+        summary["seconds"] = round(time.monotonic() - started, 2)
+        summary["disks"] = {p.name: digest(p) for p in args.output.glob("*.luks")}
+        (args.output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        print(json.dumps({k: summary[k] for k in ("passed", "seconds", "checks")}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

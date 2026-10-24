@@ -32,13 +32,13 @@ jobs:
   transfer:
     name: File copy engine ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { arch: arm64, runner: ubuntu-24.04-arm }
-          - { arch: amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, qemu: aarch64, runner: ubuntu-24.04-arm }
+          - { arch: amd64, qemu: x86_64, runner: ubuntu-24.04 }
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -49,10 +49,35 @@ jobs:
           docker buildx build --platform linux/${{ matrix.arch }} --progress plain
           -f script/oblivion/Dockerfile.transfer
           --output type=local,dest=artifacts/ci/transfer .
+      - name: Build the isolated transfer guests and synthetic source disk
+        run: >-
+          docker buildx build --platform linux/${{ matrix.arch }} --progress plain
+          -f script/oblivion/Dockerfile.vm-lab --target transfer-vm-artifacts
+          --build-arg COPY_BINARY=artifacts/ci/transfer/oblivion-copy
+          --output type=local,dest=artifacts/ci/transfer-image .
+      - name: Install the VM laboratory
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-arm qemu-system-x86
+      - name: Copy through private VM ports into LUKS and cancel a partial copy
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: >-
+          python3 script/oblivion/run-transfer-vm-lab.py
+          --architecture ${{ matrix.qemu }} --accelerator tcg
+          --image artifacts/ci/transfer-image --bundle artifacts/ci/transfer
+          --output artifacts/ci/transfer-results
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
         with:
           name: oblivion-transfer-${{ matrix.arch }}-${{ github.sha }}
-          path: artifacts/ci/transfer/
+          path: |
+            artifacts/ci/transfer/
+            artifacts/ci/transfer-results/*.json
+            artifacts/ci/transfer-results/*.log
+            artifacts/ci/transfer-image/SHA256SUMS
+            artifacts/ci/transfer-image/sources.sha256
+            artifacts/ci/transfer-image/endpoint.sha256
           retention-days: 7
           if-no-files-found: error
 

@@ -1,0 +1,85 @@
+use crate::channel::Channel;
+use crate::{Limits, Manifest, Receipt, Selection, invalid, receive, require, validate_id};
+use serde::{Deserialize, Serialize};
+use std::io::{self, Read, Write};
+use std::path::Path;
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct OfferRequest {
+    pub id: String,
+    pub limits: Limits,
+    pub paths: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Approval {
+    pub id: String,
+    pub manifest_sha256: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReceiveRequest {
+    pub approval: Approval,
+    pub limits: Limits,
+}
+
+/// One selection, one approval and one receipt. No listener or retry loop.
+/// The controller supplies a private channel and owns the user's decision.
+pub fn send(channel: &mut Channel, root: &Path) -> io::Result<()> {
+    let request: OfferRequest = read_message(channel, 64 * 1024)?;
+    validate_id(&request.id)?;
+    let mut selection = Selection::prepare(root, &request.paths, request.limits)?;
+    selection.manifest().write(channel)?;
+    let approval: Approval = read_message(channel, 1024)?;
+    require(
+        approval.id == request.id && approval.manifest_sha256 == selection.manifest().sha256(),
+        "offer_not_approved",
+    )?;
+    selection.send_data(channel)?;
+    let receipt: Receipt = read_message(channel, 1024)?;
+    require(
+        receipt.id == request.id
+            && receipt.manifest_sha256 == approval.manifest_sha256
+            && receipt.entries == selection.manifest().entries().len()
+            && receipt.bytes == selection.manifest().bytes(),
+        "invalid_receipt",
+    )?;
+    channel.write_all(b"copied\n")
+}
+
+/// The destination root is chosen locally, never from the peer's request.
+pub fn accept(channel: &mut Channel, root: &Path) -> io::Result<()> {
+    let request: ReceiveRequest = read_message(channel, 1024)?;
+    validate_id(&request.approval.id)?;
+    let manifest = Manifest::read(channel, request.limits)?;
+    require(
+        manifest.sha256() == request.approval.manifest_sha256,
+        "offer_not_approved",
+    )?;
+    channel.write_all(b"receive\n")?;
+    let receipt = receive(channel, &manifest, root, &request.approval.id)?;
+    write_message(channel, &receipt)
+}
+
+pub fn read_message<T: for<'de> Deserialize<'de>>(
+    reader: &mut impl Read,
+    limit: usize,
+) -> io::Result<T> {
+    let mut size = [0; 4];
+    reader.read_exact(&mut size)?;
+    let size = u32::from_be_bytes(size) as usize;
+    require(size > 0 && size <= limit, "message_limit")?;
+    let mut bytes = vec![0; size];
+    reader.read_exact(&mut bytes)?;
+    serde_json::from_slice(&bytes).map_err(|_| invalid("invalid_message"))
+}
+
+pub fn write_message(writer: &mut impl Write, message: &impl Serialize) -> io::Result<()> {
+    let bytes = serde_json::to_vec(message).map_err(|_| invalid("invalid_message"))?;
+    require(bytes.len() <= 64 * 1024, "message_limit")?;
+    writer.write_all(&(bytes.len() as u32).to_be_bytes())?;
+    writer.write_all(&bytes)
+}

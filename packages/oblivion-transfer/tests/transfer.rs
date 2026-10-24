@@ -1,11 +1,12 @@
+mod support;
+
 use oblivion_transfer::{Entry, Limits, Manifest, Selection, receive};
-use std::fs::{self, DirBuilder};
+use std::fs;
 use std::io::{Cursor, Read, Write};
-use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt, symlink};
+use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
+use support::Tree;
 
 const ID: &str = "0123456789abcdef0123456789abcdef";
 const EMPTY: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -13,27 +14,6 @@ const LIMITS: Limits = Limits {
     entries: 64,
     bytes: 1024 * 1024,
 };
-
-struct Tree(PathBuf);
-
-impl Tree {
-    fn new() -> Self {
-        static NEXT: AtomicU64 = AtomicU64::new(0);
-        let path = std::env::temp_dir().join(format!(
-            "oblivion-transfer-test-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        DirBuilder::new().mode(0o700).create(&path).unwrap();
-        Self(path)
-    }
-}
-
-impl Drop for Tree {
-    fn drop(&mut self) {
-        fs::remove_dir_all(&self.0).unwrap();
-    }
-}
 
 fn empty(path: &str) -> Entry {
     Entry::File {
