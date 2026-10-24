@@ -165,6 +165,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--overlay", action="store_true", help="Development only: load the current fixture and network script in RAM")
     parser.add_argument("--tor-online", action="store_true", help="Allow Tor to bootstrap and check HTTPS via check.torproject.org; no provider requests")
     args = parser.parse_args()
     assert (platform.system(), platform.machine()) == ("Darwin", "arm64")
@@ -178,21 +179,32 @@ def main():
         digest, name = line.split()
         assert Path(name).name == name and hashlib.sha256((image / name).read_bytes()).hexdigest() == digest
     repository = Path(__file__).resolve().parents[2]
-    # The fixture and network script are the only executable RAM overlays.
-    # Refuse an old image if its firewall, Tor policy or service units differ.
+    # By default test the exact built image. Development overlays are explicit
+    # and cannot hide an old firewall, Tor policy or service configuration.
     for line in (image / "sources.sha256").read_text().splitlines():
         digest, name = line.split()
-        if name.startswith("./guest/") and Path(name).name not in ["install.sh", "network.sh"]:
+        if name.startswith("./guest/"):
+            if args.overlay and Path(name).name == "network.sh":
+                continue
             source = repository / "packages/oblivion-gateway/guest" / Path(name).name
             assert hashlib.sha256(source.read_bytes()).hexdigest() == digest, f"rebuild image: {source}"
+        if name.startswith("./lab/"):
+            if args.overlay and Path(name).name == "vm-network-fixture.py":
+                continue
+            source = Path(__file__).with_name(Path(name).name)
+            assert hashlib.sha256(source.read_bytes()).hexdigest() == digest, f"rebuild image: {source}"
     output.mkdir(parents=True, exist_ok=False)
-    overlay_fixture(image, output)
+    if args.overlay:
+        overlay_fixture(image, output)
+    else:
+        shutil.copyfile(image / "initrd", output / "lab-initrd")
     checks = []
     started = time.monotonic()
     fixture_hash = hashlib.sha256(Path(__file__).with_name("vm-network-fixture.py").read_bytes()).hexdigest()
     summary = {"scope": "two independent Debian ARM VMs on Mac HVF; synthetic API credentials; no LUKS lifecycle or OpenCode integration",
         "online_tor_requested": args.tor_online, "provider_requests": False, "checks": checks, "passed": False,
         "image_manifest": (image / "SHA256SUMS").read_text(), "fixture_sha256": fixture_hash,
+        "runtime_overlays": ["fixture", "network script", "error console"] if args.overlay else [],
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     summary["runtime_initrd_sha256"] = hashlib.sha256((output / "lab-initrd").read_bytes()).hexdigest()
     summary["runtime_network_script_sha256"] = hashlib.sha256((Path(__file__).resolve().parents[2] / "packages/oblivion-gateway/guest/network.sh").read_bytes()).hexdigest()

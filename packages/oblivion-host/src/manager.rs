@@ -18,6 +18,7 @@ struct Status {
     vm_state: Option<String>,
     laboratory_emulation: bool,
     recovery_required: bool,
+    api_key_present: Option<bool>,
 }
 
 fn main() {
@@ -109,7 +110,7 @@ fn run(preview: bool) -> Result<()> {
                 " Sessioni protette\r\n\r\n"
             });
             let limit = rows
-                .saturating_sub(if rows >= 20 && cols >= 64 { 19 } else { 14 })
+                .saturating_sub(if rows >= 20 && cols >= 64 { 20 } else { 15 })
                 .max(1) as usize;
             let start = selected.saturating_sub(limit - 1);
             for (index, session) in sessions.iter().enumerate().skip(start).take(limit) {
@@ -131,6 +132,14 @@ fn run(preview: bool) -> Result<()> {
                 "\r\n Spazio disponibile: {} MiB; nuova sessione: {} MiB\r\n",
                 status.available_bytes.unwrap_or(0) / 1048576,
                 status.session_bytes / 1048576
+            ));
+            view.push_str(&format!(
+                " API Abliteration: {}  [A] Imposta  [X] Rimuovi\r\n",
+                if status.api_key_present == Some(true) {
+                    "configurata"
+                } else {
+                    "non configurata"
+                }
             ));
             view.push_str(&format!(
                 " {ACTION}{}\r\n [I] Creazioni interrotte ({}) / sessioni  [B] Blocca{RESET}\r\n",
@@ -230,6 +239,24 @@ fn run(preview: bool) -> Result<()> {
             if !status.general_mounted || status.general_readonly {
                 return Ok(());
             }
+            if key == b'a' {
+                if let Some(secret) = terminal
+                    .password("API key Abliteration - salvata nel volume generale cifrato")?
+                {
+                    busy(&mut terminal, "Salvataggio della API key")?;
+                    control::request("set-api-key", None, &secret)?;
+                }
+                return Ok(());
+            }
+            if key == b'x' && status.api_key_present == Some(true) {
+                terminal.flush_input();
+                terminal.write(&format!("{CLEAR} Rimuovere la API key salvata?\r\n Premi X di nuovo per confermare; altro tasto annulla."))?;
+                if terminal.input(-1)?.as_slice().eq_ignore_ascii_case(b"x") {
+                    busy(&mut terminal, "Rimozione della API key")?;
+                    control::request("clear-api-key", None, &[])?;
+                }
+                return Ok(());
+            }
             if key == b'i' {
                 incomplete = !incomplete;
                 selected = 0;
@@ -286,6 +313,9 @@ fn run(preview: bool) -> Result<()> {
             notice = match error.to_string().as_str() {
                 "passwords_do_not_match" => "Le password non coincidono.",
                 "password_too_short" => "Usa almeno 16 byte per la nuova password.",
+                "invalid_api_key" => {
+                    "API key non valida: usa da 16 a 1024 caratteri ASCII senza spazi."
+                }
                 "insufficient_space" => {
                     "Spazio insufficiente. Controlla le creazioni interrotte prima di riprovare."
                 }

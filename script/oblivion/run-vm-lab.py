@@ -116,6 +116,7 @@ fixture_verified = fixture is None or (fixture_prefix + hashlib.sha256(fixture).
 bundle_prefix = "OBLIVION_GATEWAY_BUNDLE_SHA256 " if args.gateway_bundle else "OBLIVION_HOST_BUNDLE_SHA256 "
 bundle_verified = bundle_manifest is None or (bundle_prefix + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
 markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVION_VM_TEMP_CANARY_d9ae",
+           b"OBLIVION_API_KEY_CANARY_5c91", b"OBLIVION_API_NEXT_CANARY_86ab",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
 if (image / "opencode.sha256").exists():
     markers.append(b"OBLIVION_GUEST_CHAT_CANARY_7eaf")

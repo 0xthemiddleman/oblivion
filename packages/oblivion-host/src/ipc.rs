@@ -29,6 +29,8 @@ enum Operation {
     Lock,
     Status,
     Console,
+    SetApiKey,
+    ClearApiKey,
 }
 
 #[derive(Deserialize)]
@@ -158,6 +160,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
             | Operation::UnlockEphemeral
             | Operation::Create
             | Operation::Open
+            | Operation::SetApiKey
     );
     require(
         needs_secret == (request.secret_len > 0),
@@ -191,6 +194,8 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         Operation::ForceClose => "force-leave",
         Operation::Lock => "lock",
         Operation::Status => "status",
+        Operation::SetApiKey => "set-api-key",
+        Operation::ClearApiKey => "clear-api-key",
         Operation::Console => unreachable!(),
     };
     let mut command =

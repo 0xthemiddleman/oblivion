@@ -11,8 +11,9 @@ Il binario `oblivion-api` gestisce una sola autorizzazione, senza poterla
 riassegnare a un'altra sessione. Il controller gli consegnerà la chiave reale;
 OpenCode riceverà soltanto un token locale revocabile. Il broker non monta il
 profilo generale o i vault e non aggiunge dipendenze HTTP/TLS al controller LUKS.
-Questa separazione è implementata nel componente; la consegna dal profilo LUKS
-rimane da collegare al ciclo di vita reale del gateway.
+Il [salvataggio della credenziale](CREDENTIALS.md) nel generale cifrato è ora
+implementato nella TUI fidata. La consegna al broker rimane da collegare al
+ciclo di vita reale del gateway.
 
 ## Superficie ammessa
 

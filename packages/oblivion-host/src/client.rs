@@ -39,7 +39,7 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     }
     let needs_secret = matches!(
         operation.as_str(),
-        "init-general" | "unlock" | "unlock-ephemeral" | "create" | "open"
+        "init-general" | "unlock" | "unlock-ephemeral" | "create" | "open" | "set-api-key"
     );
     let mut secret = Zeroizing::new(Vec::with_capacity(1025));
     if needs_secret {

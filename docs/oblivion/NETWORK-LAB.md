@@ -5,9 +5,8 @@
 gateway; il client di prova nella VM chat usa soltanto un token locale.
 La VM avviata dal controller delle sessioni mantiene ancora `-nic none`:
 questo laboratorio non è ancora collegato a LUKS, manager e adapter OpenCode.
-L’immagine esportata precede la correzione BusyBox: senza gli script caricati
-in RAM dal runner, il gateway non si avvia. La ricostruzione finale è ancora
-da verificare dopo il ripristino di Docker, fermato da spazio esaurito.
+L’immagine finale è stata ricostruita dopo il ripristino di Docker e provata
+senza modifiche ai sorgenti caricate in RAM.
 
 ## Topologia e confini
 
@@ -60,13 +59,13 @@ sincronizzazione dell'ora e IPv6 non sono gestiti da questo prototipo.
 ```sh
 docker build --platform linux/arm64 \
   --target gateway-network-artifacts \
-  --output type=local,dest=artifacts/oblivion-network/image \
+  --output type=local,dest=artifacts/oblivion-network/image-final \
   -f script/oblivion/Dockerfile.vm-lab .
 python3 script/oblivion/run-network-lab.py \
-  --image artifacts/oblivion-network/image \
+  --image artifacts/oblivion-network/image-final \
   --output artifacts/oblivion-network/offline-new
 python3 script/oblivion/run-network-lab.py \
-  --image artifacts/oblivion-network/image \
+  --image artifacts/oblivion-network/image-final \
   --output artifacts/oblivion-network/online-new --tor-online
 ```
 
@@ -77,12 +76,12 @@ Solo quest'ultima è usata nelle prove descritte qui. I due guest usano 1.5 GiB
 di RAM complessivi. I controlli del laboratorio non equivalgono al confinamento
 del processo QEMU nell'host Linux di produzione.
 
-Il runner verifica i manifest e la corrispondenza di firewall, Tor e unità di
-servizio con i sorgenti. Inserisce nell'initrd la fixture e lo script di rete
-correnti, montati dal RAM filesystem: i rispettivi hash sono nel report.
-Una diagnostica solo di laboratorio porta l'errore del servizio di rete sulla
-console e spegne la VM se quel servizio fallisce. Nessuna shell di emergenza
-viene esposta.
+Il runner verifica i manifest e la corrispondenza di script, firewall, Tor e
+unità di servizio con i sorgenti. Per default avvia l’immagine costruita senza
+modificarla; un file non allineato richiede una nuova build. L’opzione esplicita
+`--overlay`, riservata allo sviluppo, inserisce nell’initrd la fixture e lo script
+di rete correnti e una diagnostica degli errori di boot. Il report distingue
+questa modalità dalle prove dell’immagine immutata.
 
 La variante offline vieta anche l'uscita nel backend QEMU. La variante online
 rimuove quella seconda barriera: è il firewall del gateway a dover bloccare
@@ -98,8 +97,8 @@ vengono pubblicati nel repository.
 
 Le [evidenze strutturate](network-evidence.json) riportano i controlli eseguiti,
 gli hash, i pacchetti osservati e i tentativi falliti. La versione finale del
-runner passa 10 controlli offline in 11,88 secondi e 11 controlli con Tor reale
-in 18,83 secondi. Prima di Tor la cattura
+runner passa 10 controlli offline in 11,31 secondi e 11 controlli con Tor reale
+in 15,37 secondi. Prima di Tor la cattura
 esterna è vuota anche nella variante online. Dopo l'attivazione contiene TCP,
 senza UDP o IPv6. Questo verifica la matrice sintetica eseguita; non dimostra
 assenza universale di leak né rivela da solo le richieste dentro Tor/TLS.

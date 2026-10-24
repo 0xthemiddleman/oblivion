@@ -13,6 +13,7 @@ const SESSION: &str = "/dev/mapper/oblivion-session";
 const RUN: &str = "/run/oblivion";
 const RECOVERY: &str = "/run/oblivion/recovery-required";
 const MOUNT: &str = "/run/oblivion/general";
+const PROFILE: &str = "/run/oblivion/general/profile";
 const MIB: u64 = 1024 * 1024;
 
 pub struct Error(pub &'static str);
@@ -44,6 +45,7 @@ struct Status {
     vm_state: Option<String>,
     laboratory_emulation: bool,
     recovery_required: bool,
+    api_key_present: Option<bool>,
 }
 
 pub fn main() -> Result<()> {
@@ -88,6 +90,8 @@ pub fn main() -> Result<()> {
             | "enter"
             | "discard-general-pending"
             | "discard-session-pending"
+            | "set-api-key"
+            | "clear-api-key"
     ) {
         require(!recovery_required()?, "recovery_required")?;
     }
@@ -121,6 +125,21 @@ pub fn main() -> Result<()> {
         "unlock" => config.unlock(&password(false)?, false),
         "unlock-ephemeral" => config.unlock(&password(false)?, true),
         "create" => config.create(&password(true)?),
+        "set-api-key" | "clear-api-key" => {
+            require(
+                mount_mode()? == MountMode::ReadWrite,
+                "general_not_writable",
+            )?;
+            require(
+                !mapping_open("oblivion-session")? && crate::vm::stopped()?,
+                "session_must_be_closed",
+            )?;
+            update_api_key(if op == "set-api-key" {
+                Some(password(false)?)
+            } else {
+                None
+            })
+        }
         "open" => config.open(&args[3], &password(false)?),
         "enter" => {
             let vm = config.vm.as_ref().ok_or(Error("vm_not_configured"))?;
@@ -191,6 +210,11 @@ pub fn main() -> Result<()> {
                 },
                 laboratory_emulation: cfg!(feature = "lab-emulation"),
                 recovery_required: recovery_required()?,
+                api_key_present: if mode == MountMode::Closed {
+                    None
+                } else {
+                    Some(api_key_present()?)
+                },
             };
             println!(
                 "{}",
@@ -383,6 +407,72 @@ impl Config {
             Some(secret),
         )
     }
+}
+
+fn api_key_present() -> Result<bool> {
+    let directory = match fs::symlink_metadata(PROFILE) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(_) => return Err(Error("profile_unavailable")),
+        Ok(directory) => directory,
+    };
+    require(
+        directory.is_dir() && directory.uid() == 0 && directory.mode() & 0o077 == 0,
+        "unsafe_profile",
+    )?;
+    let path = Path::new(PROFILE).join("abliteration.key");
+    match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
+        Err(_) => Err(Error("profile_unavailable")),
+        Ok(_) => {
+            let file = trusted_file(&path)?;
+            require(
+                (16..=1024).contains(&file.metadata().map_err(|_| Error("metadata_failed"))?.len()),
+                "invalid_api_key",
+            )?;
+            Ok(true)
+        }
+    }
+}
+
+fn update_api_key(secret: Option<Zeroizing<Vec<u8>>>) -> Result<()> {
+    let present = api_key_present()?;
+    if let Some(secret) = &secret {
+        require(
+            (16..=1024).contains(&secret.len()) && secret.iter().all(u8::is_ascii_graphic),
+            "invalid_api_key",
+        )?;
+    }
+    let directory = Path::new(PROFILE);
+    let pending = directory.join("abliteration.key.pending");
+    // A failed write leaves the previous key intact. Only this fixed, private
+    // staging file may be discarded on a later update, under the operation lock.
+    match fs::symlink_metadata(&pending) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => return Err(Error("profile_unavailable")),
+        Ok(_) => {
+            trusted_file(&pending)?;
+            fs::remove_file(&pending).map_err(|_| Error("profile_write_failed"))?;
+        }
+    }
+    let path = directory.join("abliteration.key");
+    let Some(secret) = secret else {
+        if present {
+            fs::remove_file(path).map_err(|_| Error("profile_write_failed"))?;
+        }
+        return sync_directory(directory);
+    };
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(&pending)
+        .map_err(|_| Error("profile_write_failed"))?;
+    file.write_all(&secret)
+        .and_then(|()| file.sync_all())
+        .map_err(|_| Error("profile_write_failed"))?;
+    fs::rename(pending, path).map_err(|_| Error("profile_write_failed"))?;
+    sync_directory(directory)
 }
 
 fn close_session() -> Result<()> {

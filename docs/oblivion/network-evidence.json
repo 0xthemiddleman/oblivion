@@ -11,7 +11,7 @@
     "packages/oblivion-gateway/guest/torrc": "0abe37d46a10919687b34721605c874d109c2dd6e70cf96318cc4d0290c4541e",
     "script/oblivion/Dockerfile.vm-lab": "1ab0386e8b8d4d0ac25f74831b50631d3474eef04a4d4e6298d20f430ba5baa3",
     "script/oblivion/Dockerfile.vm-lab.dockerignore": "13a5b4fa0dc27552dcde95307f5aec37f7c33976a7488caee4ec5c680e86d270",
-    "script/oblivion/run-network-lab.py": "aca092a00961bd9d06508285f26c30af16305016fe300e9b3a96b2bbfb0d4071",
+    "script/oblivion/run-network-lab.py": "4f7df435bb0a317266336413ed2b99bfd51342fba26a546da00bd62239167a2f",
     "script/oblivion/vm-network-fixture.py": "5b782fa8d54d7ebdef404a38b22c4afba9826c9277497b93b8c616d8f15ad612",
     "script/oblivion/vm-network-setup.sh": "00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41"
   },
@@ -21,24 +21,20 @@
     "qemu": "QEMU emulator version 10.2.0"
   },
   "image": {
-    "manifest_sha256": "18294bda8dc9cf210112faeb02602e7899fc9a58c9f4150012b6efa368f7a9db",
-    "sources_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  ./broker.sha256\n17c1e315f5ae50b8aa53c149da2a7edaaef6001e542f9cf098dd82d30037d4c7  ./guest/firewall.nft\n6084a789997f82c7b815b211dfccc844e7425551ec037d2503f4402489c03cfc  ./guest/install.sh\n67e2704f6116a1eec4d5a1238c672ee569e4edb6d43f98812db6439e3e9fc414  ./guest/network.sh\nf2420aaa2d444bfcd01d8c7ee2f76298de1a135bfc63341d9604fee9fc5ff456  ./guest/oblivion-gateway-network.service\n091365da1d3bf1dff4cdc1dcad5daadb7f526eb01c03fd47db69308e604864db  ./guest/oblivion-tor.service\n136f5b898e56a9181e324f0a58641418baa58985462065719551c04adc8441f0  ./guest/resolv.conf\n0abe37d46a10919687b34721605c874d109c2dd6e70cf96318cc4d0290c4541e  ./guest/torrc\n0e9d4a188912f8bcb49981f0b1882424c5e4d064bf95025f210d53688c1c83cf  ./lab/vm-network-fixture.py\n00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41  ./lab/vm-network-setup.sh\n",
+    "manifest_sha256": "985f55a6d5aa96b0c51c2999492c9c619ed7ddeb579704026f71e63e0c175fe4",
+    "sources_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  ./broker.sha256\n17c1e315f5ae50b8aa53c149da2a7edaaef6001e542f9cf098dd82d30037d4c7  ./guest/firewall.nft\nc31291b56f030cc62daaa6a53ed29d98ff22228a31f8333f0d6f33ce539d1f9a  ./guest/install.sh\n02fe3601dd4692f6c5e5d31178e6ce4463a4edca70b2101c46a13c7f38c374b0  ./guest/network.sh\nf2420aaa2d444bfcd01d8c7ee2f76298de1a135bfc63341d9604fee9fc5ff456  ./guest/oblivion-gateway-network.service\n091365da1d3bf1dff4cdc1dcad5daadb7f526eb01c03fd47db69308e604864db  ./guest/oblivion-tor.service\n136f5b898e56a9181e324f0a58641418baa58985462065719551c04adc8441f0  ./guest/resolv.conf\n0abe37d46a10919687b34721605c874d109c2dd6e70cf96318cc4d0290c4541e  ./guest/torrc\n5b782fa8d54d7ebdef404a38b22c4afba9826c9277497b93b8c616d8f15ad612  ./lab/vm-network-fixture.py\n00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41  ./lab/vm-network-setup.sh\n",
     "tor_package": "tor\t0.4.9.14-0+deb13u1",
-    "runtime_overlays": [
-      "current network.sh",
-      "current vm-network-fixture.py",
-      "lab-only network error console and poweroff override"
-    ],
-    "final_rebuild_verified": false,
-    "known_base_image_issue": "standalone network script references absent sysctl; corrected source invokes BusyBox and is overlaid in RAM for these tests; exported image without overlay must be rebuilt"
+    "runtime_overlays": [],
+    "final_rebuild_verified": true,
+    "historical_base_image_issue": "old image lacked standalone sysctl; final rebuilt image invokes the installed BusyBox applet"
   },
   "runs": {
-    "run-09": {
-      "local_artifacts": "artifacts/oblivion-network/run-09",
-      "summary_sha256": "86b66c225a5b83eefc6bbd680991bdc6fd5f52e7dbdc164e1761c089410fa85b",
+    "run-11": {
+      "local_artifacts": "artifacts/oblivion-network/run-11",
+      "summary_sha256": "522cb3f344dbc1df3655147ca503a13fdceb7b3d9d0024e14348fccd9c2ec9fa",
       "console_hashes": {
-        "chat": "81a049ff7010927d4f08d1941542a784cf8f80dc1e3f25ad62084fde51885282",
-        "gateway": "c247e59ad530229e1d77b88634c026c5ec8633b59a7714aee21a278237b80ade"
+        "chat": "64e8ea7a75c158b64f9cd44bdee2c7743bd6209a9fc5119263a3c1e1e8227322",
+        "gateway": "c76c09e27a87acd163be1c50dceb39cf4ceebae7e48e6f452c1dc3d2e144d6aa"
       },
       "scope": "two independent Debian ARM VMs on Mac HVF; synthetic API credentials; no LUKS lifecycle or OpenCode integration",
       "online_tor_requested": false,
@@ -56,10 +52,11 @@
         "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
       ],
       "passed": true,
-      "image_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\nf66cc8053130ada05a14698835492a537f20d06e08ef1801a4981e60c6c4c618  gateway.squashfs\n5cff269c60b2b3ab3dfb17ad6876823606b76db4d5a850a303569354b01dc42c  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n6e05048710438d8bf12adcde6e3b34b6eaf302ba5f4f2d2b4f601b2200a82a48  lab-packages.tsv\ndef0133e189eb13bdaa650d663c9a67c8b4b78f2ca742f48a34799a397af158d  laboratory.squashfs\n19fdb5be5085300ad75ec8e193080139818ae120c205a7646b3faca974b70777  sources.sha256\n",
+      "image_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\n1c1808de18a08c7cd951cd7c683f30318b8d95ad819a7bbd87ab45d94f27dbd7  gateway.squashfs\nf92aca6b38c853a4bfca7ba346a82f51231aa5d9e85f8a3d95662da845884116  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nccb33b5e735d7f4d6a656d4ed1495cdb7ca831a6de175d7bc2a9ee9dba62cf6b  lab-packages.tsv\n13b843341cc31c4c48ca0578f8902819aefb36ab75ab64515b715f5d632fde4b  laboratory.squashfs\n5c840dcce2af289b930f274a7e237781909cb64a2a867f45f0425b31f347dac2  sources.sha256\n",
       "fixture_sha256": "5b782fa8d54d7ebdef404a38b22c4afba9826c9277497b93b8c616d8f15ad612",
-      "runner_sha256": "aca092a00961bd9d06508285f26c30af16305016fe300e9b3a96b2bbfb0d4071",
-      "runtime_initrd_sha256": "1fbfaaefd4d3100e5203daea153fb102b96e4f7bee1a74978d7a935ff7f60465",
+      "runtime_overlays": [],
+      "runner_sha256": "4f7df435bb0a317266336413ed2b99bfd51342fba26a546da00bd62239167a2f",
+      "runtime_initrd_sha256": "f92aca6b38c853a4bfca7ba346a82f51231aa5d9e85f8a3d95662da845884116",
       "runtime_network_script_sha256": "02fe3601dd4692f6c5e5d31178e6ce4463a4edca70b2101c46a13c7f38c374b0",
       "before_tor": {
         "packets": 0,
@@ -79,11 +76,11 @@
           "udp": 3,
           "tcp": 61,
           "tcp_ports": [
-            22, 53, 80, 443, 8111, 9050, 9051, 39260, 40566, 41914, 46982, 46994, 47002, 47014, 47020, 47028, 47042,
-            49716, 50156, 52570, 53682, 57436
+            22, 53, 80, 443, 8111, 9050, 9051, 34696, 34698, 34700, 34702, 34710, 34712, 34720, 37934, 37950, 39008,
+            45350, 45598, 48858, 51080, 51160
           ],
-          "udp_ports": [53, 443, 32802, 45620, 45928],
-          "sha256": "47a52579735f9c2e83810a3119e5b28d0906597977a2c933e887a226f98afc3c"
+          "udp_ports": [53, 443, 35144, 55038, 57464],
+          "sha256": "3afc2a7b5488addb5064455c8a508d88d54b33c55a4f14146cb4a06bf4f29701"
         },
         "gateway-inside.pcap": {
           "packets": 82,
@@ -92,11 +89,11 @@
           "udp": 3,
           "tcp": 60,
           "tcp_ports": [
-            22, 53, 80, 443, 8111, 9050, 9051, 39260, 40566, 41914, 46982, 46994, 47002, 47014, 47020, 47028, 49716,
-            50156, 52570, 53682, 57436
+            22, 53, 80, 443, 8111, 9050, 9051, 34696, 34698, 34700, 34702, 34710, 34712, 37934, 37950, 39008, 45350,
+            45598, 48858, 51080, 51160
           ],
-          "udp_ports": [53, 443, 32802, 45620, 45928],
-          "sha256": "b681e5711424474e3e2628fb5a1ee2814ea81243117b5de2905ace20747fce95"
+          "udp_ports": [53, 443, 35144, 55038, 57464],
+          "sha256": "ef7d29ddf020fd80a882d4117a94e151e2593553006c5c063c8d55978b83fced"
         },
         "before-tor-outside.pcap": {
           "packets": 0,
@@ -119,14 +116,14 @@
           "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
         }
       },
-      "seconds": 11.88
+      "seconds": 11.31
     },
-    "run-10": {
-      "local_artifacts": "artifacts/oblivion-network/run-10",
-      "summary_sha256": "b5d6d7c923827c1b9221849474d9c18b5c725cb0071dfb84dd8b83ec43b1d85e",
+    "run-12": {
+      "local_artifacts": "artifacts/oblivion-network/run-12",
+      "summary_sha256": "0e1346539a6d42fcef0fc619c4762b315775666f9480865094b515b37b206c8d",
       "console_hashes": {
-        "chat": "7a5ac4bc1a303a0f90a8a441e6f478b515079d89332022d9cd1b996aa8bcb728",
-        "gateway": "c7092e8813bb57822e4a5c9dfbc4e0e826e1302a37fcde155cc1ce3432c07289"
+        "chat": "5f927d8225f84aee1b1f3d4f4557d9112a470aa3dfd6337a09a119a77f5702b3",
+        "gateway": "d7f3937c4848000368d9f277720ac735ebfa9359361f3e36eed5a451e18c243f"
       },
       "scope": "two independent Debian ARM VMs on Mac HVF; synthetic API credentials; no LUKS lifecycle or OpenCode integration",
       "online_tor_requested": true,
@@ -145,10 +142,11 @@
         "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
       ],
       "passed": true,
-      "image_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\nf66cc8053130ada05a14698835492a537f20d06e08ef1801a4981e60c6c4c618  gateway.squashfs\n5cff269c60b2b3ab3dfb17ad6876823606b76db4d5a850a303569354b01dc42c  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n6e05048710438d8bf12adcde6e3b34b6eaf302ba5f4f2d2b4f601b2200a82a48  lab-packages.tsv\ndef0133e189eb13bdaa650d663c9a67c8b4b78f2ca742f48a34799a397af158d  laboratory.squashfs\n19fdb5be5085300ad75ec8e193080139818ae120c205a7646b3faca974b70777  sources.sha256\n",
+      "image_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\n1c1808de18a08c7cd951cd7c683f30318b8d95ad819a7bbd87ab45d94f27dbd7  gateway.squashfs\nf92aca6b38c853a4bfca7ba346a82f51231aa5d9e85f8a3d95662da845884116  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nccb33b5e735d7f4d6a656d4ed1495cdb7ca831a6de175d7bc2a9ee9dba62cf6b  lab-packages.tsv\n13b843341cc31c4c48ca0578f8902819aefb36ab75ab64515b715f5d632fde4b  laboratory.squashfs\n5c840dcce2af289b930f274a7e237781909cb64a2a867f45f0425b31f347dac2  sources.sha256\n",
       "fixture_sha256": "5b782fa8d54d7ebdef404a38b22c4afba9826c9277497b93b8c616d8f15ad612",
-      "runner_sha256": "aca092a00961bd9d06508285f26c30af16305016fe300e9b3a96b2bbfb0d4071",
-      "runtime_initrd_sha256": "67eb0a587b8ae9c3dd9ffec297ea3e291108b9262d5a530d11029242710d104d",
+      "runtime_overlays": [],
+      "runner_sha256": "4f7df435bb0a317266336413ed2b99bfd51342fba26a546da00bd62239167a2f",
+      "runtime_initrd_sha256": "f92aca6b38c853a4bfca7ba346a82f51231aa5d9e85f8a3d95662da845884116",
       "runtime_network_script_sha256": "02fe3601dd4692f6c5e5d31178e6ce4463a4edca70b2101c46a13c7f38c374b0",
       "before_tor": {
         "packets": 0,
@@ -162,30 +160,30 @@
       },
       "captures": {
         "chat-inside.pcap": {
-          "packets": 84,
+          "packets": 83,
           "ipv4": 64,
-          "ipv6": 14,
+          "ipv6": 13,
           "udp": 3,
           "tcp": 61,
           "tcp_ports": [
-            22, 53, 80, 443, 8111, 9050, 9051, 34786, 36930, 38736, 38746, 39004, 49438, 51482, 55358, 56620, 56622,
-            56634, 56638, 56644, 59514, 60382
+            22, 53, 80, 443, 8111, 9050, 9051, 33080, 33092, 33098, 33102, 33108, 47978, 48300, 48308, 48608, 48678,
+            51842, 52146, 54340, 57470, 58760
           ],
-          "udp_ports": [53, 443, 34554, 50313, 53083],
-          "sha256": "fbafc9bdfc3e8ad78c4a35336789b68675f5fec7df44de438457644af11aed48"
+          "udp_ports": [53, 443, 35298, 46782, 55009],
+          "sha256": "2a2e84e202f367d006a7ad02fcd8bd4fb395ce78f75dfcd2daab45c2daa05868"
         },
         "gateway-inside.pcap": {
-          "packets": 83,
+          "packets": 82,
           "ipv4": 63,
-          "ipv6": 14,
+          "ipv6": 13,
           "udp": 3,
           "tcp": 60,
           "tcp_ports": [
-            22, 53, 80, 443, 8111, 9050, 9051, 34786, 36930, 38736, 38746, 39004, 49438, 51482, 55358, 56620, 56622,
-            56634, 56638, 59514, 60382
+            22, 53, 80, 443, 8111, 9050, 9051, 33080, 33092, 33098, 33102, 47978, 48300, 48308, 48608, 48678, 51842,
+            52146, 54340, 57470, 58760
           ],
-          "udp_ports": [53, 443, 34554, 50313, 53083],
-          "sha256": "d41d1e174924f4f33e2bd2a2399db56ada3d372614e123411092f4d97c47b68e"
+          "udp_ports": [53, 443, 35298, 46782, 55009],
+          "sha256": "3a06ef293028e6b4b746d4eceb7738feac5324bebf930646c8e6e24114131bfe"
         },
         "before-tor-outside.pcap": {
           "packets": 0,
@@ -198,23 +196,24 @@
           "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
         },
         "gateway-outside.pcap": {
-          "packets": 6349,
-          "ipv4": 6347,
+          "packets": 6581,
+          "ipv4": 6579,
           "ipv6": 0,
           "udp": 0,
-          "tcp": 6347,
-          "tcp_ports": [443, 51542, 52364, 57008],
+          "tcp": 6579,
+          "tcp_ports": [443, 9001, 35568, 52100, 58060],
           "udp_ports": [],
-          "sha256": "b0fd2ee46fe2525ec8d8d66cb66c311c3b53e42e7cc15a27fc709cf1fe938308"
+          "sha256": "7a2419c0203e52f7cd24f1fac548b57f10657cb8af19662d575ca5a1eb4293ec"
         }
       },
-      "seconds": 18.83
+      "seconds": 15.37
     }
   },
   "checks": {
     "python_syntax": "passed",
     "shell_syntax": "passed",
-    "repository": "blocked: native oxlint binding for darwin-arm64 absent; dependencies installed for Linux; Docker engine stopped after ENOSPC and ordinary restart timed out"
+    "repository": "passed: lint and 34 cached typecheck tasks in Debian ARM / Bun 1.4.4",
+    "repository_log_sha256": "bd0ae169faeb05ff70f9afc939a3f86fe4a08aa621563b7634642902c65fd56d"
   },
   "previous_attempts": [
     {
@@ -236,10 +235,13 @@
     {
       "run": "run-07/run-08",
       "result": "offline nine and online ten checks passed; final runs add a complete WAN capture assertion and stale-policy-image check"
+    },
+    {
+      "environment": "Mac Docker Desktop",
+      "result": "engine stopped on ENOSPC; recovered after closing stale app processes and releasing obsolete generated artifacts; final image rebuilt and tested without RAM source overrides"
     }
   ],
   "remaining_gates": [
-    "rebuild final image and rerun canonical repository check after Docker recovery",
     "production gateway lifecycle and QEMU confinement",
     "persistent Tor state delivery and ephemeral profile semantics",
     "tool proxy allow/deny/ask and revocation",

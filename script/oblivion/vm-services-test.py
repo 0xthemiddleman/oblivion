@@ -2,6 +2,7 @@
 """Actual systemd units, manager PTY, LUKS and QEMU; disposable synthetic disks only."""
 import codecs
 import ctypes
+import errno
 import fcntl
 import hashlib
 import json
@@ -21,6 +22,8 @@ import pyte
 CONFIG = "/run/oblivion-services-test.json"
 GENERAL = b"synthetic-general-password"
 PASSWORD = b"synthetic-session-password-a"
+API_KEY = b"OBLIVION_API_KEY_CANARY_5c91"
+NEXT_API_KEY = b"OBLIVION_API_NEXT_CANARY_86ab"
 CONTROLLER = "oblivion-controller.service"
 MANAGER = "oblivion-manager.service"
 RECOVER = "oblivion-recover.service"
@@ -258,6 +261,9 @@ try:
     assert property(CONTROLLER, "Type") == "notify"
     locked()
     check("systemd waits for controller readiness and runs the confined manager as UID 1000")
+    assert status()["api_key_present"] is None
+    assert command("set-api-key", secret=API_KEY, success=False) == "general_not_writable"
+    assert command("clear-api-key", success=False) == "general_not_writable"
     send(b"d", "Premi D di nuovo")
     send(b"x", "Preparazione generale interrotta")
     assert file_digest("/data/general.luks.pending") == before
@@ -285,13 +291,85 @@ try:
     assert command("discard-general-pending", success=False) == "general_already_exists"
     assert file_digest("/data/general.luks") == before
     check("trusted setup confirms discard, recreates a complete general volume and protects existing archives")
+    command("unlock-ephemeral", secret=GENERAL)
+    assert status()["api_key_present"] is False
+    command("lock")
+    assert file_digest("/data/general.luks") == before
     send(b"\r", "Password del volume generale")
     send(GENERAL + b"\r", "Nessuna sessione")
+    assert status()["api_key_present"] is False
+    send(b"a", "API key Abliteration - salvata")
+    send(b"\x1b", "API Abliteration: non configurata")
+    assert status()["api_key_present"] is False
+    send(b"a", "API key Abliteration - salvata")
+    send(b"short\r", "API key non valida")
+    assert status()["api_key_present"] is False
+    send(b"a", "API key Abliteration - salvata")
+    send(API_KEY + b"\r", "API Abliteration: configurata")
+    key_file = Path("/run/oblivion/general/profile/abliteration.key")
+    assert key_file.read_bytes() == API_KEY
+    assert key_file.stat().st_uid == 0 and key_file.stat().st_mode & 0o777 == 0o600
+    assert API_KEY.decode() not in command("status")
+    forbidden = subprocess.run(["cat", str(key_file)], user=1000, group=1000, extra_groups=[], capture_output=True)
+    assert forbidden.returncode != 0 and not forbidden.stdout
+    check("trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it")
+    for secret in [b"too short", b"invalid-key with-spaces", b"invalid-key-with-newline\n"]:
+        assert command("set-api-key", secret=secret, success=False) == "invalid_api_key"
+        assert key_file.read_bytes() == API_KEY
+    pending_key = key_file.with_name("abliteration.key.pending")
+    pending_key.symlink_to(key_file)
+    assert command("set-api-key", secret=NEXT_API_KEY, success=False) == "file_unavailable"
+    pending_key.unlink()
+    os.link(key_file, pending_key)
+    assert command("clear-api-key", success=False) == "unsafe_file"
+    pending_key.unlink()
+    pending_key.write_bytes(b"interrupted-key-update")
+    command("set-api-key", secret=NEXT_API_KEY)
+    assert key_file.read_bytes() == NEXT_API_KEY and not pending_key.exists()
+    check("invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry")
+    filler_key = key_file.with_name("key-space-fixture")
+    with filler_key.open("xb") as file:
+        space = os.statvfs(key_file.parent)
+        allocated = space.f_bavail * space.f_frsize - 65536
+        os.posix_fallocate(file.fileno(), 0, allocated)
+        deadline = time.monotonic() + 5
+        while True:
+            assert time.monotonic() < deadline, "profile fill deadline"
+            try:
+                os.posix_fallocate(file.fileno(), allocated, 4096)
+                allocated += 4096
+            except OSError as error:
+                assert error.errno == errno.ENOSPC
+                break
+    assert command("set-api-key", secret=API_KEY, success=False) == "profile_write_failed"
+    assert key_file.read_bytes() == NEXT_API_KEY
+    filler_key.unlink()
+    command("set-api-key", secret=API_KEY)
+    assert key_file.read_bytes() == API_KEY
+    check("profile exhaustion preserves the previous key; retry publishes a complete replacement")
+    send(b"b", "Archivio generale bloccato")
+    assert status()["api_key_present"] is None
+    send(b"\r", "Password del volume generale")
+    send(GENERAL + b"\r", "API Abliteration: configurata")
+    assert key_file.read_bytes() == API_KEY
+    send(b"x", "Premi X di nuovo")
+    send(b"a", "API Abliteration: configurata")
+    assert key_file.read_bytes() == API_KEY
+    send(b"x", "Premi X di nuovo")
+    send(b"x", "API Abliteration: non configurata")
+    assert not key_file.exists() and status()["api_key_present"] is False
+    send(b"a", "API key Abliteration - salvata")
+    send(API_KEY + b"\r", "API Abliteration: configurata")
+    check("key persists across lock/unlock; removal requires confirmation and cancellation preserves it")
     send(b"n", "Nuova sessione - password")
     send(PASSWORD + b"\r", "Ripeti la password")
     send(PASSWORD + b"\r", "Conversazioni e documenti")
     wait_screen("/exit blocca")
     session_id = status()["sessions"][0]
+    assert command("set-api-key", secret=NEXT_API_KEY, success=False) == "session_must_be_closed"
+    assert command("clear-api-key", success=False) == "session_must_be_closed"
+    assert key_file.read_bytes() == API_KEY
+    check("an open session prevents changes to the infrastructure credential")
     send(b"\x1d", "Sessioni protette")
     archive = Path(f"/run/oblivion/general/sessions/{session_id}.luks")
     before = file_digest(archive)
@@ -299,12 +377,15 @@ try:
     interrupt_creation("create", PASSWORD, "mke2fs")
     encrypted_before = file_digest("/data/general.luks")
     command("unlock-ephemeral", secret=GENERAL)
+    assert status()["api_key_present"] is True
+    assert command("set-api-key", secret=NEXT_API_KEY, success=False) == "general_not_writable"
+    assert command("clear-api-key", success=False) == "general_not_writable"
     pending_id = next(Path("/run/oblivion/general/sessions").glob("*.pending")).stem
     assert command("discard-session-pending", pending_id, success=False) == "general_not_writable"
     assert status()["incomplete_sessions"] == []
     command("lock")
     assert file_digest("/data/general.luks") == encrypted_before
-    check("read-only profile rejects pending deletion and remains byte-identical")
+    check("read-only profile exposes only credential presence, rejects key changes and pending deletion, and remains byte-identical")
     terminal.reset()
     os.kill(manager_pid, signal.SIGKILL)
     manager_pid = wait_restart(MANAGER, manager_pid)
@@ -384,7 +465,8 @@ try:
     current = status()
     assert current["recovery_required"] and current["session_open"] and current["general_open"], current
     for operation, arguments, secret in [("create", [], PASSWORD), ("enter", [session_id], PASSWORD),
-            ("unlock", [], GENERAL), ("unlock-ephemeral", [], GENERAL)]:
+            ("unlock", [], GENERAL), ("unlock-ephemeral", [], GENERAL),
+            ("set-api-key", [], NEXT_API_KEY), ("clear-api-key", [], b"")]:
         assert command(operation, *arguments, secret=secret, success=False) == "recovery_required"
     rejected = subprocess.run(["/usr/bin/oblivion-control", "create"], input=PASSWORD,
         capture_output=True, user=1000, group=1000, extra_groups=[], timeout=30)
@@ -410,8 +492,8 @@ try:
     assert property(MANAGER, "ActiveState") in ["inactive", "failed"]
     assert not Path(f"/proc/{manager_pid}").exists()
     check("controller stop drains dependent services and leaves no active VM or open volume")
-    assert GENERAL not in output and PASSWORD not in output
-    check("synthetic passwords never appear on the managed console")
+    assert all(secret not in output for secret in [GENERAL, PASSWORD, API_KEY, NEXT_API_KEY])
+    check("synthetic passwords and API keys never appear on the managed console")
     subprocess.run(["umount", "/data"], check=True)
     print("OBLIVION_VM_LAB_PASS", flush=True)
 except BaseException:
