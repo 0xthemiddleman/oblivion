@@ -52,8 +52,9 @@ e due di attivazione del processo: un
 profilo privato con 128 regole oltre il precedente limite di 4 KiB e il rifiuto
 di frame oltre 128 KiB. La CI ARM ora esegue anche il laboratorio gateway
 senza swap e le due prove dell'adapter compilato, oltre a costruire i binari.
-Le otto prove di attivazione sono compilate; l'esecuzione di questa estensione
-della CI nelle VM è ancora in corso.
+Le otto prove di attivazione sono compilate. La prima esecuzione CI è stata
+rifiutata prima del boot per la scelta di HVF sul runner Linux; il comando
+ora seleziona TCG esplicitamente e attende una nuova prova.
 
 Il tipo condiviso `oblivion-transport::Transport` distingue:
 

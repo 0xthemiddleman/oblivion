@@ -225,6 +225,7 @@ jobs:
       - name: Exercise gateway policies and private activation in a swap-free VM
         run: >-
           python3 -u script/oblivion/run-vm-lab.py
+          --arch aarch64 --accel tcg
           --image artifacts/ci/host-image --gateway-bundle artifacts/ci/gateway
           --output artifacts/ci/gateway-results
       - name: Retain synthetic ARM64 boot evidence, including failures

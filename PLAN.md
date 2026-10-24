@@ -66,7 +66,9 @@ delle regole al connettore dei tool, non attivato dal supervisore: `ask` rimane
 bloccato. Il proxy HTTP/CONNECT supera otto test in Debian ARM64; passano tutti
 i 28 test di libreria del gateway e i controlli del repository, come documentato
 nelle [evidenze di componente](docs/oblivion/tools-proxy-component-evidence.json).
-La CI delle VM rimane in corso. Servizio, firewall, client Bun,
+La CI delle VM rimane in corso; la prova di componente ARM non è partita
+per un acceleratore errato nel comando e deve essere ripetuta con TCG.
+Servizio, firewall, client Bun,
 integrazione nel manager, persistenza, conferme e scadenze rimangono da completare.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.

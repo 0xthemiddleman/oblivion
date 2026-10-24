@@ -53,7 +53,9 @@ Il connettore ha ora un canale tool con policy esplicita; il supervisore non
 lo abilita. Il proxy HTTP/CONNECT supera otto test come componente in Debian
 ARM64. Passano tutti i 28 test di libreria gateway e i controlli canonici del
 repository; le [evidenze](tools-proxy-component-evidence.json) distinguono questa
-verifica dalla CI nelle VM ancora in corso. Servizio, firewall, policy del
+verifica dalla CI nelle VM ancora in corso. Il primo avvio della VM gateway
+ARM è stato rifiutato prima del boot perché il comando sceglieva HVF su Linux;
+la correzione seleziona TCG e attende ripetizione. Servizio, firewall, policy del
 manager e client Bun restano da integrare.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
