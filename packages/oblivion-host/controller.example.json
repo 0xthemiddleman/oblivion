@@ -1,0 +1,7 @@
+{
+  "general_image": "/var/lib/oblivion/general.luks",
+  "general_mib": 4096,
+  "session_mib": 512,
+  "pbkdf_memory_kib": 262144,
+  "manager_uid": 1000
+}

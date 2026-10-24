@@ -1,0 +1,12 @@
+**
+!packages/
+!packages/oblivion-host/
+!packages/oblivion-host/Cargo.toml
+!packages/oblivion-host/Cargo.lock
+!packages/oblivion-host/src/
+!packages/oblivion-host/src/**
+!packages/oblivion-host/examples/
+!packages/oblivion-host/examples/**
+!script/
+!script/oblivion/
+!script/oblivion/storage-lab-*.sh
