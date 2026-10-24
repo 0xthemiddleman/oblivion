@@ -111,7 +111,7 @@ jobs:
           network = True
           # Unknown history and changes outside host drivers/jobs run the matrix.
           host_only = {"script/oblivion/vm-services-test.py", "script/oblivion/run-vm-lab.py",
-                       "script/oblivion/run-tui-boot-lab.py", "PLAN.md"}
+                       "script/oblivion/run-tui-boot-lab.py", "script/oblivion/vm-session-network-test.py", "PLAN.md"}
           if re.fullmatch(r"[0-9a-f]{40}", base) and base != "0" * 40:
               fetched = subprocess.run(["git", "fetch", "--no-tags", "--depth=1", "origin", base], capture_output=True, timeout=30)
               if fetched.returncode == 0:

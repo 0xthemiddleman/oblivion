@@ -164,7 +164,7 @@ root = Path("/run/oblivion-gateway-qemu-root")
 root.mkdir(mode=0o755)
 run("mount", "-t", "tmpfs", "-o", "mode=0755,nodev,nosuid,size=512m", "tmpfs", str(root))
 shutil.copytree("/usr/lib/oblivion/vm/qemu-root", root, symlinks=True, dirs_exist_ok=True)
-(root / "run/oblivion-gateway-vm").mkdir(mode=0o755)
+(root / "run/oblivion-gateway-vm").mkdir(mode=0o755, exist_ok=True)
 root.chmod(0o755)
 run("mount", "-o", "remount,ro", str(root))
 # Older retained host images need the public account in laboratory RAM. New
