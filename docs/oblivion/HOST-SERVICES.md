@@ -4,7 +4,7 @@ Lo sviluppo e il collaudo avvengono sul Mac ARM, con un host Debian in QEMU/HVF
 e VM di sessione in TCG. Le unità in `packages/oblivion-host/host` sono componenti
 del futuro sistema live; non installano servizi sul Mac e non preparano una USB.
 
-Il ciclo finale ha superato **8 controlli in 141,78 secondi**, dopo una prima
+Il ciclo iniziale dei soli servizi ha superato **8 controlli in 141,78 secondi**, dopo una prima
 esecuzione riuscita con 7 controlli. Le [evidenze](services-evidence.json) includono
 hash di sorgenti, binari, unità, initramfs e fixture effettivamente eseguiti.
 
@@ -102,6 +102,8 @@ stata osservata nell'output della PTY e nessun marcatore sintetico è stato trov
 nel disco spento. Nell'immagine precedente l'account del manager è aggiunto in
 RAM con gli stessi dati pubblici ora presenti nel Dockerfile del laboratorio.
 
-Rimangono da collaudare interruzione durante creazione/format, esaurimento disco,
+Le prove successive di [creazione e spazio esaurito](STORAGE-RECOVERY.md) ripetono
+questi controlli con i nuovi binari e aggiungono l'interruzione di mkfs e la pulizia
+confermata dei tentativi incompleti. Rimangono errori I/O, disco pieno nel guest,
 OOM, spegnimento completo, power loss, console fisica e Linux/KVM. Una prova con
 TCG non certifica l'isolamento del prodotto.

@@ -9,9 +9,15 @@ laboratorio Debian: **9 controlli superati in 95,09 secondi**. Le
 ## Flusso implementato
 
 Il manager parte con logo ASCII viola e stato letto dal controller. Se il
-generale è chiuso, Invio apre il campo password nascosto. Dopo lo sblocco mostra
+generale esiste ed è chiuso, Invio apre il campo password nascosto. Se manca,
+propone la prima creazione con conferma della password. Dopo lo sblocco mostra
 solo identificatori neutri delle sessioni; nessun titolo o contenuto della chat
 è copiato nell'indice amministrativo.
+
+La lista mostra anche spazio disponibile e dimensione della prossima sessione.
+I apre la vista separata dei tentativi incompleti; D e una seconda conferma D
+eliminano solo il tentativo selezionato. La preparazione generale interrotta ha
+una schermata dedicata. Dettagli e prove in [recupero della creazione](STORAGE-RECOVERY.md).
 
 | Comando                      | Effetto                                                                    |
 | ---------------------------- | -------------------------------------------------------------------------- |
@@ -187,7 +193,7 @@ Linux del laboratorio. Tutte le credenziali e i dati di prova sono sintetici.
   degli agenti, percorso dei file e inventario dei comandi residui.
 - Completare input incollato e multilinea, ridimensionamento, ripristino del
   rendering dopo riconnessione e verifica visiva sulla console Linux fisica.
-- Integrare le unità di sistema nella live e completare guasti durante creazione,
+- Integrare le unità di sistema nella live e completare guasti I/O/pubblicazione,
   OOM, shutdown completo e power loss. Il laboratorio copre ora i crash dei
   processi di manager/controller e il recupero con VM non responsiva.
 - Aggiungere effimero completo, impostazioni, broker/rete e trasferimenti.

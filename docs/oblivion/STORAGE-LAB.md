@@ -73,8 +73,10 @@ build di laboratorio non è dichiarata riproducibile bit per bit né firmata.
 
 Il ciclo VM e il passaggio del blocco sono ora provati separatamente nel
 [laboratorio VM](VM-LAB.md), con guest sintetico e senza attestazione KVM.
-Mancano interfaccia password, boot del prodotto, Tor, provider reale e
-trasferimenti. Restano da provare interruzione di alimentazione, disco pieno,
-recupero della creazione incompleta, cancellazione/backup, integrità dei volumi e
+Il [manager](MANAGER.md) ora fornisce l'interfaccia password e il
+[recupero della creazione](STORAGE-RECOVERY.md) ha prove di interruzione, pulizia
+confermata e spazio esaurito durante la preparazione dei volumi. Mancano boot del
+prodotto, Tor, provider reale e trasferimenti. Restano da provare interruzione di
+alimentazione, errori I/O, disco pieno nel guest, backup, integrità dei volumi e
 comportamento su hardware x86. La modalità effimera provata qui riguarda il solo
 profilo generale in sola lettura, non l'intera esperienza effimera.

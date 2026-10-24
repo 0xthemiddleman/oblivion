@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::ffi::CString;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::os::fd::AsRawFd;
@@ -30,11 +31,16 @@ struct Config {
 
 #[derive(Serialize)]
 struct Status {
+    general_present: bool,
+    general_incomplete: bool,
     general_open: bool,
     general_mounted: bool,
     general_readonly: bool,
     session_open: bool,
     sessions: Vec<String>,
+    incomplete_sessions: Vec<String>,
+    available_bytes: Option<u64>,
+    session_bytes: u64,
     vm_state: Option<String>,
     laboratory_emulation: bool,
     recovery_required: bool,
@@ -50,7 +56,12 @@ pub fn main() -> Result<()> {
     }
     let op = args[2].as_str();
     require(
-        args.len() == if matches!(op, "open" | "enter") { 4 } else { 3 },
+        args.len()
+            == if matches!(op, "open" | "enter" | "discard-session-pending") {
+                4
+            } else {
+                3
+            },
         "usage",
     )?;
     // Latch before taking the operation lock: a worker may still be completing
@@ -69,12 +80,44 @@ pub fn main() -> Result<()> {
     let _lock = lock()?;
     if matches!(
         op,
-        "init-general" | "unlock" | "unlock-ephemeral" | "create" | "open" | "enter"
+        "init-general"
+            | "unlock"
+            | "unlock-ephemeral"
+            | "create"
+            | "open"
+            | "enter"
+            | "discard-general-pending"
+            | "discard-session-pending"
     ) {
         require(!recovery_required()?, "recovery_required")?;
     }
     match op {
         "init-general" => config.initialize(&password(true)?),
+        "discard-general-pending" => {
+            require(
+                !config
+                    .general_image
+                    .try_exists()
+                    .map_err(|_| Error("image_check_failed"))?,
+                "general_already_exists",
+            )?;
+            require(
+                !mapping_open("oblivion-general")? && mount_mode()? == MountMode::Closed,
+                "volume_busy",
+            )?;
+            discard_pending(&config.pending_general())
+        }
+        "discard-session-pending" => {
+            validate_id(&args[3])?;
+            require(
+                mount_mode()? == MountMode::ReadWrite,
+                "general_not_writable",
+            )?;
+            discard_pending(&PathBuf::from(format!(
+                "{MOUNT}/sessions/{}.pending",
+                args[3]
+            )))
+        }
         "unlock" => config.unlock(&password(false)?, false),
         "unlock-ephemeral" => config.unlock(&password(false)?, true),
         "create" => config.create(&password(true)?),
@@ -113,15 +156,34 @@ pub fn main() -> Result<()> {
         "status" => {
             let mode = mount_mode()?;
             let status = Status {
+                general_present: config
+                    .general_image
+                    .try_exists()
+                    .map_err(|_| Error("image_check_failed"))?,
+                general_incomplete: config
+                    .pending_general()
+                    .try_exists()
+                    .map_err(|_| Error("image_check_failed"))?,
                 general_open: mapping_open("oblivion-general")?,
                 general_mounted: mode != MountMode::Closed,
                 general_readonly: mode == MountMode::ReadOnly,
                 session_open: mapping_open("oblivion-session")?,
                 sessions: if mode == MountMode::ReadWrite {
-                    sessions()?
+                    sessions(".luks")?
                 } else {
                     Vec::new()
                 },
+                incomplete_sessions: if mode == MountMode::ReadWrite {
+                    sessions(".pending")?
+                } else {
+                    Vec::new()
+                },
+                available_bytes: if mode == MountMode::ReadWrite {
+                    Some(available_bytes()?)
+                } else {
+                    None
+                },
+                session_bytes: config.session_mib * MIB,
                 vm_state: if config.vm.is_some() {
                     Some(crate::vm::state()?)
                 } else {
@@ -175,9 +237,17 @@ impl Config {
         )?;
         // Only a NEW regular file can be initialized. Physical devices and existing
         // files cannot be formatted through this interface, even with a bad password.
-        create_image(&self.general_image, self.general_mib)?;
-        self.format(&self.general_image, secret)?;
-        crypt_open(&self.general_image, "oblivion-general", secret, false)?;
+        require(
+            !self
+                .general_image
+                .try_exists()
+                .map_err(|_| Error("image_check_failed"))?,
+            "general_already_exists",
+        )?;
+        let path = self.pending_general();
+        create_image(&path, self.general_mib)?;
+        self.format(&path, secret)?;
+        crypt_open(&path, "oblivion-general", secret, false)?;
         let formatted = run(
             "/usr/sbin/mkfs.ext4",
             &[
@@ -193,7 +263,13 @@ impl Config {
         let closed = crypt_close("oblivion-general");
         formatted?;
         closed?;
-        Ok(())
+        publish(&path, &self.general_image)
+    }
+
+    fn pending_general(&self) -> PathBuf {
+        let mut path = self.general_image.as_os_str().to_owned();
+        path.push(".pending");
+        PathBuf::from(path)
     }
 
     fn unlock(&self, secret: &[u8], readonly: bool) -> Result<()> {
@@ -262,12 +338,7 @@ impl Config {
         let closed = crypt_close("oblivion-session");
         formatted?;
         closed?;
-        trusted_file(&path)?
-            .sync_all()
-            .map_err(|_| Error("sync_failed"))?;
-        fs::rename(&path, format!("{MOUNT}/sessions/{id}.luks"))
-            .map_err(|_| Error("publish_failed"))?;
-        sync_directory(Path::new(&format!("{MOUNT}/sessions")))?;
+        publish(&path, &PathBuf::from(format!("{MOUNT}/sessions/{id}.luks")))?;
         println!("{id}");
         Ok(())
     }
@@ -500,14 +571,56 @@ fn create_image(path: &Path, mib: u64) -> Result<()> {
         .map_err(|_| Error("image_size_failed"))?;
     // Reserve space up front: a sparse inner vault must not exhaust the general
     // filesystem while the guest believes it still has free disk blocks.
-    unsafe {
-        require(
-            libc::posix_fallocate(file.as_raw_fd(), 0, (mib * MIB) as libc::off_t) == 0,
-            "image_allocation_failed",
-        )?;
+    // posix_fallocate returns an error number directly; it does not set errno.
+    match unsafe { libc::posix_fallocate(file.as_raw_fd(), 0, (mib * MIB) as libc::off_t) } {
+        0 => {}
+        libc::ENOSPC | libc::EDQUOT => return Err(Error("insufficient_space")),
+        _ => return Err(Error("image_allocation_failed")),
     }
     file.sync_all().map_err(|_| Error("sync_failed"))?;
     sync_directory(parent)
+}
+
+fn publish(pending: &Path, destination: &Path) -> Result<()> {
+    trusted_file(pending)?
+        .sync_all()
+        .map_err(|_| Error("sync_failed"))?;
+    let source =
+        CString::new(pending.as_os_str().as_encoded_bytes()).map_err(|_| Error("invalid_path"))?;
+    let target = CString::new(destination.as_os_str().as_encoded_bytes())
+        .map_err(|_| Error("invalid_path"))?;
+    // Publication is atomic and must never replace an existing archive.
+    require(
+        unsafe {
+            libc::renameat2(
+                libc::AT_FDCWD,
+                source.as_ptr(),
+                libc::AT_FDCWD,
+                target.as_ptr(),
+                libc::RENAME_NOREPLACE,
+            )
+        } == 0,
+        "publish_failed",
+    )?;
+    sync_directory(destination.parent().ok_or(Error("invalid_path"))?)
+}
+
+fn discard_pending(path: &Path) -> Result<()> {
+    require(!mapping_open("oblivion-session")?, "volume_busy")?;
+    trusted_file(path)?;
+    fs::remove_file(path).map_err(|_| Error("discard_failed"))?;
+    sync_directory(path.parent().ok_or(Error("invalid_path"))?)
+}
+
+fn available_bytes() -> Result<u64> {
+    let file = File::open(MOUNT).map_err(|_| Error("space_check_failed"))?;
+    let mut stats = std::mem::MaybeUninit::<libc::statvfs>::uninit();
+    require(
+        unsafe { libc::fstatvfs(file.as_raw_fd(), stats.as_mut_ptr()) } == 0,
+        "space_check_failed",
+    )?;
+    let stats = unsafe { stats.assume_init() };
+    Ok(stats.f_bavail.saturating_mul(stats.f_frsize))
 }
 
 fn sync_directory(path: &Path) -> Result<()> {
@@ -569,14 +682,14 @@ fn mount_mode() -> Result<MountMode> {
     Ok(MountMode::Closed)
 }
 
-fn sessions() -> Result<Vec<String>> {
+fn sessions(extension: &str) -> Result<Vec<String>> {
     let mut ids = Vec::new();
     for entry in
         fs::read_dir(format!("{MOUNT}/sessions")).map_err(|_| Error("session_list_failed"))?
     {
         let entry = entry.map_err(|_| Error("session_list_failed"))?;
         let name = entry.file_name();
-        if let Some(id) = name.to_str().and_then(|name| name.strip_suffix(".luks")) {
+        if let Some(id) = name.to_str().and_then(|name| name.strip_suffix(extension)) {
             validate_id(id)?;
             trusted_file(&entry.path())?;
             ids.push(id.to_owned());

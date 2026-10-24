@@ -5,11 +5,16 @@ use serde::Deserialize;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Status {
+    general_present: bool,
+    general_incomplete: bool,
     general_open: bool,
     general_mounted: bool,
     general_readonly: bool,
     session_open: bool,
     sessions: Vec<String>,
+    incomplete_sessions: Vec<String>,
+    available_bytes: Option<u64>,
+    session_bytes: u64,
     vm_state: Option<String>,
     laboratory_emulation: bool,
     recovery_required: bool,
@@ -42,17 +47,28 @@ fn run(preview: bool) -> Result<()> {
     let mut selected = 0usize;
     let mut notice = String::new();
     let mut requested_new = false;
+    let mut incomplete = false;
     loop {
         let status: Status = serde_json::from_str(&control::request("status", None, &[])?)?;
-        if status.sessions.iter().any(|s| {
-            s.len() != 32
-                || !s
-                    .bytes()
-                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-        }) {
+        if status
+            .sessions
+            .iter()
+            .chain(&status.incomplete_sessions)
+            .any(|s| {
+                s.len() != 32
+                    || !s
+                        .bytes()
+                        .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            })
+        {
             return Err("invalid_session_list".into());
         }
-        selected = selected.min(status.sessions.len().saturating_sub(1));
+        let sessions = if incomplete {
+            &status.incomplete_sessions
+        } else {
+            &status.sessions
+        };
+        selected = selected.min(sessions.len().saturating_sub(1));
         let (rows, cols) = terminal.size();
         let mut view = format!(
             "{CLEAR}{BRAND}{} OBLIVION - controllo fidato{RESET}\r\n\r\n",
@@ -70,6 +86,10 @@ fn run(preview: bool) -> Result<()> {
         } else if !status.general_mounted {
             view.push_str(if status.general_open {
                 " Archivio generale da richiudere.\r\n\r\n [B] Blocca\r\n"
+            } else if !status.general_present && status.general_incomplete {
+                " Preparazione generale interrotta.\r\n Nessun archivio pronto; il tentativo incompleto e' conservato.\r\n\r\n [D] Elimina il tentativo incompleto\r\n"
+            } else if !status.general_present {
+                " Prima preparazione di Oblivion\r\n\r\n [Invio] Crea il volume generale cifrato\r\n"
             } else {
                 " Archivio generale bloccato\r\n\r\n [Invio] Sblocca\r\n"
             });
@@ -83,22 +103,44 @@ fn run(preview: bool) -> Result<()> {
         } else if status.general_readonly {
             view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [B] Blocca\r\n");
         } else {
-            view.push_str(" Sessioni protette\r\n\r\n");
+            view.push_str(if incomplete {
+                " Creazioni interrotte - mai aperte come chat\r\n\r\n"
+            } else {
+                " Sessioni protette\r\n\r\n"
+            });
             let limit = rows
-                .saturating_sub(if rows >= 20 && cols >= 64 { 17 } else { 12 })
+                .saturating_sub(if rows >= 20 && cols >= 64 { 19 } else { 14 })
                 .max(1) as usize;
             let start = selected.saturating_sub(limit - 1);
-            for (index, session) in status.sessions.iter().enumerate().skip(start).take(limit) {
+            for (index, session) in sessions.iter().enumerate().skip(start).take(limit) {
                 view.push_str(&format!(
-                    " {} Sessione {}  Bloccata\r\n",
+                    " {} Sessione {}  {}\r\n",
                     if index == selected { ">" } else { " " },
-                    &session[..8]
+                    &session[..8],
+                    if incomplete { "Incompleta" } else { "Bloccata" }
                 ));
             }
-            if status.sessions.is_empty() {
-                view.push_str(" Nessuna sessione.\r\n");
+            if sessions.is_empty() {
+                view.push_str(if incomplete {
+                    " Nessuna creazione interrotta.\r\n"
+                } else {
+                    " Nessuna sessione.\r\n"
+                });
             }
-            view.push_str(&format!("\r\n {ACTION}[N] Nuova  [Invio] Apri  [J/K] Seleziona\r\n [B] Blocca Oblivion{RESET}\r\n"));
+            view.push_str(&format!(
+                "\r\n Spazio disponibile: {} MiB; nuova sessione: {} MiB\r\n",
+                status.available_bytes.unwrap_or(0) / 1048576,
+                status.session_bytes / 1048576
+            ));
+            view.push_str(&format!(
+                " {ACTION}{}\r\n [I] Creazioni interrotte ({}) / sessioni  [B] Blocca{RESET}\r\n",
+                if incomplete {
+                    "[D] Elimina selezionata  [J/K] Seleziona"
+                } else {
+                    "[N] Nuova  [Invio] Apri  [J/K] Seleziona"
+                },
+                status.incomplete_sessions.len()
+            ));
         }
         view.push_str(&format!(
             "\r\n {FEEDBACK}{notice}{RESET}\r\n [Q] Blocca tutto ed esci"
@@ -120,7 +162,7 @@ fn run(preview: bool) -> Result<()> {
         };
         notice.clear();
         if key == b'j' {
-            selected = (selected + 1).min(status.sessions.len().saturating_sub(1));
+            selected = (selected + 1).min(sessions.len().saturating_sub(1));
             continue;
         }
         if key == b'k' {
@@ -134,6 +176,19 @@ fn run(preview: bool) -> Result<()> {
                 return Ok(());
             }
             if !status.recovery_required && !status.general_open && matches!(key, b'\r' | b'\n') {
+                if !status.general_present {
+                    if !status.general_incomplete {
+                        if let Some(secret) = new_password(
+                            &mut terminal,
+                            "Nuovo volume generale - password di almeno 16 byte",
+                            "Ripeti la password del volume generale",
+                        )? {
+                            busy(&mut terminal, "Preparazione del volume generale cifrato")?;
+                            control::request("init-general", None, &secret)?;
+                        }
+                    }
+                    return Ok(());
+                }
                 if let Some(secret) = terminal.password("Password del volume generale")? {
                     busy(&mut terminal, "Sblocco del volume generale")?;
                     control::request("unlock", None, &secret)?;
@@ -161,7 +216,37 @@ fn run(preview: bool) -> Result<()> {
                 }
                 return Ok(());
             }
+            if !status.general_present
+                && status.general_incomplete
+                && !status.general_open
+                && key == b'd'
+            {
+                if confirm_discard(&mut terminal, "preparazione generale incompleta")? {
+                    busy(&mut terminal, "Eliminazione del tentativo incompleto")?;
+                    control::request("discard-general-pending", None, &[])?;
+                }
+                return Ok(());
+            }
             if !status.general_mounted || status.general_readonly {
+                return Ok(());
+            }
+            if key == b'i' {
+                incomplete = !incomplete;
+                selected = 0;
+                return Ok(());
+            }
+            if incomplete {
+                if key == b'd' {
+                    if let Some(id) = sessions.get(selected) {
+                        if confirm_discard(
+                            &mut terminal,
+                            &format!("creazione interrotta {}", &id[..8]),
+                        )? {
+                            busy(&mut terminal, "Eliminazione del tentativo incompleto")?;
+                            control::request("discard-session-pending", Some(id), &[])?;
+                        }
+                    }
+                }
                 return Ok(());
             }
             let id = if key == b'n' {
@@ -174,28 +259,20 @@ fn run(preview: bool) -> Result<()> {
             if key != b'n' && id.is_none() {
                 return Ok(());
             }
-            let Some(secret) = terminal.password(if id.is_some() {
-                "Password della sessione"
+            let Some(secret) = (if id.is_some() {
+                terminal.password("Password della sessione")?
             } else {
-                "Nuova sessione - password di almeno 16 byte"
-            })?
-            else {
+                new_password(
+                    &mut terminal,
+                    "Nuova sessione - password di almeno 16 byte",
+                    "Ripeti la password della nuova sessione",
+                )?
+            }) else {
                 return Ok(());
             };
             let id = if let Some(id) = id {
                 id.to_owned()
             } else {
-                if secret.len() < 16 {
-                    return Err("password_too_short".into());
-                }
-                let Some(confirmation) =
-                    terminal.password("Ripeti la password della nuova sessione")?
-                else {
-                    return Ok(());
-                };
-                if *secret != *confirmation {
-                    return Err("passwords_do_not_match".into());
-                }
                 busy(&mut terminal, "Creazione del volume cifrato")?;
                 control::request("create", None, &secret)?.trim().to_owned()
             };
@@ -209,6 +286,9 @@ fn run(preview: bool) -> Result<()> {
             notice = match error.to_string().as_str() {
                 "passwords_do_not_match" => "Le password non coincidono.",
                 "password_too_short" => "Usa almeno 16 byte per la nuova password.",
+                "insufficient_space" => {
+                    "Spazio insufficiente. Controlla le creazioni interrotte prima di riprovare."
+                }
                 _ => "Operazione non completata. Verifica lo stato mostrato prima di continuare.",
             }
             .to_owned();
@@ -217,6 +297,32 @@ fn run(preview: bool) -> Result<()> {
         }
         terminal.flush_input();
     }
+}
+
+fn new_password(
+    terminal: &mut Terminal,
+    title: &str,
+    repeat: &str,
+) -> Result<Option<zeroize::Zeroizing<Vec<u8>>>> {
+    let Some(secret) = terminal.password(title)? else {
+        return Ok(None);
+    };
+    if secret.len() < 16 {
+        return Err("password_too_short".into());
+    }
+    let Some(confirmation) = terminal.password(repeat)? else {
+        return Ok(None);
+    };
+    if *secret != *confirmation {
+        return Err("passwords_do_not_match".into());
+    }
+    Ok(Some(secret))
+}
+
+fn confirm_discard(terminal: &mut Terminal, label: &str) -> Result<bool> {
+    terminal.flush_input();
+    terminal.write(&format!("{CLEAR}{FEEDBACK} Elimina {label}?\r\n Questa operazione non si puo' annullare.\r\n Premi D di nuovo per confermare; altro tasto annulla.{RESET}"))?;
+    Ok(terminal.input(-1)?.as_slice().eq_ignore_ascii_case(b"d"))
 }
 
 fn busy(terminal: &mut Terminal, message: &str) -> Result<()> {

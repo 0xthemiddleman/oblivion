@@ -10,6 +10,9 @@ It has no dependency on the OpenCode server, model or tool execution environment
 - A general LUKS2 file contains an administrative profile and independent session
   LUKS2 files. Creation allocates space up front, uses Argon2id and never overwrites
   an existing file. Physical-device initialization is deliberately absent.
+- Both levels stage creation in `.pending` files. Only fully formatted and closed
+  containers are published, with an atomic no-replace rename and file/directory
+  synchronization. Interrupted attempts remain separate from usable sessions.
 - The general filesystem is mounted only by the privileged controller, with
   `nodev,nosuid,noexec` and private permissions. The controller formats session
   filesystems but **never mounts them**.
@@ -52,6 +55,12 @@ and their ancestors belong to the trusted system, never to an imported document.
 | `status`           | Returns kernel-derived state and opaque IDs, no conversation titles                                                                             |
 | `serve`            | Serves the restricted Unix control socket for the configured manager UID                                                                        |
 
+Two additional operations, also available through the restricted manager IPC,
+discard only unpublished attempts: `discard-general-pending` requires an absent
+general archive and closed mappings; `discard-session-pending <id>` requires a
+writable general, no open session and a valid pending ID. Both reject unresolved
+recovery, symlinks and hard links. They never select a published archive.
+
 Secrets are binary stdin (1–1024 bytes; creation requires at least 16). A newline
 is part of a secret. Do not type real passphrases into shell command lines.
 `oblivion-manager` now supplies a hidden password prompt outside the guest.
@@ -59,6 +68,9 @@ Its native Mac `--preview` mode never connects to storage or asks for a password
 The included lab uses only fixed, public synthetic passphrases.
 The general image belongs on persistent storage (`/persist` in the example),
 not the live system's RAM-backed `/var`.
+If it is absent, the trusted TUI now supports its initial creation and password
+confirmation. Incomplete attempts have a separate view and an explicit second
+confirmation before deletion. See [creation recovery](../../docs/oblivion/STORAGE-RECOVERY.md).
 
 ## Local IPC
 
@@ -90,7 +102,10 @@ success response. It never delegates QMP or arbitrary paths. The manager checks
 that the controller's peer UID is root. See the [manager laboratory](../../docs/oblivion/MANAGER.md).
 `recover` is deliberately absent from the manager IPC vocabulary; it is invoked
 by trusted root services. The manager can retry `lock` or explicitly force-close
-the session before locking the general. `status` includes `recovery_required`.
+the session before locking the general. `status` includes `recovery_required`,
+general existence/incomplete flags, pending session IDs and available/planned
+session bytes. Pending IDs and available space are exposed only with a writable
+general; the read-only profile cannot discard attempts.
 
 Service ordering, dedicated accounts, console behavior and Mac reproduction are
 documented in [host services](../../docs/oblivion/HOST-SERVICES.md). Units must be
@@ -131,8 +146,8 @@ the compiled Linux binaries with real cryptsetup and real device-mapper mappings
 inside a disposable Debian VM, not mocks of encryption or process execution.
 
 Still required: full live-image integration, KVM/hardware validation,
-guest TUI refinement, complete boot/shutdown lifecycle, quota UI, explicit recovery for interrupted initialization
-and `.pending` session files, power-loss tests, profile settings/API broker,
+guest TUI refinement, complete boot/shutdown lifecycle, guest filesystem exhaustion,
+I/O and power-loss recovery, profile settings/API broker,
 full ephemeral guests, USB provisioning, integrity/backup decisions and release
-hardening. A failed initialization retains its file and a failed creation may
-retain a `.pending` file; neither is silently reused or overwritten.
+hardening. Failed creation retains its `.pending` file until explicit confirmed
+discard; published archives are never silently reused or overwritten.

@@ -18,6 +18,8 @@ pub const SOCKET: &str = "/run/oblivion-control.sock";
 #[serde(rename_all = "kebab-case")]
 enum Operation {
     InitGeneral,
+    DiscardGeneralPending,
+    DiscardSessionPending,
     Unlock,
     UnlockEphemeral,
     Create,
@@ -134,7 +136,10 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
     let request: Request = serde_json::from_slice(&header).map_err(|_| Error("invalid_request"))?;
     require(request.secret_len <= 1024, "invalid_secret_length")?;
     require(
-        matches!(request.operation, Operation::Open) == request.session.is_some(),
+        matches!(
+            request.operation,
+            Operation::Open | Operation::DiscardSessionPending
+        ) == request.session.is_some(),
         "invalid_session_argument",
     )?;
     if let Some(id) = &request.session {
@@ -176,6 +181,8 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
     }
     let operation = match request.operation {
         Operation::InitGeneral => "init-general",
+        Operation::DiscardGeneralPending => "discard-general-pending",
+        Operation::DiscardSessionPending => "discard-session-pending",
         Operation::Unlock => "unlock",
         Operation::UnlockEphemeral => "unlock-ephemeral",
         Operation::Create => "create",

@@ -28,7 +28,13 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let operation = args.first().ok_or("missing_operation")?;
-    if args.len() != if operation == "open" { 2 } else { 1 } {
+    if args.len()
+        != if matches!(operation.as_str(), "open" | "discard-session-pending") {
+            2
+        } else {
+            1
+        }
+    {
         return Err("invalid_arguments".into());
     }
     let needs_secret = matches!(
