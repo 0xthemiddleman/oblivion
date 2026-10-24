@@ -1,6 +1,7 @@
 import { Clock, Effect, Semaphore } from "effect"
 import { mkdir, open } from "node:fs/promises"
 import path from "node:path"
+import { Oblivion } from "./oblivion.js"
 
 // One process-wide permit: the signal listener and the HTTP endpoint share it, so concurrent
 // requests queue instead of serializing two heaps at once.
@@ -14,6 +15,10 @@ const lock = Semaphore.makeUnsafe(1)
  */
 export const write = Effect.fn("HeapSnapshot.write")(
   function* (directory: string) {
+    if (Oblivion.enabled)
+      yield* Effect.try(() => {
+        throw new Error("Heap snapshots are disabled in Oblivion")
+      })
     const v8 = yield* Effect.tryPromise(() => import("node:v8"))
     const time = new Date(yield* Clock.currentTimeMillis).toISOString().replace(/[:.]/g, "")
     const file = path.join(directory, `heap-${process.pid}-${time}.heapsnapshot`)

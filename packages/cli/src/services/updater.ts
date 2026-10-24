@@ -10,6 +10,7 @@ import { stripVTControlCharacters } from "node:util"
 import { RetainedImage } from "./retained-image"
 import { action, parseReleaseVersion, type Policy } from "./updater-action"
 import { errorMessage } from "../util/error"
+import { Oblivion } from "@opencode/util/oblivion"
 
 export const methods = ["curl", "npm", "pnpm", "bun", "yarn", "vp", "brew", "winget"] as const
 
@@ -137,6 +138,18 @@ export function decodePolicy(text: string): Policy | undefined {
 }
 
 const make = Effect.gen(function* () {
+  if (Oblivion.enabled) {
+    const unavailable = () => Effect.fail(new Error("Oblivion updates are managed outside the session"))
+    return Service.of({
+      run: () => Effect.undefined,
+      check: () => Effect.undefined,
+      apply: unavailable,
+      method: () => Effect.undefined,
+      latest: unavailable,
+      upgrade: unavailable,
+      removal: () => undefined,
+    })
+  }
   const fs = yield* FileSystem.FileSystem
   const global = yield* Global.Service
   const appProcess = yield* AppProcess.Service
@@ -217,7 +230,10 @@ const make = Effect.gen(function* () {
     if (installedWinget) return "winget"
     if (!installedPackage) return
 
-    const parts = executable.toLowerCase().split(path.sep).map((part) => part.replace(/^\./, ""))
+    const parts = executable
+      .toLowerCase()
+      .split(path.sep)
+      .map((part) => part.replace(/^\./, ""))
     const checks: Array<{ method: Method; command: string[] }> = [
       { method: "npm", command: ["npm", "list", "-g", "--depth=0", installedPackage] },
       { method: "pnpm", command: ["pnpm", "list", "-g", "--depth=0", installedPackage] },

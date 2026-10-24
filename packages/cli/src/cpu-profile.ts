@@ -4,10 +4,18 @@ import { Global } from "@opencode/util/global"
 import { Effect, FileSystem, Queue } from "effect"
 import { Session } from "node:inspector"
 import path from "node:path"
+import { Oblivion } from "@opencode/util/oblivion"
 
 export const listen = Effect.gen(function* () {
-  const global = yield* Global.Service
   if (process.platform === "win32") return
+  if (Oblivion.enabled) {
+    const ignore = () => undefined
+    return yield* Effect.acquireRelease(
+      Effect.sync(() => process.on("SIGPROF", ignore)),
+      () => Effect.sync(() => process.off("SIGPROF", ignore)),
+    )
+  }
+  const global = yield* Global.Service
   const signals = yield* Queue.dropping<void>(1)
   yield* Effect.acquireRelease(
     Effect.sync(() => {
@@ -19,10 +27,7 @@ export const listen = Effect.gen(function* () {
   )
   yield* Effect.gen(function* () {
     yield* Queue.take(signals)
-    const file = path.join(
-      global.log,
-      `cpu-${process.pid}-${new Date().toISOString().replace(/[:.]/g, "")}.cpuprofile`,
-    )
+    const file = path.join(global.log, `cpu-${process.pid}-${new Date().toISOString().replace(/[:.]/g, "")}.cpuprofile`)
     yield* run(file, Effect.sleep("10 seconds")).pipe(
       Effect.catchCause((cause) => Effect.logError("Failed to capture CPU profile", { path: file, cause })),
     )

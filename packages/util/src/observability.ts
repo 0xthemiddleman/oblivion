@@ -7,6 +7,7 @@ import { FetchHttpClient } from "effect/http"
 import { OtlpExporter, OtlpSerialization } from "effect/observability"
 import { Logging } from "./observability/logging.js"
 import { Otlp } from "./observability/otlp.js"
+import { Oblivion } from "./oblivion.js"
 
 export const Options = Schema.Struct({
   endpoint: Schema.optional(Schema.String),
@@ -23,6 +24,10 @@ export function layer(
     headers: process.env.OTEL_EXPORTER_OTLP_HEADERS,
   },
 ) {
+  if (Oblivion.enabled)
+    return Logger.layer([], { mergeWithExisting: false }).pipe(
+      Layer.merge(Layer.succeed(References.TracerEnabled, false)),
+    )
   const app = {
     client: options.client ?? "opencode",
     version: options.version ?? "unknown",

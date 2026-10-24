@@ -3,6 +3,9 @@
 Obiettivo attivo: completare la roadmap di [PLAN.md](../../PLAN.md), senza ridurre
 le garanzie ai soli test già disponibili. VirtualBox resta fuori dal lavoro
 immediato. Il prototipo di laboratorio non è una release da usare con dati privati.
+Lo sviluppo procede sul Mac ARM disponibile: Docker per build e prove del binario,
+Debian/HVF e guest TCG per il laboratorio VM. L'hardware x86/KVM è un gate di
+rilascio, non un blocco allo sviluppo sul Mac.
 
 | Area | Stato ed evidenza | Gate ancora aperto |
 | --- | --- | --- |
@@ -11,7 +14,7 @@ immediato. Il prototipo di laboratorio non è una release da usare con dati priv
 | Privilegi | Client UID limitato e socket con credenziali del peer; nessun accesso diretto al generale | Servizi di sistema e confinamento nel prodotto |
 | VM della sessione | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md) con fixture sintetica | KVM/hardware x86, OpenCode reale, console fidata e servizi di prodotto |
 | Console e manager | [Specifica approvata](BOOT-AND-TUI.md) | Rendering reale senza desktop, input fidato, segreti e ciclo VM |
-| Fork privacy | Audit dei punti da modificare | Disabilitazione runtime di log/discovery/download e TUI ridotta |
+| Fork privacy | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti | Guest reale, altri download/plugin, credenziale esterna e TUI ridotta |
 | Rete e provider | [Progetto](NETWORK-AND-FILES.md) e catture di fixture | Broker, Tor, policy, revoca, test di guasto e provider reale |
 | Documenti | Flussi concordati | USB, copie A→B, OnionShare, quote e annullamento |
 | Effimero | Solo sblocco RO del profilo implementato | Guest RAM completo e zero scritture end-to-end |

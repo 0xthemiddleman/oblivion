@@ -18,6 +18,7 @@ import { ServiceRegistration } from "./services/service-registration"
 import { RemoteTunnel } from "./services/remote-tunnel"
 import { WebUi } from "./services/web-ui"
 import { databasePath } from "./database-path"
+import { Oblivion } from "@opencode/util/oblivion"
 
 export type Mode = "default" | "service" | "stdio"
 
@@ -120,14 +121,16 @@ const processEffect = Effect.fnUntraced(function* (options: Options) {
           },
           config: {
             directory: process.env.OPENCODE_CONFIG_DIR,
-            project: !truthy(
-              process.env.OPENCODE_CONFIG_PROJECT_DISABLE ?? process.env.OPENCODE_DISABLE_PROJECT_CONFIG,
-            ),
+            project:
+              !Oblivion.enabled &&
+              !truthy(process.env.OPENCODE_CONFIG_PROJECT_DISABLE ?? process.env.OPENCODE_DISABLE_PROJECT_CONFIG),
             // .claude is only read for skills, so both flags gate the same roots.
-            claude: !(
-              truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE) ||
-              truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS)
-            ),
+            claude:
+              !Oblivion.enabled &&
+              !(
+                truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE) ||
+                truthy(process.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS)
+              ),
             file: process.env.OPENCODE_CONFIG,
             content: process.env.OPENCODE_CONFIG_CONTENT,
           },

@@ -1,7 +1,9 @@
 # Oblivion — OpenCode v2 privacy fork
 
 This fork is pinned to OpenCode **v2.1.4** (`68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`).
-Phase 0 adds a privacy audit and reproducible synthetic probes; upstream application code is unchanged.
+Phase 0 records the unchanged upstream baseline with reproducible synthetic probes.
+The optional `--oblivion` build now disables application logging/OTLP, diagnostic
+dumps, the updater, provider discovery and project configuration loading.
 A Linux controller prototype implements two-level LUKS2, restricted local IPC
 and confined per-session QEMU lifecycle, tested with a synthetic guest.
 KVM/hardware validation, the actual OpenCode guest, live USB, privacy TUI and
@@ -16,6 +18,7 @@ Do not treat this branch as a private or hardened distribution.
 - [Implementation status and remaining gates (Italian)](docs/oblivion/IMPLEMENTATION.md)
 - [Real LUKS2 storage laboratory (Italian)](docs/oblivion/STORAGE-LAB.md)
 - [Session VM lifecycle laboratory and limitations (Italian)](docs/oblivion/VM-LAB.md)
+- [Compiled privacy profile and Mac ARM development (Italian)](docs/oblivion/PRIVACY-PROFILE.md)
 
 The upstream README follows. Its installation instructions install upstream OpenCode.
 

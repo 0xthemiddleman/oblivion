@@ -14,6 +14,7 @@ import { Provider } from "./provider.js"
 import { Variant } from "./variant.js"
 import { KV } from "./kv.js"
 import snapshotText from "./models-dev/snapshot.txt" with { type: "text" }
+import { Oblivion } from "@opencode/util/oblivion"
 
 export const CatalogModelStatus = Schema.Literals(["alpha", "beta", "deprecated"])
 export type CatalogModelStatus = typeof CatalogModelStatus.Type
@@ -310,6 +311,15 @@ export const layer = (options?: Options) =>
   Layer.effect(
     Service,
     Effect.gen(function* () {
+      if (Oblivion.enabled)
+        return Service.of({
+          get: () =>
+            bundledSnapshot.pipe(
+              Effect.map((catalog) => catalog.filter((item) => item.info.id === "abliteration-ai")),
+              Effect.orDie,
+            ),
+          refresh: () => Effect.void,
+        })
       const fs = yield* FSUtil.Service
       const bus = yield* Bus.Service
       const app = yield* App.Metadata
