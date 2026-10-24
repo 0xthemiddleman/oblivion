@@ -72,9 +72,11 @@ host completo non è stato eseguito in questo tentativo.
 Il nuovo servizio `oblivion-tools`, il suo avvio opzionale dal supervisore e
 l'ingresso firewall 8112 sono ora compilati. La [nuova prova ARM in VM](docs/oblivion/tools-service-evidence.json)
 supera 56 controlli, inclusi 28 test di libreria, 10 di attivazione e due
-dell'adapter compilato. Il comando TCG corretto funziona. Il test x86 di
-storage passa; lo stream host completo è ancora in corso. Il precedente
-problema di riapertura non si è ripresentato, ma la causa resta da chiarire.
+dell'adapter compilato. Il comando TCG corretto funziona. Tutti i 25 job sono
+verdi, inclusi 28 controlli storage x86 e 21 dello stream host completo.
+Nessuno dei 14 marcatori sintetici cercati compare sul disco dello stream.
+Il precedente problema di riapertura non si è ripresentato, ma la causa resta
+da chiarire.
 Sono pronti quattro scenari VM del percorso tool completo, ancora da eseguire.
 Il controller host non invia una policy, quindi nel normale ciclo della
 sessione il servizio rimane spento. `ask` resta bloccato. Client Bun,

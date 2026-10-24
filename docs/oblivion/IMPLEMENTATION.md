@@ -58,10 +58,10 @@ crash del manager, da diagnosticare. La suite stream host non è partita.
 Il servizio `oblivion-tools` e il suo avvio opzionale sotto il supervisore sono
 compilati, con UID 1301 e ingresso 8112. La [prova successiva in VM ARM](tools-service-evidence.json)
 supera 56 controlli: 28 test di libreria, 10 di attivazione, hardening dei binari
-di produzione e due prove dell'adapter compilato. L'avvio TCG corretto passa;
-passa anche lo step x86 di storage, mentre lo stream host completo è ancora
-in corso. Il problema precedente della console non è stato riprodotto né
-spiegato. Quattro scenari del percorso tool completo sono pronti ma non ancora
+di produzione e due prove dell'adapter compilato. Tutti i 25 job passano:
+anche 28 controlli storage x86 e 21 dello stream host completo, senza nessuno
+dei 14 marcatori sintetici cercati sul disco. Il problema precedente della
+console non è stato riprodotto né spiegato. Quattro scenari del percorso tool completo sono pronti ma non ancora
 eseguiti. Il controller host non invia una policy: il servizio resta spento
 nel normale ciclo. Policy del manager, conferme e client Bun restano da collegare.
 Il [report precedente](host-transport-status.json)

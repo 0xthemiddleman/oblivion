@@ -1,7 +1,7 @@
 {
   "date": "2026-10-24",
   "source_commit": "09e494b85beb2f3f04e0fae0ed21cf3c46aba9f4",
-  "status": "service-component-vm-passed-host-stream-suite-running",
+  "status": "service-component-vm-and-regressions-passed",
   "scope": "Tools service binary, private activation and optional supervisor role compiled in Debian ARM64. Component and production-binary hardening checks executed in a swap-free ARM64 TCG VM. The integrated tools grant through supervisor and firewall is not exercised by this run.",
   "ci": {
     "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40107027093",
@@ -11,7 +11,9 @@
     "arm_vm_job": 120911373535,
     "arm_vm_conclusion": "success",
     "x86_host_job": 120911283356,
-    "overall": "in_progress_at_recording"
+    "overall": "success",
+    "successful_jobs": 25,
+    "x86_host_conclusion": "success"
   },
   "verification": {
     "gateway_vm_checks": 56,
@@ -34,8 +36,13 @@
       "truncated": 0,
       "udp": 0
     },
-    "x86_storage_step": "passed; report pending job completion",
-    "host_stream_step": "pending completion"
+    "network_matrix_jobs_passed": 21,
+    "x86_storage_checks": 28,
+    "x86_storage_seconds": 249.11,
+    "host_stream_checks": 21,
+    "host_stream_seconds": 427.16,
+    "host_stream_disk_canaries": 14,
+    "host_stream_plaintext_markers_on_disk": []
   },
   "service_contract": {
     "uid": 1301,
@@ -90,6 +97,30 @@
     {
       "path": "artifacts/oblivion-linux-ci/run-09e494b/arm-evidence/oblivion-build/build-evidence.json",
       "sha256": "7e08461616c2d053d5908e9c298ee187fe6329d3928f9c91c172ad7a7135a3f7"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/jobs.json",
+      "sha256": "6330f3f899b5e4ddf90c9e4d1b66538b0a407ca4513710aa9ac6b950a5a45b8c"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/host-job.log",
+      "sha256": "cf21ea4eb9b59ee6548d6c7ad4ff39acf3b6bdee05a533b5435d7135432a3b6c"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/x64-evidence/ci/host-results/summary.json",
+      "sha256": "470bd29c5295c225069b28ed814fc7267cc7f50d4a1837dad15e4a1a7626b030"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "0ce459a94b176b273c8109ada1328386cea50fb6df4fda8a28600511294d4622"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/x64-evidence/ci/stream-results/serial.log",
+      "sha256": "0a4c33f30733a71067b9ca6f9fcc7e7b607bedad32a28adf5a768b221333c768"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/x64-evidence/ci/stream-images/session/build-evidence.json",
+      "sha256": "fb0673155a6256a9cb01436c749e02d4ccf60e0438462e6bc86677a2951e1502"
     }
   ],
   "previous_attempt": "tools-proxy-component-evidence.json",
@@ -98,6 +129,6 @@
     "Four integrated tools VM scenarios are prepared in commit 0f76f89 and have not run yet. Their Python peer is not Bun/OpenCode.",
     "No production hardware isolation or real provider request is demonstrated by this TCG component laboratory.",
     "No Tor tools circuit-isolation claim is made.",
-    "An earlier x86 console reopening failure did not recur in the current storage step; its cause remains undiagnosed."
+    "An earlier x86 console reopening failure did not recur in the complete 28-check storage suite; its cause remains undiagnosed."
   ]
 }
