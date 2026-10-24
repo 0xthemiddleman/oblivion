@@ -1,0 +1,107 @@
+name: Oblivion checks
+
+on:
+  push:
+    branches: [dev, oblivion-phase-0]
+    paths:
+      - "packages/**"
+      - "script/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/actions/setup-bun/**"
+      - ".github/workflows/oblivion-check.yml"
+  pull_request:
+    branches: [dev]
+    paths:
+      - "packages/**"
+      - "script/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/actions/setup-bun/**"
+      - ".github/workflows/oblivion-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oblivion-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository:
+    name: Repository checks
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bun
+      - name: Canonical check
+        run: bun run check
+      - name: Official TypeScript compiler
+        run: bun run typecheck:tsc
+
+  linux:
+    name: Debian ARM64 builds
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      # Existing Docker stages run locked Rust tests and compile the real
+      # Linux modules. Only public sources and synthetic fixtures are used.
+      - name: Host services and manager
+        run: >-
+          docker buildx build --platform linux/arm64 --progress plain
+          -f script/oblivion/Dockerfile.vm-lab --target host-artifacts
+          --output type=local,dest=artifacts/ci/host .
+      - name: Gateway and transport laboratory image
+        run: >-
+          docker buildx build --platform linux/arm64 --progress plain
+          -f script/oblivion/Dockerfile.vm-lab --target transport-network-artifacts
+          --output type=local,dest=artifacts/ci/transport .
+      - name: Standalone gateway bundle
+        run: >-
+          docker buildx build --platform linux/arm64 --progress plain
+          -f script/oblivion/Dockerfile.vm-lab --target gateway-artifacts
+          --output type=local,dest=artifacts/ci/gateway .
+      - name: Package verified build outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for component in host gateway transport; do
+            (cd "artifacts/ci/$component" && sha256sum --check SHA256SUMS)
+            tar -czf "artifacts/ci/$component.tar.gz" -C "artifacts/ci/$component" .
+          done
+          printf '%s\n' "$GITHUB_SHA" > artifacts/ci/source-commit.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oblivion-host-arm64-${{ github.sha }}
+          path: |
+            artifacts/ci/host.tar.gz
+            artifacts/ci/source-commit.txt
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oblivion-gateway-arm64-${{ github.sha }}
+          path: |
+            artifacts/ci/gateway.tar.gz
+            artifacts/ci/source-commit.txt
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: oblivion-transport-lab-arm64-${{ github.sha }}
+          path: |
+            artifacts/ci/transport.tar.gz
+            artifacts/ci/source-commit.txt
+          retention-days: 7
+          if-no-files-found: error
+          compression-level: 0
