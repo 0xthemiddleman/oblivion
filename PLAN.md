@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.33 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.34 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -32,9 +32,12 @@ il controllo canonico e il compilatore TypeScript ufficiale. La
 9 casi Tor offline, con catture esterne e guasti durante gli stream.
 Anche storage, IPC e scelta nel manager sono ora scritti: profilo salvato nel
 generale e scelta temporanea in RAM, con cambio consentito soltanto a chat
-chiuse. Passano 19 test host sia sul Mac sia in Debian; il menu interattivo
-e il lifecycle completo richiedono ancora collaudo; il relativo job CI è stato
-preparato con il vero client compilato e volumi sintetici. La CI permette di proseguire
+chiuse. Passano 19 test host sia sul Mac sia in Debian. La
+[verifica host in CI](docs/oblivion/host-transport-ci-evidence.json)
+supera 15 controlli, inclusi menu reale, chiavi multiple, profilo SOCKS e disco
+pieno, ma fallisce aspettando la chat nella VM. Il lifecycle completo, i casi
+readonly e il blocco delle modifiche a chat aperta restano da verificare con
+questa build. La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
 Nessuna modifica ai componenti della chat TUI.
 
@@ -223,7 +226,7 @@ Non assumere che un solo flag privacy copra tutto. Mantenere il diff upstream pi
 
 **Gateway configurabile con Tor predefinito e SOCKS5 alternativo**
 
-Questa sezione fissa i requisiti. Le [chiavi multiple e i due percorsi](docs/oblivion/KEYS-AND-EGRESS.md) sono una nuova estensione da realizzare. Lo [studio di networking](docs/oblivion/NETWORK-AND-FILES.md) propone la topologia, separa servizio API e proxy dei tool e identifica le prove ancora necessarie. Per il prototipo si preferisce un proxy con controllo delle destinazioni, senza offrire alla VM un SOCKS Tor libero che aggiri le regole.
+Questa sezione fissa i requisiti. Le [chiavi multiple e i due percorsi](docs/oblivion/KEYS-AND-EGRESS.md) sono implementati per il servizio API, con verifiche separate di storage e trasporto e collaudo del ciclo completo ancora aperto. Il proxy dei tool resta da realizzare. Lo [studio di networking](docs/oblivion/NETWORK-AND-FILES.md) propone la topologia, separa servizio API e proxy dei tool e identifica le prove ancora necessarie. Per il prototipo si preferisce un proxy con controllo delle destinazioni, senza offrire alla VM un SOCKS Tor libero che aggiri le regole.
 
 Il default per il traffico applicativo è bloccare ciò che non è autorizzato. La VM di lavoro non ha interfacce verso la LAN fisica e non eredita proxy o socket dell'host. Può raggiungere solo i servizi interni previsti; l'unico percorso Internet è quello del gateway. L'agente non riceve permessi di amministrazione delle reti e non può cambiare l'ora o il firewall host.
 

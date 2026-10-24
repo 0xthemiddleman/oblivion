@@ -19,8 +19,11 @@ e 9 casi Tor offline, con due VM nuove per caso e catture esterne.
 Passano anche `bun run check` e il compilatore TypeScript ufficiale, 34 task
 ciascuno. Questo supera il blocco delle build locali dovuto agli errori I/O di
 Docker, senza riparare il disco del Mac. Configurazione host e selezione nel
-manager sono compilate anche per Linux; le nuove prove LUKS/manager sono
-collegate a un job CI con il vero client compilato, ancora senza esito verificato.
+manager sono compilate anche per Linux. Le nuove prove LUKS/manager hanno un
+[esito parziale](host-transport-ci-evidence.json): 15 controlli superati su menu,
+chiavi, profili e disco pieno, poi timeout aspettando la chat nella VM. La causa
+è in verifica; il lifecycle completo e i casi readonly non sono ancora superati
+da questa build.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

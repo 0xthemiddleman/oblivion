@@ -116,8 +116,11 @@ Il [report host](host-transport-status.json) registra 19 test nativi passati,
 compresi sei casi del profilo, più Clippy su tutti i target nativi. Non sono
 prove dei rami Linux esclusi da `cfg`. La suite `vm-services-test.py` include
 ora menu reale, LUKS, permessi, staging, ENOSPC, blocco a chat aperta e
-readonly con confronto byte per byte del volume: **non è ancora stata eseguita**
-con questo codice. Restano inoltre da provare il cambio effettivo di gateway
+readonly con confronto byte per byte del volume. La
+[verifica Linux](host-transport-ci-evidence.json) supera 15 controlli,
+compresi menu, credenziali nascoste, selezione RAM e disco pieno, poi fallisce
+aspettando la chat nella VM. I casi readonly e a chat aperta non sono ancora
+raggiunti. Restano inoltre da provare il cambio effettivo di gateway
 Tor↔SOCKS, stream, persistenza delle guardie e tutte le catture esterne. Il
 proxy dei tool rimane da realizzare prima di dichiarare il trasporto globale.
 

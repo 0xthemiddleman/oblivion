@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "eb4f5b07b59161e5e59f98735e1ab1a735f08279",
+  "status": "partial: 15 host checks passed; suite failed waiting for the compiled chat to appear",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40091733054",
+    "run_id": 40091733054,
+    "host_job_id": 120866198745,
+    "conclusion": "failure"
+  },
+  "scope": "Actual Debian systemd controller, unprivileged manager PTY, LUKS general volume and named API-key/transport profiles. Outer Linux TCG; nested session boot not verified.",
+  "checks": [
+    "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+    "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+    "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+    "PASS: fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request",
+    "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+    "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+    "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+    "PASS: trusted network menu saves hidden proxy credentials only in the root-owned encrypted profile; offline policy refuses external proxies",
+    "PASS: temporary transport stays in RAM; saved selection restores it; unknown fields, aliases and corrupt profiles never trigger a fallback",
+    "PASS: full-disk transport update preserves the prior profile; retry replaces the interrupted private staging file",
+    "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+    "PASS: legacy key is read without migration; ENOSPC preserves it and retry publishes the versioned archive before deleting the legacy file",
+    "PASS: full-disk replacement preserves the archive; published archives take precedence over leftover legacy secrets and malformed archives fail closed",
+    "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+    "PASS: trusted manager adds and renames a second hidden key, saves its default and selects another key only in RAM"
+  ],
+  "seconds": 538.36,
+  "failure": {
+    "fixture_line": 542,
+    "expected_screen": "Conversazioni e documenti",
+    "observed_screen": "Trusted manager SESSIONE APERTA frame with blank guest area",
+    "deadline_seconds": 180,
+    "cause": "under investigation; timeout is not accepted as success"
+  },
+  "disk_scan": {
+    "plaintext_markers_found": [],
+    "disk_sha256": "b8a339b0ec48144cf3aeb9dad548e3878a206637b6a4c5ded02749e316484023",
+    "limitation": "This run searched API-key/password/content canaries, but did not yet include the two proxy credential canaries. No general absence-of-leaks claim."
+  },
+  "provenance": {
+    "opencode_sha256": "a8456cb56fc134746a9cd75a2d3b9472786e417a0d5b9162452cc9310fa8bcc0",
+    "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n3177f722c6c8a0b1571cd712b1055f596c7aaabfe0828891be898c39631d841e  initrd\nd3ed11d3015102e5b8aa3fdf99bd9feac6a82d5fa643331cc5e73927ee57071f  host.squashfs\n5f5dc1832ec5d93491b6f9cdbb0fda9350938d31ae20b97c340b46fbd5c1d78a  host-packages.tsv\nb23d84696f492da1c5998e8f4fb026d3357aa72b7b95de89d1e5104f172b2786  guest-packages.tsv\nef632128d7a78c73b7e23195199827f06284f82b81f48199df45fc757bd9687c  sources.sha256\n62a67e02da94db43b21332351bac999957aacb4fe4fe69584f00b5c8e65f90d7  opencode.sha256\n0e1f8b4a5e467dec1bad88470c43b94080f9438c24bd1d8d6a3e48c6aac9a393  opencode-build.json\nc588c020590898778a225edd1d77af041d4cce28f59de1f1f5ff9dde79d7a428  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n",
+    "runtime_fixture_override": {
+      "file": "vm-services-test.py",
+      "sha256": "357863232e5825e02ff9272c59ee2f18728538a0ecba3e1044aecd2cbd63df63"
+    },
+    "runtime_host_bundle": {
+      "manifest": "2513eff88c897f2566e420318755edc6e9599833dd93ca1feea4f1179b7a473f  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  oblivion-gateway-host.service\n539812a4fed15c3ba617664ce78b58ba2830a66f64cd44f7820d5e070bbedea0  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\n41a92074880c4d8f794ec66bd62e1813bfc6f4a0f0cf11e776a5e3af3c61e803  oblivion-storage\nd43a80243aebbf196e753bdaf76047973718a2813e8bd0596e6aa2377a66ad18  oblivion-storage-lab\ne615eb656a86ba3eba47be167aca3bb6321bdd6322a49363ee1934e2e57a1de8  sources.sha256\n",
+      "sources": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  ../oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  ../oblivion-tor-state/src/lib.rs\n8dc68df0af76d6c99fd25b61200e584dda3f93139b2b6530ae9c36b3fda4e56d  ../oblivion-transport/Cargo.toml\nd555e50dfcae8b2263b6f5003fdcddf99e151366b484d3e715e3d6ec6212e3a5  ../oblivion-transport/src/lib.rs\n546042bf477aa5a249f1ec8ce93d25f71b388a48c94d5c93804b6c4763908e39  Cargo.lock\n1a5f944aa50427c9966074006908bcc22db401d2eba73d344fa0589886fd66bc  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\nc26c96a0ca11e1f82c0d1d0d351dc3d28d77cb7a225dd8f378c4bf8b55988c2e  src/channel.rs\nb3d9e951e1e9e7415242c64358c0391124b0755eeee8f1382d0004e5c63833b8  src/client.rs\nbcdb1646d97b15e2263e2b610e0fd63435628829e57a5a80ace64b2730de914f  src/control.rs\ne2fc2244144fd103bd59ee7f86c7dc8595c1f1065eba94b62b261fe63e5f21cf  src/egress.rs\nb65fb7a48bc2f3850282880d533d2df2fe72fa40975cf2fbd8e89cc86904f1e2  src/gateway.rs\n0f7fe02fc80fd581b57f8b57b45a47c315f9f31a0849a64290618bc8d457345b  src/ipc.rs\n63051dd132d554c7e6a302d3097fafdaf8c13111cd22b3d0641eede138bea77c  src/keys.rs\nce01c69ed9fa4d10948f8ab7350765c2fdede5901fc4a2de926db6470e422c15  src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  src/main.rs\n8f6bea4cfa30b727690c673851f51e8c56e95671a509d4a40d9adf0ca63ad62b  src/manager.rs\n9703c7251d03906efcb991d7fa77def326d1f74e2717797870df66955aec3874  src/storage.rs\nfc8ef41fa85d38ab2c4f6d15e62361617672a16f711fd8f86ccc04ce1500b98b  src/terminal.rs\nd1979bcac8b8c7e685c42d301c082363f0383b6177b08e9db975ccae6be94269  src/vm.rs\n659e99741f93a3db5bd87d74e9ee05eb85b0bf8ee913926ffcd72ddef95557d7  tests/channel.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\na77cb5e30ef916b34fb1590b777769e436ed9b8e9087b7ecc50974c360650d73  tests/egress.rs\n943e545d9f2d0e4520090a3dfa43a83dcb3bebe36bf24cd70ac9652c4e02c87c  tests/keys.rs\n",
+      "verified_in_guest": true
+    },
+    "fixture_verified": true
+  },
+  "earlier_failure": {
+    "run_id": 40090888784,
+    "source_commit": "e028638e598f07938b1083e91faa72730d3f5348",
+    "checks_passed": 3,
+    "cause": "Adversarial IPC test did not accept ConnectionResetError after the server returned its deadline error and closed with unread input. The next run passed the exact response assertion and subsequent valid request."
+  },
+  "limits": [
+    "No actual provider, external proxy or gateway VM participates in this storage/UI suite.",
+    "Active-session route/key mutation rejection, readonly ciphertext identity and crash/recovery cases were not reached in this run.",
+    "Temporary RAM selection was tested while the general filesystem was writable; full readonly sequence remains unverified for this source.",
+    "Both QEMU layers use software emulation; no KVM or hardware isolation assertion.",
+    "Synthetic data only; no live product release or comprehensive filesystem/traffic audit."
+  ],
+  "local_artifacts": "artifacts/oblivion-linux-ci/run-eb4f5b0",
+  "artifact_hashes": {
+    "host-evidence/ci/host-image/SHA256SUMS": "e2ae0e40e8a3da83c948877411e3ae2d3005d5ac8319b6cb23532e2bf033526c",
+    "host-evidence/ci/host-image/sources.sha256": "ef632128d7a78c73b7e23195199827f06284f82b81f48199df45fc757bd9687c",
+    "host-evidence/ci/host-results/serial.log": "736a1977c80a8546ee4a5cf2620be11e549c091a110a0c58fb9cb31a9e3b5c5f",
+    "host-evidence/ci/host-results/summary.json": "d3f8ec7841160155ebe7c4917a14d974fc7c910c237a3f14d987903964ebb621",
+    "host-evidence/oblivion-build/build-evidence.json": "0e1f8b4a5e467dec1bad88470c43b94080f9438c24bd1d8d6a3e48c6aac9a393"
+  }
+}
