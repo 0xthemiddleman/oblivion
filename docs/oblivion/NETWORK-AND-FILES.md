@@ -75,12 +75,19 @@ eccezioni infrastrutturali globalmente raggiungibili, oltre a multicast e
 IPv6 fuori da `2000::/3`. Questa è una scelta restrittiva del prodotto;
 non è una verifica dell'indirizzo risolto dal proxy remoto.
 
-Passano nove test dedicati sul Mac, insieme ai 19 test host precedenti e a
-Clippy. La funzione non esegue DNS né apre socket. Non è ancora collegata
-al traffico: persistenza nel generale, IPC, proxy HTTP/CONNECT, richieste
-di conferma, permessi temporanei con scadenza e revoca dei tunnel restano
-da implementare e verificare. Il limite del frame JSON appartiene al canale
-che caricherà la policy; il modulo valida struttura, valori e numero di regole.
+Passano nove test dedicati sul Mac e in Debian ARM/x86, insieme ai 19 test host
+precedenti; passa anche Clippy sul Mac. La [CI del motore puro](network-policy-ci-evidence.json)
+supera tutti i 25 job. La funzione non esegue DNS né apre socket.
+
+Il successivo collegamento al [connettore](EGRESS-CONNECTOR.md) è scritto e
+attende collaudo: un ruolo `oblivion-tools`, abilitato soltanto da configurazione
+privata esplicita, verifica sessione, destinazione e porta prima di contattare
+il trasporto. `ask` e `deny` chiudono la richiesta; soltanto `allow` inoltra.
+La configurazione privata è limitata a 128 KiB e la policy a 128 regole.
+Il supervisore corrente omette questa configurazione: il canale non è ancora
+disponibile al guest. Persistenza nel generale, IPC host, proxy HTTP/CONNECT,
+conferme, scadenze e revoca dei singoli permessi restano da implementare.
+La revoca dell'intero grant continua a interrompere tutte le sue connessioni.
 
 **Servizio API e significato delle autorizzazioni**
 

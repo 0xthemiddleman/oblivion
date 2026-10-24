@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.38 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.39 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -52,10 +52,13 @@ stato Tor. Sono verdi tutti i 25 job della relativa CI. Il cambio effettivo
 Tor↔SOCKS, provider reale e isolamento KVM della sessione restano da collaudare.
 
 Il [motore delle regole](docs/oblivion/NETWORK-AND-FILES.md) ora valida domini,
-IP, porte e ambiti, con nove test nativi passati: divieti prioritari e
-destinazioni sconosciute in attesa di conferma. Non è ancora collegato al
-traffico o al manager; proxy dei tool, persistenza, conferme e scadenze
-rimangono da implementare. Questa aggiunta non è coperta dalla CI SOCKS precedente.
+IP, porte e ambiti, con nove test passati sul Mac e in Debian ARM/x86:
+divieti prioritari e destinazioni sconosciute senza autorizzazione implicita.
+La [CI successiva](docs/oblivion/network-policy-ci-evidence.json) supera tutti
+i 25 job, ripetendo anche i 18 controlli SOCKS. È ora scritto il collegamento
+delle regole al connettore dei tool, ancora da collaudare e non attivato dal
+supervisore: `ask` rimane bloccato. Proxy HTTP/CONNECT, integrazione nel manager,
+persistenza, conferme e scadenze rimangono da implementare.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
 Nessuna modifica ai componenti della chat TUI.

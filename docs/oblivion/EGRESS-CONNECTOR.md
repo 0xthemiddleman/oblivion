@@ -5,8 +5,9 @@ separatamente. Il collegamento a supervisore e firewall e il nuovo codice host
 per [storage, IPC e selezione nel manager](KEYS-AND-EGRESS.md) sono ora compilati
 in [Debian ARM64 tramite CI](linux-ci-evidence.json). Supervisore e firewall
 superano inoltre la [matrice con due VM](transport-vm-evidence.json): 12 casi
-SOCKS e 9 Tor offline. Il lifecycle Linux dei volumi e il cambio effettivo di
-profilo attraverso il manager rimangono da collaudare.
+SOCKS e 9 Tor offline. Il [lifecycle Linux dei volumi](host-lifecycle-ci-evidence.json)
+supera 28 controlli e il [percorso SOCKS completo](host-socks-stream-ci-evidence.json)
+ne supera 18. Il cambio effettivo Tor↔SOCKS attraverso il manager è ora in collaudo.
 I componenti della chat OpenCode non cambiano.
 
 ## Confini implementati
@@ -21,9 +22,30 @@ Ogni istanza appartiene a un solo grant. Il broker deve autenticarsi sul
 listener locale con il token di quella apertura. Per ora è autorizzato solo
 `api.abliteration.ai:443`, passato come nome al SOCKS: autenticazione e verifica
 della destinazione precedono qualsiasi connessione al proxy. IP diretti, altre
-destinazioni, altre porte, BIND e UDP ASSOCIATE vengono rifiutati. Il futuro
-proxy dei tool richiederà un proprio canale autorizzato; questo listener non è
-un SOCKS generale da esporre alla VM della chat.
+destinazioni, altre porte, BIND e UDP ASSOCIATE vengono rifiutati. Questo
+listener non è un SOCKS generale da esporre alla VM della chat.
+
+È ora scritto, ma ancora da collaudare, il canale `oblivion-tools`. La
+configurazione privata opzionale `tools` contiene l'identità della sessione e
+la policy versionata; in sua assenza il ruolo viene rifiutato già durante
+l'autenticazione. Le regole si applicano prima del contatto con il proxy:
+`allow` inoltra, `ask` e `deny` chiudono senza attendere una conferma ancora non
+implementata. I nomi sono canonicalizzati; gli IP pubblici autorizzati usano
+i rispettivi tipi SOCKS IPv4/IPv6, sempre nel trasporto scelto. Le regole dei
+tool non ampliano il ruolo API, che mantiene origine e porta fisse.
+
+Tor riceve username distinti per API e tool e il token per apertura; un
+SOCKS esterno riceve soltanto le proprie credenziali configurate. Questa
+distinzione non prova l'isolamento effettivo dei circuiti Tor. Il supervisore
+corrente non invia `tools`, il firewall non apre un nuovo ingresso e manca il
+proxy HTTP/CONNECT del guest: questa aggiunta non completa il SOCKS globale.
+Le nuove prove di componente usano socket reali per autorizzazione, indirizzi,
+separazione delle credenziali e revoca; i risultati precedenti non le coprono.
+Sono aggiunti cinque test di libreria e due di attivazione del processo: un
+profilo privato con 128 regole oltre il precedente limite di 4 KiB e il rifiuto
+di frame oltre 128 KiB. La CI ARM ora esegue anche il laboratorio gateway
+senza swap e le due prove dell'adapter compilato, oltre a costruire i binari.
+Questa estensione della CI attende il primo risultato.
 
 Il tipo condiviso `oblivion-transport::Transport` distingue:
 

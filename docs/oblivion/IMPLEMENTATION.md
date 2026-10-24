@@ -37,11 +37,15 @@ relativa CI sono verdi. Non è una prova del provider remoto o della
 transizione host Tor↔SOCKS.
 
 Il motore puro delle regole in `oblivion-transport::policy` aggiunge nove
-test nativi passati a quelli host precedenti; passa anche Clippy. Valida
+test passati sul Mac e in Debian ARM/x86 a quelli host precedenti; passa
+anche Clippy sul Mac. Valida
 destinazioni, wildcard delimitate, porte e ambiti e applica precedenza
 `deny > ask > allow`. La [descrizione tecnica](NETWORK-AND-FILES.md) distingue
 questo nucleo dal proxy dei tool, dalle conferme e dalla persistenza ancora
-da collegare. La CI del ciclo SOCKS precede questa aggiunta.
+da collegare. La [CI successiva](network-policy-ci-evidence.json) copre il
+motore puro e ripete il ciclo SOCKS completo: tutti i 25 job passano.
+Il connettore ha ora un canale tool con policy esplicita, ancora da collaudare;
+il supervisore non lo abilita e il proxy HTTP del guest non è implementato.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

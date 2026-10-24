@@ -1,0 +1,191 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "190287d1d3acf1da91deb8091621e297c395a19a",
+  "status": "passed",
+  "scope": "Pure destination policy evaluator tested on native macOS ARM64 and Debian ARM64/x86_64; complete existing API SOCKS lifecycle rerun. No tools traffic integration in this source.",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40101190628",
+    "run_id": 40101190628,
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 120893500293,
+        "name": "Debian ARM64 builds",
+        "conclusion": "success"
+      },
+      {
+        "id": 120893500449,
+        "name": "Repository checks",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894084275,
+        "name": "ARM64 compiled chat boot",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894084278,
+        "name": "x86 host LUKS, manager and SOCKS streams",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159284,
+        "name": "Network socks required supervisor-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159286,
+        "name": "Network socks required broker-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159294,
+        "name": "Network socks required egress-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159295,
+        "name": "Network socks none broker-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159296,
+        "name": "Network tor isolation disconnect",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159298,
+        "name": "Network socks none supervisor-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159315,
+        "name": "Network socks required reconfigure",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159318,
+        "name": "Network socks required revoke",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159319,
+        "name": "Network socks none egress-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159329,
+        "name": "Network socks none control-disconnect",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159342,
+        "name": "Network socks none revoke",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159344,
+        "name": "Network tor isolation oversized",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159353,
+        "name": "Network tor isolation shutdown",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159363,
+        "name": "Network socks none reconfigure",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159364,
+        "name": "Network socks required control-disconnect",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894159381,
+        "name": "Network tor isolation malformed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894160150,
+        "name": "Network tor isolation partial",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894160152,
+        "name": "Network tor isolation duplicate-grant",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894160228,
+        "name": "Network tor isolation supervisor-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894160272,
+        "name": "Network tor isolation broker-crash",
+        "conclusion": "success"
+      },
+      {
+        "id": 120894160411,
+        "name": "Network tor isolation egress-crash",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "verification": {
+    "policy_tests": {
+      "macos_arm64": 9,
+      "debian_arm64": 9,
+      "debian_x86_64": 9
+    },
+    "previous_host_unit_tests": 19,
+    "canonical_check_tasks": 34,
+    "official_typescript_tasks": 34,
+    "network_vm_cases": 21,
+    "host_luks_checks": 28,
+    "api_socks_stream_checks": 18,
+    "host_luks_seconds": 324.26,
+    "api_socks_stream_seconds": 445.8,
+    "plaintext_secret_markers_on_disk": []
+  },
+  "source_sha256": {
+    "packages/oblivion-transport/src/policy.rs": "9c968a031de582dbdc1563cf978c53f65f3979917cd66576882e9a0492b9ad48",
+    "packages/oblivion-host/tests/network-policy.rs": "79eba5ffafb656f9f7b883c7d3b00f46e2dc3e8051bb1d5e1a548c9d1d1905bf"
+  },
+  "retained_evidence": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-190287d/jobs.json",
+      "sha256": "5a4f134c3840b8b99e82f1ff885622b5829cb48befd80525c2de11ab55d54b50"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-190287d/linux-job.log",
+      "sha256": "db41ce13e95baf9dfea0cb49cc63e597f3484492f2f0c511a1f67fec6a9fc3d9"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-190287d/host-job.log",
+      "sha256": "0dcdf1f4f95b1829a49b77e2a57001cd2fa847dc46a8a431001372e75e364f2f"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-190287d/repository-job.log",
+      "sha256": "5032badca4a12a229ccc26a8506599b241e290a123d66b259587ce28ad737179"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-190287d/x64-evidence/ci/host-results/summary.json",
+      "sha256": "50bb91afba85bb473af92048d9ff2ecadc5731ddd02a9e4ac07a061a03bd4193"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-190287d/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "1c27f87c6ebbf47250a2e1f80338ea88559197870bdb8e469366b5bfac8abfd9"
+    }
+  ],
+  "limits": [
+    "The policy function does not open sockets or resolve names; these results do not demonstrate tools proxy enforcement.",
+    "The stream suite uses synthetic credentials and a local TLS provider, outer KVM with inner TCG and no external host NIC.",
+    "Tor-to-SOCKS transition and prompt/response disk canaries were added in a later commit and are not covered here.",
+    "A zero-hit canary scan does not prove the absence of all filesystem disclosures.",
+    "No remote Abliteration request, physical live USB, session KVM isolation or general tools proxy is certified by this run."
+  ]
+}
