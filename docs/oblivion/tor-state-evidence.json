@@ -1,0 +1,444 @@
+{
+  "date": "2026-10-24",
+  "scope": "Selective Tor 0.4.9.14 persistence, bootstrap gating and final checkpoint in the real general LUKS lifecycle; ARM development on Mac. No provider request or production KVM claim.",
+  "source_hashes": {
+    "packages/oblivion-gateway/Cargo.lock": "4076bea6d6456bb7523847333e5d0fe1021de8242d1e9c210c0b25f18fb4190d",
+    "packages/oblivion-gateway/Cargo.toml": "ffa4e6af9b99376e1efa935dfe9b9de35a183f79243c17b2280760f610414e75",
+    "packages/oblivion-gateway/guest/oblivion-gateway-control.service": "55a6fbc87353256c96d134ee29e31cd40528945012873736e24691331759db42",
+    "packages/oblivion-gateway/guest/torrc": "8ad8ac52186b63eb322ae82ab5beaa442ef8278743cfeab00540f1c7ace0c8c4",
+    "packages/oblivion-gateway/src/control.rs": "76d28a1c78b6bde4fc6f076617bdaa74e97391ec7cb80c165200881c8981ff87",
+    "packages/oblivion-gateway/src/supervisor.rs": "79c82f64fa8f7a18132c83dfc9873e9a61e6cf6ea0c8fa0edcfcadf617a4acf2",
+    "packages/oblivion-gateway/src/tor.rs": "7745e69e3e2373c7fd6e751aaf00e4b33d27faba68442df2d8075fda8683588d",
+    "packages/oblivion-host/Cargo.lock": "58e0d39dbcf42cfd606853f9355e8b3ae02a5ce80b613d529c827a14def34da6",
+    "packages/oblivion-host/Cargo.toml": "6886ddcdaecae96a30ad5b65b178dd34899e12a6c673efdba14b97d1ecb80b02",
+    "packages/oblivion-host/host/oblivion-gateway-host.service": "7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015",
+    "packages/oblivion-host/src/gateway.rs": "f02061934ff235aa009ce081d1680d58a74a213b2c7d39a4084ca096f9d58a11",
+    "packages/oblivion-host/src/manager.rs": "bf573c8ceef7648aa8323d810a8fd096cab253bcc1b4f3e9f62ed89d413e0ee6",
+    "packages/oblivion-host/src/storage.rs": "e499aaef5250bacba6f13d4c222a2a0221693145a8583c384a936267fb2f6b39",
+    "packages/oblivion-tor-state/Cargo.lock": "1a2a4b5b3ff7d599a68a53479a34a41f4c2d30c2b22b142cff503fb28aa3633f",
+    "packages/oblivion-tor-state/Cargo.toml": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf",
+    "packages/oblivion-tor-state/src/lib.rs": "5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5",
+    "script/oblivion/Dockerfile.vm-lab": "1d37b9554e2a6ae12c10c02f3dc63a0eaabe88e591abf9b9a1da02bf303837c3",
+    "script/oblivion/Dockerfile.vm-lab.dockerignore": "c1121576bc5bb0bfe4db600fc963e81e3ccf992b5a7f0653cbe7f5f61b906843",
+    "script/oblivion/packet_capture.py": "d7af62155d2c6941d68fb8d8aef28b355f3a5b60d63ddd8d594faf1defcfc876",
+    "script/oblivion/run-network-lab.py": "e9f571781de73a8c560c6858f6dd9d0e1ff06cd5b27b727052654847ff8300ef",
+    "script/oblivion/run-vm-lab.py": "6f336682ed1ab96fc49521c380a56620e8b909fdd7254c7cb5f760adc47fc161",
+    "script/oblivion/vm-network-fixture.py": "76da9016bbf36deb1a575cad5d417bfaa6e96d6d752ae275ec24ebcb5ff6dd3a",
+    "script/oblivion/vm-tor-state-test.py": "a090c472dcc0fc394e8a85ef355aa93a9724d66f413ebb90430bf530fca77dd1"
+  },
+  "environment": {
+    "outer_accelerator": "hvf",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "provider_requests": false,
+    "base_image_manifest_sha256": "60745c1fb4fa9f27174a4d22c7bbf36eaef87cbd56e8044fbf99bd5a24eabff2",
+    "host_bundle": "artifacts/oblivion-tor-state/bundle-02",
+    "host_bundle_manifest": "83b83f09cf6b28c47321df285be7b43114db1a6c394a256c5f17fbf8cbd9163c  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  oblivion-gateway-host.service\n30adb7902abb7dd886aec8ee34ea3e859d7e92f4efa3e329ad4c4a970d658d4c  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\na1c71558e751d3d98be590b89ff34f1513ed40f9d96f3509c790f7f7b48be091  oblivion-storage\n6e20475f7e87fb6d3c89bd003dc4a4ce0803231808b16cc9b4f414ef2dd607d6  oblivion-storage-lab\n2bb084120201bfb3fbf0a658b44bb87680fd417ceab68abd0fce483ab1579416  sources.sha256\n",
+    "host_bundle_sources": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  ../oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  ../oblivion-tor-state/src/lib.rs\n58e0d39dbcf42cfd606853f9355e8b3ae02a5ce80b613d529c827a14def34da6  Cargo.lock\n6886ddcdaecae96a30ad5b65b178dd34899e12a6c673efdba14b97d1ecb80b02  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\n2f4d99b7904f01ec0a8f4fb2616f017c7d91e0cfb16677d4b7617bf95471a98e  src/client.rs\nc93e5eae70ae5e999ff2d885910ad22d565f0494705f432223e000617d08a0ed  src/control.rs\nf02061934ff235aa009ce081d1680d58a74a213b2c7d39a4084ca096f9d58a11  src/gateway.rs\n7da8a099dd5fd947be5f17b7baa96523fda9c9b3a321a166d5e9e793aca57605  src/ipc.rs\na68fc4a96fdb02e9540208c80612033491253ed3a1fe72e29cf8a8b93040be86  src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  src/main.rs\nbf573c8ceef7648aa8323d810a8fd096cab253bcc1b4f3e9f62ed89d413e0ee6  src/manager.rs\ne499aaef5250bacba6f13d4c222a2a0221693145a8583c384a936267fb2f6b39  src/storage.rs\nbf147d38b44c179516573fc63be01767687ee077baa1bff94871d151b18f06ed  src/terminal.rs\n485fa4b2e83a4cf34297fbc9a18b89d6d8d21a4e0dd918b005eb32d883328732  src/vm.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\n",
+    "gateway_image": "artifacts/oblivion-tor-state/image-03",
+    "gateway_manifest": "2b30f06c593e8fe9c054f09c1655b07ea66788f491419b282357d89e64317ccb  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\n932fa95f4251790bb494abd4772ba6b460e52df01e035e12ffc7231c92400bd6  gateway.squashfs\n5cd145a69f3b59b43e458881c1920c2851fe7769689381a27d03ffac23c3d82d  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nccb33b5e735d7f4d6a656d4ed1495cdb7ca831a6de175d7bc2a9ee9dba62cf6b  lab-packages.tsv\ndf4897299a1f78555ce384d75ed2496cf8ffc7aa5a5c5af6fe010b214dba010f  laboratory.squashfs\n46685a48f12af2ea29185f143ec13e87f60599996881339f563d3d2e75d30559  sources.sha256\n",
+    "gateway_binary_sources": "5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  ../oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  ../oblivion-tor-state/src/lib.rs\naabd2af12e26033cb8de9b63841b54574718406e4479b47e41bc0d92fc6f14e0  .cargo/config.toml\n4076bea6d6456bb7523847333e5d0fe1021de8242d1e9c210c0b25f18fb4190d  Cargo.lock\nffa4e6af9b99376e1efa935dfe9b9de35a183f79243c17b2280760f610414e75  Cargo.toml\n07aa5ef007032add91dc2a12200f4164c62080de45ace048baf45f4018dd3d32  src/broker.rs\nc5bf4cdcdbcfbb03f755850316544d52ac882744a3abf56dd5d19facff487be6  src/broker/tests.rs\n76d28a1c78b6bde4fc6f076617bdaa74e97391ec7cb80c165200881c8981ff87  src/control.rs\ne05e5159a7f08d0f74b8be9c8e30e5c35a7716c859b84508d2671cdbfd8502ac  src/lib.rs\nd4321f3abc3f3a86a921bba2b07cb83f2d241a2f5c1680bbf794a8512f82168b  src/main.rs\nb74e8927bd78e8378a164e37f1d5fa2a461bc93bee1075d4a2c896592252c2c0  src/request.rs\n79c82f64fa8f7a18132c83dfc9873e9a61e6cf6ea0c8fa0edcfcadf617a4acf2  src/supervisor.rs\n7745e69e3e2373c7fd6e751aaf00e4b33d27faba68442df2d8075fda8683588d  src/tor.rs\na1dbc53394a45f7142970829f2e4bb4d54b778b58959089158c86a43d1e6d47a  tests/activation.rs\n",
+    "compiled_sources_match_repository": true,
+    "runtime_overrides": [
+      "Current host binaries and units in RAM on the earlier immutable laboratory host.",
+      "Public UID entries, QEMU binaries and gateway image copied into RAM with manifest verification.",
+      "Production gateway filesystem; only host fixture stderr goes to the volatile lab journal.",
+      "Online fixture uses a serial acknowledgement barrier before gateway activation; capture is outside the outer host VM."
+    ]
+  },
+  "persistence": {
+    "destination": "general/profile/tor-state",
+    "owner": "root",
+    "mode": "0600",
+    "retained_records": ["Guard", "TorVersion", "LastWritten"],
+    "guard_metadata": "Includes guard selection and confirmation timestamps, order and path-bias counters; this is persistent operational metadata.",
+    "excluded": "Chat data, destination history, logs, bandwidth history, consensus/descriptors cache and circuit-build statistics.",
+    "maximum_state_bytes": 131072,
+    "maximum_guards": 512,
+    "maximum_guard_bytes": 2048,
+    "tor_ram_guard_flush_nominal_seconds": 30,
+    "host_poll_seconds": 5,
+    "usb_write": "Only a changed Guard record set or missing profile; atomic staging/fsync/rename/directory fsync. LastWritten changes alone do not cause a write.",
+    "readonly": "Import into RAM without writing; encrypted general image is byte-identical before and after the tested lifecycle.",
+    "stop": "Revoke API, graceful Tor stop, final selective snapshot, host save acknowledgement, VM destruction, then storage closure.",
+    "crash": "Last successful checkpoint remains; changes since it may be lost. The nominal 35 seconds is not a hard deadline under scheduling or I/O faults."
+  },
+  "offline": {
+    "artifacts": "artifacts/oblivion-tor-state/offline-01",
+    "summary_sha256": "f3978b558861cf138807f3b88170fd367380bb47a44802fe64a6f3eaf34b54e9",
+    "guest_pass": true,
+    "seconds": 193.35,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: fresh Tor state is saved with only version and LastWritten, root-owned inside the encrypted profile",
+      "PASS: Tor imports a saved guard before networking and preserves its identity across two gateway VM lifetimes",
+      "PASS: readonly startup imports the saved guard and performs no write to any byte of the encrypted general profile",
+      "PASS: unreviewed versions and nonselective profiles fail closed without replacing the saved state or claiming the general is locked",
+      "PASS: a full profile prevents gateway readiness; retry safely replaces interrupted staging and preserves the API key[  190.970696] EXT4-fs (vdb): unmounting filesystem 963495bd-8445-463b-a165-aebf20821a45."
+    ],
+    "qemu_exit": 0,
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "0d6d515b5430815f9310ff67dda66ddd27127eacce61f5b84a3560b787b1d10b",
+    "fixture_verified": true,
+    "runtime_fixture_override": {
+      "file": "vm-tor-state-test.py",
+      "sha256": "6f0fcfd6d7b62fdddb4241ed336c9ece74362dad044ec4b9819ac67955dd5461"
+    },
+    "captures": null
+  },
+  "online": {
+    "artifacts": "artifacts/oblivion-tor-state/online-02",
+    "summary_sha256": "a5954eef523ffe44eff5a8e8d9a382278c1654dffe6f29812eb7f5f43bc89cb1",
+    "guest_pass": true,
+    "seconds": 267.78,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: fresh Tor state is saved with only version and LastWritten, root-owned inside the encrypted profile",
+      "PASS: Tor imports a saved guard before networking and preserves its identity across two gateway VM lifetimes",
+      "PASS: readonly startup imports the saved guard and performs no write to any byte of the encrypted general profile",
+      "PASS: unreviewed versions and nonselective profiles fail closed without replacing the saved state or claiming the general is locked",
+      "PASS: a full profile prevents gateway readiness; retry safely replaces interrupted staging and preserves the API key",
+      "PASS: real Tor bootstrap and a persisted sampled guard set precede online session authorization; no provider request is made",
+      "PASS: a new gateway imports real sampled guards instead of resetting Tor identity on unlock"
+    ],
+    "qemu_exit": 0,
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "5809259057249f7287d1bbe214122283f31300a5e45682a7780cf1dadffbf09e",
+    "fixture_verified": true,
+    "runtime_fixture_override": {
+      "file": "vm-tor-state-test.py",
+      "sha256": "a090c472dcc0fc394e8a85ef355aa93a9724d66f413ebb90430bf530fca77dd1"
+    },
+    "captures": {
+      "uplink": {
+        "packets": 6765,
+        "ipv4": 6763,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 6763,
+        "tcp_ports": [443, 444, 9000, 9001, 41678, 54334, 56906, 58028],
+        "udp_ports": [],
+        "sha256": "66b47d5d9d7b69e16265837ade5827b4912440c2e77fcdbc1721f10b1dfcf3d9"
+      },
+      "before_enable": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      }
+    }
+  },
+  "regressions": {
+    "session_network": {
+      "artifacts": "artifacts/oblivion-tor-state/session-regression",
+      "summary_sha256": "1bfa278e3a3a13deb99cdb1736d2c0fcb7f92dd16bc2c44bc93101d7475d13dc",
+      "guest_pass": true,
+      "seconds": 265.81,
+      "checks": [
+        "PASS: general unlock without an API key leaves gateway services and VM stopped",
+        "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and cannot reach provider while Tor is disabled",
+        "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+        "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+        "PASS: B gets a new grant and rejects A's token; the Ethernet connection reconnects only through a newly started session VM",
+        "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+        "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+        "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+      ],
+      "qemu_exit": 0,
+      "plaintext_markers_on_disk": [],
+      "disk_sha256": "7dd4f7fd3b9bc82a72c1e9edd3e2861b73a8fa994f05617f685dabf0990984a3",
+      "fixture_verified": true,
+      "runtime_fixture_override": {
+        "file": "vm-session-network-test.py",
+        "sha256": "54ccf8abc602007cd23833a94c6aec9c5b9d9be3cfdd1e93e36b5842ce74e0dc"
+      },
+      "captures": null
+    },
+    "manager_storage": {
+      "artifacts": "artifacts/oblivion-tor-state/manager-regression",
+      "summary_sha256": "7f8ce8526e68a9ec82cdea284da72799f12f5664ec260c4b762227b929300274",
+      "guest_pass": true,
+      "seconds": 201.8,
+      "checks": [
+        "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+        "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+        "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+        "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+        "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+        "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+        "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+        "PASS: profile exhaustion preserves the previous key; retry publishes a complete replacement",
+        "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+        "PASS: an open session prevents changes to the infrastructure credential",
+        "PASS: read-only profile exposes only credential presence, rejects key changes and pending deletion, and remains byte-identical",
+        "PASS: interrupted session formatting survives restart, cannot open, and is discarded only after confirmation",
+        "PASS: disk exhaustion is explicit, preserves existing archives and permits reopening after pending cleanup",
+        "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+        "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+        "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+        "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+        "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+        "PASS: synthetic passwords and API keys never appear on the managed console"
+      ],
+      "qemu_exit": 0,
+      "plaintext_markers_on_disk": [],
+      "disk_sha256": "cec09968173bc69dec9471b7b77dad15f95a981c855c7e76d282ea8f229dbb80",
+      "fixture_verified": true,
+      "runtime_fixture_override": {
+        "file": "vm-services-test.py",
+        "sha256": "f07bdb7238234a48964fc3a3391f82811ac8a4f7fa6ee91febd96211e5c0d965"
+      },
+      "captures": null
+    },
+    "control_oversized": {
+      "artifacts": "artifacts/oblivion-tor-state/control-oversized",
+      "summary_sha256": "d0f19bf43789edb05151994180b3868ed6a5d254d0c886f9ee1a395840807640",
+      "passed": true,
+      "seconds": 11.39,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; gateway Tor starts disabled",
+        "private virtio control configures the production supervisor; API child has UID 1300, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault oversized removes the broker and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "captures": {
+        "chat-inside.pcap": {
+          "packets": 85,
+          "ipv4": 66,
+          "ipv6": 13,
+          "udp": 3,
+          "tcp": 63,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 36140, 37642, 43470, 43778, 54636, 55858, 56640, 56652, 56656, 56662,
+            56668, 56684, 56694, 56702, 60180, 60918
+          ],
+          "udp_ports": [53, 443, 41322, 46339, 51724],
+          "sha256": "b594dc46f0ecd8a3fffde2de95d350449c235660b3c7991783f53da6f6fa18ec"
+        },
+        "gateway-inside.pcap": {
+          "packets": 84,
+          "ipv4": 65,
+          "ipv6": 13,
+          "udp": 3,
+          "tcp": 62,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 36140, 37642, 43470, 43778, 54636, 55858, 56640, 56652, 56656, 56662,
+            56668, 56684, 56694, 60180, 60918
+          ],
+          "udp_ports": [53, 443, 41322, 46339, 51724],
+          "sha256": "ac9f9420aa2c48ee3ff04047aedfe9bc91eed251808ab989ac713cfd1d59f1b2"
+        },
+        "before-tor-outside.pcap": {
+          "packets": 0,
+          "ipv4": 0,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 0,
+          "tcp_ports": [],
+          "udp_ports": [],
+          "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+        },
+        "gateway-outside.pcap": {
+          "packets": 0,
+          "ipv4": 0,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 0,
+          "tcp_ports": [],
+          "udp_ports": [],
+          "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+        }
+      }
+    },
+    "control_partial": {
+      "artifacts": "artifacts/oblivion-tor-state/control-partial",
+      "summary_sha256": "844eff38efd35b69f2be7a1a19825b08fdda4fdaa3c3c3f11f13fe6b4c09159b",
+      "passed": true,
+      "seconds": 16.49,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; gateway Tor starts disabled",
+        "private virtio control configures the production supervisor; API child has UID 1300, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault partial removes the broker and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "captures": {
+        "chat-inside.pcap": {
+          "packets": 86,
+          "ipv4": 66,
+          "ipv6": 14,
+          "udp": 3,
+          "tcp": 63,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 34642, 36360, 41184, 42250, 42260, 42276, 42280, 42284, 42298, 46662,
+            49640, 49650, 57036, 58260, 59584, 60960
+          ],
+          "udp_ports": [53, 443, 33131, 35218, 46424],
+          "sha256": "f4f7a22bc10169e011b116b6d2ae6d9ff9db5447e75527ea8825f9c58c0a4f62"
+        },
+        "gateway-inside.pcap": {
+          "packets": 84,
+          "ipv4": 65,
+          "ipv6": 13,
+          "udp": 3,
+          "tcp": 62,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 34642, 36360, 41184, 42250, 42260, 42276, 42280, 42284, 42298, 46662,
+            49640, 57036, 58260, 59584, 60960
+          ],
+          "udp_ports": [53, 443, 33131, 35218, 46424],
+          "sha256": "c0d13221096cd724d71d499089a9160a505bade16d5fbc56a1669e9fe7a81a61"
+        },
+        "before-tor-outside.pcap": {
+          "packets": 0,
+          "ipv4": 0,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 0,
+          "tcp_ports": [],
+          "udp_ports": [],
+          "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+        },
+        "gateway-outside.pcap": {
+          "packets": 0,
+          "ipv4": 0,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 0,
+          "tcp_ports": [],
+          "udp_ports": [],
+          "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+        }
+      }
+    }
+  },
+  "earlier_attempts": [
+    {
+      "artifacts": "artifacts/oblivion-tor-state/online-01",
+      "summary_sha256": "8ea0513293d2a495187947f8e54dc1a2e2af6a4830505b32794973687e100ecb",
+      "guest_pass": true,
+      "seconds": 256.3,
+      "checks": [
+        "PASS: general unlock without an API key leaves gateway services and VM stopped",
+        "PASS: fresh Tor state is saved with only version and LastWritten, root-owned inside the encrypted profile",
+        "PASS: Tor imports a saved guard before networking and preserves its identity across two gateway VM lifetimes",
+        "PASS: readonly startup imports the saved guard and performs no write to any byte of the encrypted general profile",
+        "PASS: unreviewed versions and nonselective profiles fail closed without replacing the saved state or claiming the general is locked",
+        "PASS: a full profile prevents gateway readiness; retry safely replaces interrupted staging and preserves the API key",
+        "PASS: real Tor bootstrap and a persisted sampled guard set precede online session authorization; no provider request is made",
+        "PASS: a new gateway imports real sampled guards instead of resetting Tor identity on unlock"
+      ],
+      "qemu_exit": 0,
+      "plaintext_markers_on_disk": [],
+      "disk_sha256": "f05c0fdb82ce98a3aa23d057f03371ab8754361ca4b834a97e1390e7ce588658",
+      "fixture_verified": true,
+      "runtime_fixture_override": {
+        "file": "vm-tor-state-test.py",
+        "sha256": "6f0fcfd6d7b62fdddb4241ed336c9ece74362dad044ec4b9819ac67955dd5461"
+      },
+      "captures": {
+        "uplink": {
+          "packets": 6906,
+          "ipv4": 6904,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 6904,
+          "tcp_ports": [443, 9200, 34506, 41612, 42424, 54308, 57752],
+          "udp_ports": [],
+          "sha256": "29610e60408fe5c2ae030ba6273379aed002e7f0f22e32bb7e07697c6fb82fca"
+        },
+        "before_enable": {
+          "packets": 6906,
+          "ipv4": 6904,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 6904,
+          "tcp_ports": [443, 9200, 34506, 41612, 42424, 54308, 57752],
+          "udp_ports": [],
+          "sha256": "29610e60408fe5c2ae030ba6273379aed002e7f0f22e32bb7e07697c6fb82fca"
+        }
+      },
+      "passed": false,
+      "reason": "Guest checks passed; the original PCAP phase assertion compared guest wall time with QEMU capture timestamps about one hour apart. Replaced the comparison with a guest/runner barrier and a separate pre-enable capture; online-02 passes."
+    },
+    {
+      "artifacts": "artifacts/oblivion-tor-state/smoke-01",
+      "summary_sha256": "13b54e80a6021bd32b28757341d06a22acd6b4910a755e580a5246c623002279",
+      "guest_pass": true,
+      "note": "Ten host lifecycle checks on the earlier bundle-01/image-02, before bootstrap gating; supporting evidence only."
+    }
+  ],
+  "verification": {
+    "native_rust": {
+      "tor_state_tests": 3,
+      "host_console_tests": 4,
+      "gateway_library_tests": 10,
+      "clippy_all_targets": "passed with -D warnings for all three crates"
+    },
+    "linux_builds": {
+      "host_tests": 4,
+      "gateway_library_tests": 10,
+      "gateway_activation_tests": "compiled, not rerun in this change; existing activation code unchanged",
+      "host_log": "artifacts/oblivion-tor-state/build-bundle-02.log",
+      "gateway_log": "artifacts/oblivion-tor-state/build-image-03.log"
+    },
+    "root_check": {
+      "exit_code": 0,
+      "lint_errors": 0,
+      "lint_warnings": 1225,
+      "typecheck_tasks": 34,
+      "cached_typecheck_tasks": 34,
+      "log": "artifacts/oblivion-tor-state/root-check.log",
+      "sha256": "95f5e79e7a1bff61ea1ad9230f2a045e540f600d3c675aafa215148c79d63119"
+    },
+    "python_syntax": "passed for changed runners, fixture and capture helper"
+  },
+  "upstream_reference": {
+    "url": "https://dist.torproject.org/tor-0.4.9.14.tar.gz",
+    "sha256": "182449ac1c8ff43278da27b69b02040e11d03d0327db6d9126e4190ec6235e4a",
+    "files": ["src/feature/client/entrynodes.c", "src/app/config/statefile.c", "src/feature/control/control_getinfo.c"]
+  },
+  "artifact_retention": [
+    {
+      "artifact": "artifacts/oblivion-tor-state/smoke-01/data.raw",
+      "sha256": "22c104add424c972080434ff71fd8e5ba444e550a22d26d6e56993225777866a",
+      "reason": "synthetic disposable disk removed after guest checks and hash verification; logs and reports retained"
+    },
+    {
+      "artifact": "artifacts/oblivion-tor-state/offline-01/data.raw",
+      "sha256": "0d6d515b5430815f9310ff67dda66ddd27127eacce61f5b84a3560b787b1d10b",
+      "reason": "synthetic disposable disk removed after guest checks and hash verification; logs and reports retained"
+    },
+    {
+      "artifact": "artifacts/oblivion-tor-state/online-01/data.raw",
+      "sha256": "f05c0fdb82ce98a3aa23d057f03371ab8754361ca4b834a97e1390e7ce588658",
+      "reason": "synthetic disposable disk removed after guest checks and hash verification; logs and reports retained"
+    }
+  ],
+  "remaining_gates": [
+    "Successful complete OpenCode streaming and tool calling through the broker, then authorized Abliteration/Tor tests.",
+    "Automatic revocation on spontaneous session VM exit; end-to-end active stream cancellation and global shutdown.",
+    "Guard state failure under I/O errors, abrupt power loss and storage removal; version upgrade/migration policy.",
+    "Wi-Fi, time configuration, bridges, tool proxy allow/deny/ask and full ephemeral sessions.",
+    "USB transfers, OnionShare, signed live image, x86/KVM hardware and independent security review."
+  ]
+}

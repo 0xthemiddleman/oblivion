@@ -10,6 +10,7 @@ publish = false
 lab-emulation = []
 
 [dependencies]
+oblivion-tor-state = { path = "../oblivion-tor-state" }
 bytes = "1"
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 http-body-util = "0.1"

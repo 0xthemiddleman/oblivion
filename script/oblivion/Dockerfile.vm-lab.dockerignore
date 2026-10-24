@@ -1,6 +1,12 @@
 **
 !packages/
 packages/*
+!packages/oblivion-tor-state/
+packages/oblivion-tor-state/*
+!packages/oblivion-tor-state/Cargo.toml
+!packages/oblivion-tor-state/Cargo.lock
+!packages/oblivion-tor-state/src/
+!packages/oblivion-tor-state/src/**
 !packages/oblivion-host/
 packages/oblivion-host/*
 !packages/oblivion-host/Cargo.toml
@@ -32,6 +38,7 @@ script/*
 !script/oblivion/
 script/oblivion/*
 !script/oblivion/run-vm-lab.py
+!script/oblivion/packet_capture.py
 !script/oblivion/vm-*.sh
 !script/oblivion/vm-*.py
 !script/oblivion/Dockerfile.vm-lab

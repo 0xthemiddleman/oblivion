@@ -7,7 +7,7 @@ use std::os::fd::AsRawFd;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
 
 const UNIT: &str = "oblivion-gateway-host.service";
@@ -18,6 +18,8 @@ const SOCKET: &str = "/run/oblivion/gateway-control.sock";
 enum Request<'a> {
     Grant { token: &'a str },
     Revoke {},
+    Check {},
+    Stop {},
 }
 
 #[derive(Deserialize)]
@@ -50,6 +52,16 @@ pub fn start() -> Result<()> {
 }
 
 pub fn stop() -> Result<()> {
+    let checkpoint = if state()? == "active" {
+        request(&Request::Stop {}, false)
+    } else {
+        Ok(())
+    };
+    destroy()?;
+    checkpoint.map_err(|_| Error("tor_state_not_saved"))
+}
+
+fn destroy() -> Result<()> {
     // Always inspect both units: the host process may have died before its
     // ExecStopPost, or a previous cleanup may have been interrupted.
     if !matches!(state()?.as_str(), "inactive" | "failed") {
@@ -96,14 +108,25 @@ pub fn revoke() -> Result<()> {
     }
     // A missing acknowledgement is not a successful revocation. Destroy the
     // entire gateway before allowing storage closure or another session.
-    stop()
+    destroy()
+}
+
+pub fn ready() -> Result<()> {
+    require(state()? == "active", "gateway_unavailable")?;
+    request(&Request::Check {}, false)
 }
 
 fn request(request: &Request<'_>, active: bool) -> Result<()> {
     let mut channel = UnixStream::connect(SOCKET).map_err(|_| Error("gateway_unavailable"))?;
     peer(&channel, 0)?;
     channel
-        .set_read_timeout(Some(Duration::from_secs(10)))
+        .set_read_timeout(Some(Duration::from_secs(
+            if matches!(request, Request::Stop {}) {
+                30
+            } else {
+                10
+            },
+        )))
         .and_then(|()| channel.set_write_timeout(Some(Duration::from_secs(5))))
         .map_err(|_| Error("gateway_channel_failed"))?;
     let bytes =
@@ -112,17 +135,17 @@ fn request(request: &Request<'_>, active: bool) -> Result<()> {
     configured(&mut channel, active)
 }
 
-pub fn serve(config: &vm::Config, key: Zeroizing<Vec<u8>>) -> Result<()> {
+pub fn serve(config: &vm::Config, key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
     let _lock = lock_named("gateway.lock")?;
     config.validate()?;
     config.start_role(Role::Gateway)?;
-    let result = connected(key);
+    let result = connected(key, network);
     let stopped = vm::stop_role(Role::Gateway, true);
     result?;
     stopped
 }
 
-fn connected(key: Zeroizing<Vec<u8>>) -> Result<()> {
+fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
     let mut stream = UnixStream::connect(format!("{}/control.sock", Role::Gateway.runtime()))
         .map_err(|_| Error("gateway_channel_unavailable"))?;
     peer(&stream, vm::GATEWAY_UID)?;
@@ -135,7 +158,7 @@ fn connected(key: Zeroizing<Vec<u8>>) -> Result<()> {
         .map_err(|_| Error("invalid_gateway_ready"))?;
     require(ready.ready && ready.version == 1, "invalid_gateway_ready")?;
     stream
-        .set_read_timeout(Some(Duration::from_secs(10)))
+        .set_read_timeout(Some(Duration::from_secs(30)))
         .map_err(|_| Error("gateway_channel_failed"))?;
     #[derive(Serialize)]
     struct Configure<'a> {
@@ -153,6 +176,26 @@ fn connected(key: Zeroizing<Vec<u8>>) -> Result<()> {
     drop(request);
     drop(key);
     configured(&mut stream, false)?;
+    let mut saved = crate::storage::tor_state()?;
+    let writable = crate::storage::tor_state_writable()?;
+    #[derive(Serialize)]
+    struct Initialize<'a> {
+        operation: &'static str,
+        state: Option<&'a str>,
+    }
+    let initial = serde_json::to_vec(&Initialize {
+        operation: "tor-initialize",
+        state: saved.as_ref().map(oblivion_tor_state::State::as_str),
+    })
+    .map_err(|_| Error("gateway_encode_failed"))?;
+    send(&mut stream, &initial)?;
+    configured(&mut stream, false)?;
+    let bootstrapped = checkpoint(&mut stream, &mut saved, writable, false)?;
+    let mut network_ready = !network || bootstrapped;
+    if network {
+        send(&mut stream, b"{\"operation\":\"tor-enable\"}")?;
+        configured(&mut stream, false)?;
+    }
     if let Ok(meta) = fs::symlink_metadata(SOCKET) {
         require(meta.file_type().is_socket(), "invalid_gateway_socket")?;
         fs::remove_file(SOCKET).map_err(|_| Error("gateway_socket_failed"))?;
@@ -163,7 +206,7 @@ fn connected(key: Zeroizing<Vec<u8>>) -> Result<()> {
         .map_err(|_| Error("gateway_socket_failed"))?;
     crate::ipc::notify_ready()?;
     let mut active = false;
-    // Tor remains disabled until its persistent state handoff is integrated.
+    let mut checked = Instant::now();
     // Only privileged storage workers can request a grant or revocation.
     loop {
         match listener.accept() {
@@ -176,6 +219,21 @@ fn connected(key: Zeroizing<Vec<u8>>) -> Result<()> {
                 let bytes = receive(&mut client)?;
                 let request: Request<'_> =
                     serde_json::from_slice(&bytes).map_err(|_| Error("invalid_gateway_request"))?;
+                if matches!(request, Request::Check {} | Request::Grant { .. }) && !network_ready {
+                    send(
+                        &mut client,
+                        b"{\"ok\":false,\"configured\":true,\"active\":false}",
+                    )?;
+                    continue;
+                }
+                if matches!(request, Request::Stop {}) {
+                    checkpoint(&mut stream, &mut saved, writable, true)?;
+                    send(
+                        &mut client,
+                        b"{\"ok\":true,\"configured\":true,\"active\":false}",
+                    )?;
+                    return Ok(());
+                }
                 let next = match request {
                     Request::Grant { token } => {
                         require(
@@ -187,8 +245,17 @@ fn connected(key: Zeroizing<Vec<u8>>) -> Result<()> {
                         true
                     }
                     Request::Revoke {} => false,
+                    Request::Check {} => active,
+                    Request::Stop {} => unreachable!(),
                 };
-                send(&mut stream, &bytes)?;
+                send(
+                    &mut stream,
+                    if matches!(request, Request::Check {}) {
+                        b"{\"operation\":\"status\"}"
+                    } else {
+                        &bytes
+                    },
+                )?;
                 configured(&mut stream, next)?;
                 active = next;
                 send(
@@ -206,6 +273,11 @@ fn connected(key: Zeroizing<Vec<u8>>) -> Result<()> {
         std::thread::sleep(Duration::from_millis(250));
         send(&mut stream, b"{\"operation\":\"status\"}")?;
         configured(&mut stream, active)?;
+        if checked.elapsed() >= Duration::from_secs(5) {
+            let bootstrapped = checkpoint(&mut stream, &mut saved, writable, false)?;
+            network_ready = !network || bootstrapped;
+            checked = Instant::now();
+        }
     }
 }
 
@@ -229,10 +301,52 @@ pub fn peer(stream: &UnixStream, uid: u32) -> Result<()> {
 fn configured(stream: &mut UnixStream, active: bool) -> Result<()> {
     let status: Status =
         serde_json::from_slice(&receive(stream)?).map_err(|_| Error("invalid_gateway_status"))?;
+    require(status.ok, "gateway_not_ready")?;
     require(
-        status.ok && status.configured && status.active == active,
+        status.configured && status.active == active,
         "gateway_state_mismatch",
     )
+}
+
+fn checkpoint(
+    stream: &mut UnixStream,
+    saved: &mut Option<oblivion_tor_state::State>,
+    writable: bool,
+    stop: bool,
+) -> Result<bool> {
+    send(
+        stream,
+        if stop {
+            b"{\"operation\":\"tor-snapshot\",\"stop\":true}"
+        } else {
+            b"{\"operation\":\"tor-snapshot\",\"stop\":false}"
+        },
+    )?;
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Snapshot {
+        ok: bool,
+        state: String,
+        bootstrapped: bool,
+    }
+    let snapshot: Snapshot =
+        serde_json::from_slice(&receive(stream)?).map_err(|_| Error("invalid_tor_snapshot"))?;
+    require(snapshot.ok, "tor_snapshot_failed")?;
+    let state = oblivion_tor_state::State::parse(&snapshot.state)
+        .map_err(|_| Error("invalid_tor_state"))?;
+    if saved
+        .as_ref()
+        .is_none_or(|previous| !previous.same_guards(&state))
+    {
+        if writable {
+            crate::storage::save_tor_state(&state)?;
+        }
+        *saved = Some(state);
+    }
+    Ok(snapshot.bootstrapped
+        && saved
+            .as_ref()
+            .is_some_and(oblivion_tor_state::State::has_guards))
 }
 
 fn send(stream: &mut UnixStream, bytes: &[u8]) -> Result<()> {
@@ -248,7 +362,7 @@ fn receive(stream: &mut UnixStream) -> Result<Zeroizing<Vec<u8>>> {
         .read_exact(&mut size)
         .map_err(|_| Error("gateway_channel_failed"))?;
     let size = u32::from_be_bytes(size) as usize;
-    require((1..=16384).contains(&size), "invalid_gateway_frame")?;
+    require((1..=512 * 1024).contains(&size), "invalid_gateway_frame")?;
     let mut bytes = Zeroizing::new(vec![0; size]);
     stream
         .read_exact(&mut bytes)

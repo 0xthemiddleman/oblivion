@@ -499,6 +499,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "libc",
+ "oblivion-tor-state",
  "rcgen",
  "reqwest",
  "rustls",
@@ -510,6 +511,10 @@ dependencies = [
  "tokio-util",
  "zeroize",
 ]
+
+[[package]]
+name = "oblivion-tor-state"
+version = "0.1.0"
 
 [[package]]
 name = "once_cell"

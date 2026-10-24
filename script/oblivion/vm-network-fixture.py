@@ -88,7 +88,7 @@ def gateway(operation, configuration):
         child = Path("/proc") / children[0]
         parent_status = Path(f"/proc/{pid}/status").read_text()
         status = (child / "status").read_text()
-        assert "CapEff:\t00000000000000e0" in parent_status and "NoNewPrivs:\t1" in parent_status
+        assert "CapEff:\t00000000000000e3" in parent_status and "NoNewPrivs:\t1" in parent_status
         assert "Uid:\t0\t0\t0\t0" in parent_status
         assert "Uid:\t1300\t1300\t1300\t1300" in status and "CapEff:\t0000000000000000" in status
         assert all(f"{name}:\t0000000000000000" in status for name in ["CapInh", "CapPrm", "CapAmb"])

@@ -31,11 +31,16 @@ name = "oblivion-host"
 version = "0.1.0"
 dependencies = [
  "libc",
+ "oblivion-tor-state",
  "serde",
  "serde_json",
  "vt100",
  "zeroize",
 ]
+
+[[package]]
+name = "oblivion-tor-state"
+version = "0.1.0"
 
 [[package]]
 name = "proc-macro2"

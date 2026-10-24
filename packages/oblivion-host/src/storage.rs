@@ -29,6 +29,8 @@ struct Config {
     manager_uid: u32,
     vm: Option<crate::vm::Config>,
     gateway: Option<crate::vm::Config>,
+    #[serde(default)]
+    gateway_network: bool,
 }
 
 #[derive(Serialize)]
@@ -49,6 +51,7 @@ struct Status {
     api_key_present: Option<bool>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
+    gateway_network: bool,
 }
 
 pub fn main() -> Result<()> {
@@ -67,7 +70,7 @@ pub fn main() -> Result<()> {
             .gateway
             .as_ref()
             .ok_or(Error("gateway_not_configured"))?;
-        return crate::gateway::serve(gateway, read_api_key()?);
+        return crate::gateway::serve(gateway, read_api_key()?, config.gateway_network);
     }
     require(
         args.len()
@@ -167,7 +170,7 @@ pub fn main() -> Result<()> {
             vm.validate()?;
             require(crate::vm::stopped()?, "vm_already_running")?;
             if config.gateway.is_some() {
-                require(crate::gateway::state()? == "active", "gateway_unavailable")?;
+                crate::gateway::ready()?;
             }
             config.open(&args[3], &password(false)?)?;
             // Failed startup keeps the vault interlocked until explicit leave/lock.
@@ -245,6 +248,7 @@ pub fn main() -> Result<()> {
                     None
                 },
                 laboratory_emulation: cfg!(feature = "lab-emulation"),
+                gateway_network: config.gateway_network,
                 recovery_required: recovery_required()?,
                 gateway_state: if config.gateway.is_some() {
                     Some(crate::gateway::state()?)
@@ -499,6 +503,64 @@ fn read_api_key() -> Result<Zeroizing<Vec<u8>>> {
         "invalid_api_key",
     )?;
     Ok(key)
+}
+
+pub(crate) fn tor_state() -> Result<Option<oblivion_tor_state::State>> {
+    let path = Path::new(PROFILE).join("tor-state");
+    match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(Error("profile_unavailable")),
+        Ok(_) => {}
+    }
+    let mut text = String::new();
+    trusted_file(&path)?
+        .take(oblivion_tor_state::LIMIT as u64 + 1)
+        .read_to_string(&mut text)
+        .map_err(|_| Error("profile_unavailable"))?;
+    Ok(Some(
+        oblivion_tor_state::State::parse(&text).map_err(|_| Error("invalid_tor_state"))?,
+    ))
+}
+
+pub(crate) fn tor_state_writable() -> Result<bool> {
+    let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
+    require(
+        unsafe { libc::statvfs(c"/run/oblivion/general/profile".as_ptr(), &mut stat) } == 0,
+        "profile_unavailable",
+    )?;
+    Ok(stat.f_flag & libc::ST_RDONLY == 0)
+}
+
+pub(crate) fn save_tor_state(state: &oblivion_tor_state::State) -> Result<()> {
+    require(tor_state_writable()?, "general_not_writable")?;
+    let path = Path::new(PROFILE).join("tor-state");
+    if path
+        .try_exists()
+        .map_err(|_| Error("profile_unavailable"))?
+    {
+        trusted_file(&path)?;
+    }
+    let pending = Path::new(PROFILE).join("tor-state.pending");
+    match fs::symlink_metadata(&pending) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => return Err(Error("profile_unavailable")),
+        Ok(_) => {
+            trusted_file(&pending)?;
+            fs::remove_file(&pending).map_err(|_| Error("profile_write_failed"))?;
+        }
+    }
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(&pending)
+        .map_err(|_| Error("profile_write_failed"))?;
+    file.write_all(state.as_str().as_bytes())
+        .and_then(|()| file.sync_all())
+        .map_err(|_| Error("profile_write_failed"))?;
+    fs::rename(pending, path).map_err(|_| Error("profile_write_failed"))?;
+    sync_directory(Path::new(PROFILE))
 }
 
 fn update_api_key(secret: Option<Zeroizing<Vec<u8>>>) -> Result<()> {

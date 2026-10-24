@@ -21,6 +21,7 @@ struct Status {
     api_key_present: Option<bool>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
+    gateway_network: bool,
 }
 
 fn main() {
@@ -146,7 +147,11 @@ fn run(preview: bool) -> Result<()> {
             if let Some(gateway) = &status.gateway_state {
                 view.push_str(
                     if gateway == "active" && status.gateway_vm_state.as_deref() == Some("active") {
-                        " Gateway pronto; rete non ancora abilitata.\r\n"
+                        if status.gateway_network {
+                            " Gateway avviato. Tor può richiedere alcuni istanti.\r\n"
+                        } else {
+                            " Gateway pronto; rete non abilitata.\r\n"
+                        }
                     } else {
                         " Gateway non attivo.\r\n"
                     },
@@ -331,6 +336,8 @@ fn run(preview: bool) -> Result<()> {
                     "Gateway non disponibile. Il generale resta aperto: puoi bloccarlo e riprovare."
                 }
                 "gateway_unavailable" => "Gateway non attivo. Blocca il generale e sbloccalo prima di aprire una sessione.",
+                "gateway_not_ready" => "Tor sta preparando la connessione. Attendi e riprova ad aprire la sessione.",
+                "tor_state_not_saved" => "Stato Tor non salvato. Il gateway è fermo: blocca di nuovo per chiudere il generale.",
                 "session_channel_failed" | "invalid_session_ready" => "La sessione non ha completato l'avvio protetto. Chiudila prima di riprovare.",
                 "insufficient_space" => {
                     "Spazio insufficiente. Controlla le creazioni interrotte prima di riprovare."

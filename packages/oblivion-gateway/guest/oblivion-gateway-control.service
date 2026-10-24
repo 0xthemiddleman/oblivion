@@ -15,10 +15,13 @@ ExecStopPost=-/usr/bin/systemctl kill --kill-whom=all --signal=SIGKILL oblivion-
 Group=root
 UMask=0077
 NoNewPrivileges=yes
-CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL CAP_DAC_OVERRIDE CAP_CHOWN
 DevicePolicy=closed
 DeviceAllow=/dev/virtio-ports/oblivion.gateway rw
 ProtectSystem=strict
+# /run/tor must stay visible through the parent mount: Tor recreates that
+# RuntimeDirectory on restart. A bind here would pin the removed directory.
+ReadWritePaths=/var/lib/tor
 ProtectHome=yes
 PrivateTmp=yes
 ProtectKernelTunables=yes

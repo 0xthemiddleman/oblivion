@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends cargo rustc gcc
 
 FROM rust-toolchain AS compiler
 WORKDIR /build
+COPY packages/oblivion-tor-state/ /oblivion-tor-state/
 COPY packages/oblivion-host/ ./
 RUN cargo test --locked && cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
     && cargo build --locked --release --features lab-emulation --bin oblivion-storage
@@ -21,7 +22,7 @@ RUN mkdir /bundle && cp /tmp/oblivion-storage /bundle/oblivion-storage \
     && cp target/release/oblivion-storage /bundle/oblivion-storage-lab \
     && cp target/release/oblivion-control target/release/oblivion-manager /bundle/ \
     && cp host/*.service /bundle/ \
-    && find Cargo.toml Cargo.lock src tests host -type f -print0 | sort -z | xargs -0 sha256sum > /bundle/sources.sha256 \
+    && find Cargo.toml Cargo.lock src tests host ../oblivion-tor-state/Cargo.toml ../oblivion-tor-state/src -type f -print0 | sort -z | xargs -0 sha256sum > /bundle/sources.sha256 \
     && cd /bundle && sha256sum oblivion-* sources.sha256 > SHA256SUMS
 
 # Small development bundle, overlaid only in the disposable laboratory's RAM.
@@ -121,6 +122,7 @@ COPY --from=pack /out/ /
 FROM rust-toolchain AS gateway-compiler
 WORKDIR /gateway
 ENV CARGO_TARGET_DIR=/tmp/target
+COPY packages/oblivion-tor-state/ /oblivion-tor-state/
 COPY packages/oblivion-gateway/Cargo.toml packages/oblivion-gateway/Cargo.lock ./
 COPY packages/oblivion-gateway/.cargo/ .cargo/
 RUN cargo fetch --locked
@@ -136,7 +138,7 @@ RUN --network=none cargo test --locked --offline --lib --features lab-emulation 
     && cp /tmp/target/debug/oblivion-api /gateway-bundle/oblivion-api \
     && cp /tmp/target/debug/oblivion-gateway-control /gateway-bundle/oblivion-gateway-control \
     && strip /gateway-bundle/* \
-    && find Cargo.toml Cargo.lock .cargo src tests -type f -print0 | sort -z | xargs -0 sha256sum > /gateway-bundle/sources.sha256 \
+    && find Cargo.toml Cargo.lock .cargo src tests ../oblivion-tor-state/Cargo.toml ../oblivion-tor-state/src -type f -print0 | sort -z | xargs -0 sha256sum > /gateway-bundle/sources.sha256 \
     && rustc --version > /gateway-bundle/compiler.txt \
     && cd /gateway-bundle && sha256sum * > SHA256SUMS
 

@@ -7,8 +7,9 @@ ora esegue il broker nella VM gateway e verifica firewall e Tor reale. Il
 [supervisore Rust](GATEWAY-CONTROL.md) lo avvia e revoca tramite il controllo
 virtio privato dell’host, senza usare il launcher Python della fixture. La VM
 avviata dal controller ora usa la [rete privata della sessione](SESSION-NETWORK.md),
-con token nuovo a ogni apertura e revoca prima della chiusura. Proxy dei tool,
-stato Tor e attivazione del provider rimangono da realizzare.
+con token nuovo a ogni apertura e revoca prima della chiusura. Lo
+[stato Tor](TOR-STATE.md) viene ora importato e salvato nel generale.
+Restano proxy dei tool e compatibilità completa del provider.
 
 Il binario `oblivion-api` gestisce una sola autorizzazione, senza poterla
 riassegnare a un'altra sessione. Il supervisore gli consegna la chiave reale;
@@ -137,8 +138,8 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
 
 ## Prossimi gate
 
-1. Persistenza dello stato Tor e abilitazione della rete nel ciclo reale;
-   verificare indirizzi interni e rebinding via Tor.
+1. Verificare indirizzi interni e rebinding via Tor nel percorso completo;
+   [persistenza e bootstrap](TOR-STATE.md) sono integrati nel ciclo del generale.
 2. Estendere la revoca nel controller reale a stream attivi, crash spontaneo
    della VM, shutdown globale e guasti I/O.
 3. Proxy dei tool con allow/deny/ask, quote e revoca dei tunnel; nessun traffico

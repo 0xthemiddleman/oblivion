@@ -10,7 +10,7 @@ use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
 
-const FRAME_LIMIT: usize = 16384;
+const FRAME_LIMIT: usize = 512 * 1024;
 
 #[derive(Deserialize)]
 #[serde(tag = "operation", rename_all = "kebab-case", deny_unknown_fields)]
@@ -20,6 +20,9 @@ enum Request {
     Revoke {},
     Status {},
     Shutdown {},
+    TorInitialize { state: Option<String> },
+    TorEnable {},
+    TorSnapshot { stop: bool },
 }
 
 #[derive(Serialize)]
@@ -66,6 +69,7 @@ pub fn run() -> io::Result<()> {
 
 fn serve(channel: &mut Channel, api: &mut Option<Api>) -> io::Result<()> {
     let mut key = None;
+    let mut tor = None;
     loop {
         let bytes = channel.read(api)?;
         let request: Request =
@@ -73,6 +77,52 @@ fn serve(channel: &mut Channel, api: &mut Option<Api>) -> io::Result<()> {
         drop(bytes);
         let shutdown = matches!(request, Request::Shutdown {});
         match request {
+            Request::TorInitialize { state } => {
+                if tor.is_some() || api.is_some() || key.is_none() {
+                    return Err(io::Error::other("invalid_tor_initialization"));
+                }
+                let state = state
+                    .as_deref()
+                    .map(oblivion_tor_state::State::parse)
+                    .transpose()
+                    .map_err(|_| io::Error::other("invalid_tor_state"))?;
+                tor = Some(crate::tor::Tor::initialize(state)?);
+            }
+            Request::TorEnable {} => {
+                tor.as_ref()
+                    .ok_or_else(|| io::Error::other("tor_not_initialized"))?
+                    .enable()?;
+            }
+            Request::TorSnapshot { stop } => {
+                if stop {
+                    if let Some(mut current) = api.take() {
+                        current.stop()?;
+                    }
+                }
+                let state = tor
+                    .as_ref()
+                    .ok_or_else(|| io::Error::other("tor_not_initialized"))?
+                    .snapshot(stop)?;
+                #[derive(Serialize)]
+                struct Snapshot<'a> {
+                    ok: bool,
+                    state: &'a str,
+                    bootstrapped: bool,
+                }
+                channel.write(
+                    &serde_json::to_vec(&Snapshot {
+                        ok: true,
+                        state: state.as_str(),
+                        bootstrapped: !stop
+                            && tor
+                                .as_ref()
+                                .ok_or_else(|| io::Error::other("tor_not_initialized"))?
+                                .bootstrapped()?,
+                    })?,
+                    api,
+                )?;
+                continue;
+            }
             Request::Configure { api_key } => {
                 if key.is_some()
                     || !(16..=4096).contains(&api_key.len())

@@ -1,7 +1,9 @@
 ClientOnly 1
 RunAsDaemon 0
 DataDirectory /var/lib/tor
-AvoidDiskWrites 1
+# This directory is tmpfs. Flush guard changes there promptly; the host saves
+# only the selected operational state in the encrypted profile.
+AvoidDiskWrites 0
 SafeLogging 1
 Log err stderr
 SocksPort 127.0.0.1:9050 IsolateSOCKSAuth IPv4Traffic NoIPv6Traffic

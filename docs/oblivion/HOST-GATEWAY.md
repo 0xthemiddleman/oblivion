@@ -2,9 +2,10 @@
 
 Il controller Linux ora può avviare una VM gateway dopo lo sblocco del generale
 e consegnarle la chiave salvata nel profilo. Il collegamento usa il
-[protocollo privato del supervisore](GATEWAY-CONTROL.md). La chat rimane ancora
-senza rete: assegnazione del token alla sessione, adapter e stato persistente
-Tor devono essere collegati prima di abilitare le richieste al provider.
+[protocollo privato del supervisore](GATEWAY-CONTROL.md). La [rete della sessione](SESSION-NETWORK.md) usa un token locale revocabile.
+Lo [stato Tor](TOR-STATE.md) viene importato dal generale prima di abilitare
+la rete; una nuova apertura online richiede bootstrap completo e guardie
+acquisite dal servizio host.
 
 ## Ciclo di vita
 
@@ -30,11 +31,14 @@ e permette di bloccare e riprovare.
 Le operazioni storage sono processi brevi. Il servizio host dedicato conserva
 invece il canale virtio, controlla lo stato ogni 250 ms e termina se la VM non
 risponde entro il timeout. Notifica `READY=1` a systemd solo dopo la configurazione
-privata confermata dal guest. Non espone una porta di amministrazione alla chat.
+privata e il primo checkpoint Tor confermati. Questo stato indica il servizio
+avviato; il bootstrap Tor viene verificato separatamente prima di autorizzare
+una sessione online. Non espone una porta di amministrazione alla chat.
 
 Il servizio host gira come root con la sola `CAP_DAC_OVERRIDE`, necessaria per
-connettersi ai socket QEMU di UID 1101. Il generale è readonly anche nel suo
-namespace. Dopo l'invio, i buffer espliciti della chiave vengono rilasciati con
+connettersi ai socket QEMU di UID 1101. Nel suo namespace il generale è readonly, con la sola directory
+`profile` scrivibile per il checkpoint Tor. Se il filesystem sottostante è
+aperto readonly, anche questa directory rimane readonly. Dopo l'invio, i buffer espliciti della chiave vengono rilasciati con
 `Zeroizing`; la copia operativa rimane nel gateway. Non si promette cancellazione
 completa di ogni copia interna alla RAM.
 
@@ -50,12 +54,15 @@ porta privata e solo allora riprende il guest via QMP. Le credenziali non
 compaiono in argv o ambiente. Le NIC hanno MAC fissi e nessuna ROM di boot PXE;
 il kernel viene caricato dall'immagine locale verificata nel laboratorio.
 
-Il servizio ora riceve `grant` e `revoke` dai worker storage tramite un socket
+Il servizio riceve `check`, `grant`, `revoke` e `stop` dai worker storage tramite un socket
 host riservato a UID 0; il [collegamento della sessione](SESSION-NETWORK.md)
-consegna il token locale al guest. Tor resta disabilitato. Lo stato restituito
+consegna il token locale al guest. `gateway_network: true` abilita Tor dopo
+l’importazione; il valore predefinito `false` mantiene le prove offline. Lo stato restituito
 dal supervisore deve corrispondere a quello atteso dal proprietario host.
 `BindsTo` ed `ExecStopPost` fanno terminare la VM alla morte del proprietario;
-`lock` verifica anche la VM direttamente prima di chiudere i mapping.
+`lock` richiede prima revoca e checkpoint finale, poi verifica la fine della
+VM prima di chiudere i mapping. Se il checkpoint fallisce, il gateway viene
+comunque distrutto e l’errore resta visibile; un nuovo blocco chiude il generale.
 Non c'è riavvio automatico del gateway con credenziali ancora in memoria.
 
 ## Configurazione e laboratorio Mac
@@ -73,7 +80,7 @@ docker build --platform linux/arm64 --target host-artifacts \
 python3 script/oblivion/run-vm-lab.py \
   --image artifacts/oblivion-tui/image \
   --services-bundle artifacts/oblivion-gateway-host/bundle-new \
-  --gateway-image artifacts/oblivion-supervisor/image-final \
+  --gateway-image artifacts/oblivion-tor-state/image-03 \
   --output artifacts/oblivion-gateway-host/run-new
 ```
 
@@ -102,6 +109,6 @@ non la cancellazione fisica di ogni copia dalla RAM del computer Mac.
 
 I risultati e i tentativi falliti sono in [host-gateway-evidence.json](host-gateway-evidence.json).
 Rete della sessione, token locali e revoca nel passaggio A→B sono descritti in
-[SESSION-NETWORK.md](SESSION-NETWORK.md). Restano stato Tor, attivazione della
-rete e compatibilità completa dell’adapter. Le prove su KVM e hardware, shutdown
+[SESSION-NETWORK.md](SESSION-NETWORK.md); persistenza e attivazione Tor in
+[TOR-STATE.md](TOR-STATE.md). Resta la compatibilità completa dell’adapter. Le prove su KVM e hardware, shutdown
 globale, guasti I/O e revisione del confine privilegiato rimangono gate aperti.

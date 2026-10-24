@@ -5,6 +5,8 @@ import base64
 import gzip
 import hashlib
 import json
+import os
+import selectors
 import platform
 import re
 import shutil
@@ -13,6 +15,46 @@ import tempfile
 import time
 import zlib
 from pathlib import Path
+from packet_capture import capture
+
+def online_vm(command, log, output):
+    # The guest waits for our acknowledgement before starting the online
+    # gateway. Snapshot bytes at that barrier; PCAP and guest clocks differ.
+    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, bufsize=0) as process:
+        deadline = time.monotonic() + 900
+        pending = b""
+        try:
+            with selectors.DefaultSelector() as selector:
+                selector.register(process.stdout, selectors.EVENT_READ)
+                while True:
+                    assert time.monotonic() < deadline, "VM deadline"
+                    if not selector.select(timeout=1):
+                        continue
+                    chunk = os.read(process.stdout.fileno(), 65536)
+                    if not chunk:
+                        break
+                    log.write(chunk)
+                    log.flush()
+                    pending += chunk
+                    while b"\n" in pending:
+                        line, pending = pending.split(b"\n", 1)
+                        if line.strip() != b"OBLIVION_TOR_ENABLE_WAIT":
+                            continue
+                        before = output / "before-enable.pcap"
+                        assert not before.exists()
+                        shutil.copyfile(output / "uplink.pcap", before)
+                        packets = capture(before)
+                        assert packets["ipv4"] == 0 and packets["ipv6"] == 0
+                        process.stdin.write(b"go\n")
+                        process.stdin.flush()
+            process.wait(timeout=max(1, deadline - time.monotonic()))
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait()
+        return process
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--image", type=Path, required=True)
@@ -27,7 +69,13 @@ parser.add_argument("--gateway-image", type=Path,
     help="With --services-bundle, exercise the real host owner and a nested gateway VM")
 parser.add_argument("--session-image", type=Path,
     help="With --gateway-image, exercise a networked session and grant rotation")
+parser.add_argument("--tor-state", action="store_true", help="Exercise selective Tor state persistence in real LUKS")
+parser.add_argument("--tor-online", action="store_true", help="With --tor-state, allow Tor bootstrap and capture the outer uplink")
 args = parser.parse_args()
+if args.tor_state and not args.gateway_image:
+    parser.error("--tor-state requires --gateway-image")
+if args.tor_online and not args.tor_state:
+    parser.error("--tor-online requires --tor-state")
 if args.session_image and not args.gateway_image:
     parser.error("--session-image requires --gateway-image")
 session_image = args.session_image.resolve() if args.session_image else None
@@ -59,7 +107,7 @@ initrd = image / "initrd"
 fixture = None
 bundle_manifest = None
 bundle = args.services_bundle or args.gateway_bundle
-fixture_name = "vm-session-network-test.py" if session_image else "vm-gateway-host-test.py" if gateway_image else "vm-gateway-test.py" if args.gateway_bundle else "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
+fixture_name = "vm-tor-state-test.py" if args.tor_state else "vm-session-network-test.py" if session_image else "vm-gateway-host-test.py" if gateway_image else "vm-gateway-test.py" if args.gateway_bundle else "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
 if sum(bool(option) for option in (args.refresh_tui_test, args.services_bundle, args.gateway_bundle)) > 1:
     raise SystemExit("Choose one laboratory fixture override.")
 if args.refresh_tui_test or bundle:
@@ -117,6 +165,8 @@ if args.refresh_tui_test or bundle:
             bundle_hook += (f'mkdir /run/oblivion-{role}-image\n'
                 f'mount -t tmpfs -o mode=0755,nodev,nosuid,size=512m tmpfs /run/oblivion-{role}-image\n'
                 f'cp -a /scripts/{role}-image/. /run/oblivion-{role}-image/\n')
+        if args.tor_online:
+            bundle_hook += "touch /run/oblivion-tor-online\n"
         hook = root / "scripts/init-bottom/zz-oblivion-lab-fixture"
         hook.write_text('#!/bin/sh\nset -eu\ncase "${1:-}" in prereqs) exit 0;; esac\n'
             'mount --bind /scripts/oblivion-lab-test.py "${rootmnt:-/root}/usr/libexec/oblivion-vm-test"\n' + bundle_hook)
@@ -134,7 +184,7 @@ if disk:
         stream.truncate(1024 * 1024 * 1024)
 started = time.monotonic()
 with (output / "serial.log").open("xb") as log:
-    result = subprocess.run([
+    command = [
         "qemu-system-aarch64", "-machine", "virt", "-accel", "hvf", "-cpu", "host",
         "-m", "1024" if args.gateway_bundle else "4096", "-smp", "4", "-nodefaults", "-no-reboot", "-display", "none",
         "-monitor", "none", "-serial", "stdio", "-nic", "none",
@@ -151,9 +201,14 @@ with (output / "serial.log").open("xb") as log:
     ] if gateway_image else []) + ([
         "-drive", f"file={session_image / 'session.squashfs'},format=raw,if=none,id=session-image,readonly=on",
         "-device", "virtio-blk-pci,drive=session-image,serial=oblivion-ss-image",
-    ] if session_image else []), stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+    ] if session_image else []) + ([
+        "-netdev", "user,id=uplink,ipv6=off", "-device", "virtio-net-pci,netdev=uplink,mac=52:54:00:6f:00:04",
+        "-object", f"filter-dump,id=uplink-capture,netdev=uplink,file={output / 'uplink.pcap'}",
+    ] if args.tor_online else [])
+    result = online_vm(command, log, output) if args.tor_online else subprocess.run(
+        command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
 serial = (output / "serial.log").read_text(errors="replace")
-fixture_prefix = "OBLIVION_SESSION_NETWORK_FIXTURE_SHA256 " if session_image else "OBLIVION_GATEWAY_HOST_FIXTURE_SHA256 " if gateway_image else "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
+fixture_prefix = "OBLIVION_TOR_STATE_FIXTURE_SHA256 " if args.tor_state else "OBLIVION_SESSION_NETWORK_FIXTURE_SHA256 " if session_image else "OBLIVION_GATEWAY_HOST_FIXTURE_SHA256 " if gateway_image else "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
 fixture_verified = fixture is None or (fixture_prefix + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
 bundle_prefix = "OBLIVION_GATEWAY_BUNDLE_SHA256 " if args.gateway_bundle else "OBLIVION_HOST_BUNDLE_SHA256 "
 bundle_verified = bundle_manifest is None or (bundle_prefix + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
@@ -179,9 +234,12 @@ if disk:
             digest.update(chunk)
             found.update(marker.decode() for marker in markers if marker in overlap + chunk)
             overlap = chunk[-128:]
+captures = None
+if args.tor_online:
+    captures = {"uplink": capture(output / "uplink.pcap"), "before_enable": capture(output / "before-enable.pcap") if (output / "before-enable.pcap").exists() else None}
 summary = {
     "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
-    "workload": "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
+    "workload": "selective Tor state persistence and bootstrap" if args.tor_state else "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
     "outer_accelerator": "hvf", "inner_accelerator": None if args.gateway_bundle else "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
     "checks": [line.strip() for line in serial.splitlines() if line.startswith("PASS:")],
@@ -196,8 +254,15 @@ summary = {
     "fixture_verified": fixture_verified,
     "gateway_image_manifest": gateway_manifest,
     "session_image_manifest": session_manifest,
+    "tor_online": args.tor_online,
+    "captures": captures,
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 print(json.dumps(summary, indent=2))
 if result.returncode or not summary["guest_pass"] or found or not fixture_verified or not bundle_verified:
     raise SystemExit(1)
+if captures:
+    assert captures["before_enable"] is not None
+    assert captures["before_enable"]["ipv4"] == 0 and captures["before_enable"]["ipv6"] == 0
+    assert captures["uplink"]["tcp"] > 0 and captures["uplink"]["tcp"] == captures["uplink"]["ipv4"]
+    assert captures["uplink"]["udp"] == 0 and captures["uplink"]["ipv6"] == 0

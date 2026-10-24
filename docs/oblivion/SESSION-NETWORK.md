@@ -7,10 +7,12 @@ La chiave Abliteration rimane nel profilo generale e nella VM gateway.
 
 ## Apertura e chiusura
 
-1. `enter` richiede un gateway attivo e una sola sessione aperta. Dopo lo sblocco
+1. `enter` richiede un gateway attivo e una sola sessione aperta. Con rete
+   abilitata verifica prima bootstrap Tor e acquisizione delle guardie;
+   durante l’attesa il volume rimane chiuso. Dopo lo sblocco
    del volume genera un token nuovo, anche quando si riapre lo stesso archivio.
 2. Un socket host root-only in `/run/oblivion/gateway-control.sock` accetta solo
-   `grant` e `revoke`. Il servizio controlla UID 0 tramite `SO_PEERCRED`, valida
+   `check`, `grant`, `revoke` e `stop`. Il servizio controlla UID 0 tramite `SO_PEERCRED`, valida
    frame e richieste e attende la risposta del supervisore nel gateway.
 3. QEMU della sessione parte sospeso. Il controller collega il canale virtio
    `oblivion.session`, verifica UID 1100 e avvia il guest. Aspetta che il guest
@@ -21,7 +23,8 @@ La chiave Abliteration rimane nel profilo generale e nella VM gateway.
 5. `leave`, `force-leave` e `close` revocano il broker prima di chiudere il disco.
    La risposta arriva dopo la fine del processo API. Se il proprietario host
    non risponde, il controller distrugge il gateway e ne verifica l'arresto.
-   `lock` e `recover` fermano direttamente l'intera VM gateway.
+   `lock` e `recover` chiedono anche il checkpoint Tor finale e fermano
+   l’intera VM gateway prima di chiudere il generale.
 
 Un avvio fallito revoca il grant; il volume rimane interbloccato fino alla
 chiusura esplicita. Un gateway fermo impedisce una nuova apertura con rete.
@@ -48,10 +51,11 @@ per l'adapter OpenAI-compatible già presente. Usa l'istanza standalone e i
 percorsi HOME/XDG del volume della sessione. Nessun token è negli argomenti o
 nell'ambiente dei processi host/QEMU; dentro il guest è nell'ambiente OpenCode.
 
-Tor resta disabilitato in questa integrazione. Una richiesta corretta raggiunge
-il broker ma riceve `provider_unavailable`. Restano da realizzare persistenza
-dello stato Tor, abilitazione della rete, proxy dei tool e compatibilità reale
-con Abliteration. Il launcher è disponibile nello stage `conversation-guest`;
+Con `gateway_network: false`, il default per il laboratorio offline, una
+richiesta corretta raggiunge il broker e riceve `provider_unavailable`.
+L’[avvio online](TOR-STATE.md) importa lo stato selettivo di Tor prima di
+abilitare la rete e ammette nuove sessioni solo dopo il bootstrap. Restano
+proxy dei tool e compatibilità reale con Abliteration. Il launcher è disponibile nello stage `conversation-guest`;
 la live completa non esiste ancora.
 
 ## Laboratorio Mac
@@ -66,7 +70,7 @@ docker build --platform linux/arm64 --target session-network-artifacts \
 python3 script/oblivion/run-vm-lab.py \
   --image artifacts/oblivion-tui/image \
   --services-bundle artifacts/oblivion-session-network/bundle-new \
-  --gateway-image artifacts/oblivion-supervisor/image-final \
+  --gateway-image artifacts/oblivion-tor-state/image-03 \
   --session-image artifacts/oblivion-session-network/guest-new \
   --output artifacts/oblivion-session-network/run-new
 ```
