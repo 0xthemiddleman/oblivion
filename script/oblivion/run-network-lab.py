@@ -165,21 +165,7 @@ def overlay_fixture(image, output):
     (output / "lab-initrd").write_bytes(original + gzip.compress(archive, mtime=0))
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--image", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--overlay", action="store_true", help="Development only: load the current fixture and network script in RAM")
-    parser.add_argument("--tor-online", action="store_true", help="Allow Tor to bootstrap and check HTTPS via check.torproject.org; no provider requests")
-    parser.add_argument("--control-fault", choices=["disconnect", "shutdown", "malformed", "oversized", "partial", "duplicate-grant", "supervisor-crash", "broker-crash"], default="disconnect")
-    args = parser.parse_args()
-    assert (platform.system(), platform.machine()) == ("Darwin", "arm64")
-    # Linux's dump-guest-core property is unavailable with HVF. Suppress core
-    # dumps for this runner and its QEMU children; this is still a Mac lab.
-    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    image = args.image.resolve()
-    output = args.output.resolve()
-    assert all("," not in str(path) for path in [image, output])
+def verify_image(image, overlay=False):
     for line in (image / "SHA256SUMS").read_text().splitlines():
         digest, name = line.split()
         assert Path(name).name == name and hashlib.sha256((image / name).read_bytes()).hexdigest() == digest
@@ -193,15 +179,33 @@ def main():
     for line in (image / "sources.sha256").read_text().splitlines():
         digest, name = line.split()
         if name.startswith("./guest/"):
-            if args.overlay and Path(name).name == "network.sh":
+            if overlay and Path(name).name == "network.sh":
                 continue
             source = repository / "packages/oblivion-gateway/guest" / Path(name).name
             assert hashlib.sha256(source.read_bytes()).hexdigest() == digest, f"rebuild image: {source}"
         if name.startswith("./lab/"):
-            if args.overlay and Path(name).name == "vm-network-fixture.py":
+            if overlay and Path(name).name == "vm-network-fixture.py":
                 continue
             source = Path(__file__).with_name(Path(name).name)
             assert hashlib.sha256(source.read_bytes()).hexdigest() == digest, f"rebuild image: {source}"
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--image", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--overlay", action="store_true", help="Development only: load the current fixture and network script in RAM")
+    parser.add_argument("--tor-online", action="store_true", help="Allow Tor to bootstrap and check HTTPS via check.torproject.org; no provider requests")
+    parser.add_argument("--control-fault", choices=["disconnect", "shutdown", "malformed", "oversized", "partial", "duplicate-grant", "supervisor-crash", "broker-crash", "egress-crash"], default="disconnect")
+    args = parser.parse_args()
+    assert (platform.system(), platform.machine()) == ("Darwin", "arm64")
+    # Linux's dump-guest-core property is unavailable with HVF. Suppress core
+    # dumps for this runner and its QEMU children; this is still a Mac lab.
+    resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    image = args.image.resolve()
+    output = args.output.resolve()
+    assert all("," not in str(path) for path in [image, output])
+    verify_image(image, args.overlay)
     output.mkdir(parents=True, exist_ok=False)
     if args.overlay:
         overlay_fixture(image, output)
@@ -241,13 +245,14 @@ def main():
             chat.ready(fixture_hash)
             assert control.receive() == {"ready": True, "version": 1}
             assert control.call("status") == {"ok": True, "configured": False, "active": False}
-            check("separate VMs boot read-only with no shared filesystem; gateway Tor starts disabled")
+            check("separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected")
             key = "synthetic-" + secrets.token_hex(32)
             token = secrets.token_hex(32)
             assert control.call("configure", api_key=key) == {"ok": True, "configured": True, "active": False}
+            control.call("tor-initialize", state=None)
             assert control.call("grant", token=token) == {"ok": True, "configured": True, "active": True}
             summary["processes"] = gateway.call("supervisor-info")
-            check("private virtio control configures the production supervisor; API child has UID 1300, no capabilities, no environment and no core dumps")
+            check("private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps")
             assert chat.call("request", token="invalid")["status"] == 401
             assert chat.call("request", token=token)["status"] == 502
             check("chat reaches the production API broker; token checked; disabled Tor fails closed")
@@ -293,7 +298,7 @@ def main():
                 control.close()
             elif args.control_fault == "shutdown":
                 assert not control.call("shutdown")["active"]
-            elif args.control_fault in ["supervisor-crash", "broker-crash"]:
+            elif args.control_fault in ["supervisor-crash", "broker-crash", "egress-crash"]:
                 gateway.call(args.control_fault)
             else:
                 body = json.dumps({"operation": "status", "api_key": key}).encode()
@@ -308,7 +313,7 @@ def main():
                 assert control.receive() == {"ok": False, "error": "control_failed"}
             summary["stopped"] = gateway.call("supervisor-stopped")
             assert chat.call("disconnected")["disconnected"]
-            check("control fault " + args.control_fault + " removes the broker and stops Tor without automatic restart")
+            check("control fault " + args.control_fault + " removes broker and connector, clears route selectors and stops Tor without automatic restart")
             gateway.stop()
             assert chat.call("disconnected")["disconnected"]
             check("gateway termination leaves the chat without an alternative network path")

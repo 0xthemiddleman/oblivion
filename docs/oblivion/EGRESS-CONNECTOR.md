@@ -1,9 +1,10 @@
 # Connettore Tor e SOCKS5
 
 `oblivion-egress` è il nuovo componente di trasporto, compilato e verificato
-separatamente. **Non è ancora collegato al supervisore o alle sessioni**:
-il broker distribuito continua a usare Tor locale direttamente. La scelta
-SOCKS globale nella TUI richiede ancora storage host, IPC, firewall e lifecycle.
+separatamente. Il collegamento a supervisore e firewall è ora scritto, ma
+**attende compilazione e collaudo Linux**. Le immagini già verificate usano
+ancora il percorso precedente; il manager non permette ancora di scegliere
+SOCKS. Restano storage host, IPC e integrazione nel lifecycle dei volumi.
 I componenti della chat OpenCode non cambiano.
 
 ## Confini implementati
@@ -29,7 +30,7 @@ Il tipo condiviso `oblivion-transport::Transport` distingue:
 - `socks5`: endpoint IPv4 letterale e porta, con autenticazione opzionale.
   Sono esclusi hostname, IPv6, porta zero, `0.0.0.0/8`, `224.0.0.0/3`, loopback e il
   collegamento interno `10.88.0.0/30`. Un IP LAN esplicito è ammesso dal tipo;
-  l'eccezione firewall limitata a quell'IP e porta resta da integrare.
+  l'eccezione firewall limitata a quell'IP e porta è scritta e attende collaudo.
 
 Le credenziali del SOCKS esterno sono distinte dal token locale: al proxy
 vengono inviate soltanto quelle configurate, oppure nessuna autenticazione.
@@ -81,15 +82,80 @@ SOCKS completo, con firewall e sottoprocessi, prima di dichiarare il supporto
 globale. Il laboratorio non ha NIC esterna, non usa provider reale e non
 verifica l'isolamento KVM.
 
+## Integrazione runtime scritta, verifica pendente
+
+Il controller privato accetta un trasporto nel messaggio `configure`; se
+omesso usa Tor, preservando il protocollo dell'host esistente. La configurazione
+resta immutabile per quella VM. Per ogni grant avvia due figli senza capability:
+broker API con UID 1300 e connettore con UID 1201. Il broker raggiunge soltanto
+il connettore loopback su porta 9051. Password SOCKS e token passano su
+descrittori privati, mai su argv, ambiente o file.
+
+Il ruleset parte con tre insiemi vuoti. La configurazione li aggiorna in una
+transazione `nft`: Tor abilita UID 1200 verso Internet e UID 1201 verso il Tor
+locale; SOCKS abilita UID 1201 soltanto verso IP e porta configurati. Il tipo
+`uid` e l'associazione al socket sono descritti nel
+[manuale nftables](https://netfilter.org/projects/nftables/manpage.html).
+L'eccezione SOCKS precede il blocco LAN, ma riguarda soltanto quel processo e
+quell'endpoint. Forwarding, DNS di sistema e IPv6 rimangono bloccati.
+
+Tor parte solo dopo `tor-initialize`, che è rifiutato in modalità SOCKS. Un
+file tmpfiles crea la directory RAM vuota necessaria al mount del controller,
+senza avviare Tor. L'avvio attende il canale di controllo prima di fermare Tor
+per l'importazione dello stato. Revoca e guasti del controller chiudono entrambi
+i figli; `ExecStopPost` ferma Tor e ricarica la policy con selettori vuoti.
+Questi sono comportamenti previsti dal sorgente, non nuovi risultati di test.
+
+Il nuovo `script/oblivion/run-transport-lab.py` prepara due VM indipendenti e un
+proxy SOCKS/TLS sintetico sul loopback del Mac, raggiunto attraverso l'alias
+QEMU. Nessuna richiesta viene inoltrata a un provider. L'immagine di laboratorio
+aggiunge esclusivamente il certificato pubblico della fixture al broker e
+conserva il diff; le immagini di produzione non ricevono quella CA. I test
+previsti coprono credenziali e metodi rifiutati, proxy fermo, ripresa, rotazione
+del token, stream revocato, crash e tentativo di riconfigurazione. Le catture
+esterne controllano anche le coppie IP/porta, oltre ai protocolli.
+
+Il [report corrente](transport-runtime-status.json) distingue:
+
+- controlli statici Rust, Python e shell;
+- smoke test del solo server sintetico sul Mac, con curl e verifica TLS;
+- regressione del parser su quattro PCAP già conservati;
+- build Linux e `bun run check` non completati per errori I/O Docker, con
+  circa 340 MiB liberi sul Mac; nessuna nuova esecuzione delle due VM.
+
+Prima di eseguire questi comandi occorre liberare spazio e verificare che
+Docker abbia ripreso a leggere e scrivere normalmente. Non è stato eseguito
+un reset globale di Docker e non sono stati rimossi dati di altri progetti.
+Da root del repository, usare directory di output nuove:
+
+```sh
+docker buildx build -f script/oblivion/Dockerfile.vm-lab --platform linux/arm64 \
+  --target transport-network-artifacts \
+  --output type=local,dest=artifacts/oblivion-transport-runtime/image-02 .
+PYTHONDONTWRITEBYTECODE=1 python3 script/oblivion/run-network-lab.py \
+  --image artifacts/oblivion-transport-runtime/image-02 \
+  --output artifacts/oblivion-transport-runtime/tor-01 --control-fault egress-crash
+PYTHONDONTWRITEBYTECODE=1 python3 script/oblivion/run-transport-lab.py \
+  --image artifacts/oblivion-transport-runtime/image-02 \
+  --output artifacts/oblivion-transport-runtime/socks-auth-01 \
+  --authentication required --fault egress-crash
+```
+
+Ripetere la suite SOCKS con autenticazione `none` e per i guasti `revoke`,
+`broker-crash`, `supervisor-crash`, `control-disconnect` e `reconfigure`.
+Eseguire poi regressione Tor online, persistenza delle guardie, lifecycle host
+e volumi, controlli Rust Linux e comando canonico del repository. Finché
+questi gate restano aperti non è dichiarato il supporto SOCKS globale.
+
 ## Integrazione successiva
 
 1. Salvare modalità, endpoint e autenticazione nel generale cifrato; mostrare
    soltanto metadati nel manager e permettere la scelta temporanea in readonly.
-2. Trasmettere il profilo al supervisore; avviare Tor solo in modalità Tor.
+2. Trasmettere il profilo dall'host al supervisore; avviare Tor solo in modalità Tor.
    In SOCKS non importare, acquisire o salvare stato Tor.
-3. Avviare il connettore con UID separato per grant e consegnargli i soli segreti
+3. Collaudare l'avvio del connettore con UID separato per grant e i soli segreti
    del trasporto. Il broker continua a ricevere chiave API e token locale.
-4. Applicare firewall per modalità: API e tool soltanto al connettore locale,
+4. Collaudare il firewall per modalità: API e tool soltanto al connettore locale,
    connettore soltanto al Tor locale oppure all'IP/porta del proxy scelto.
    Nessun accesso grezzo da guest e nessuna uscita diretta o DNS di sistema.
 5. Collegare revoca e arresto di entrambi i processi al lifecycle verificato

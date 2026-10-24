@@ -1,4 +1,6 @@
 #[cfg(target_os = "linux")]
+mod network;
+#[cfg(target_os = "linux")]
 mod supervisor;
 #[cfg(target_os = "linux")]
 mod tor;

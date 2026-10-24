@@ -10,6 +10,10 @@ table inet oblivion {
             192.168.0.0/16, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24,
             224.0.0.0/4, 240.0.0.0/4 }
     }
+    # Empty until the private controller chooses one transport.
+    set proxy4 { type ipv4_addr . inet_service; }
+    set tor_owners { type uid; }
+    set tor_connectors { type uid; }
     chain input {
         type filter hook input priority filter; policy drop;
         meta nfproto ipv6 counter drop
@@ -27,14 +31,18 @@ table inet oblivion {
         type filter hook output priority filter; policy drop;
         meta nfproto ipv6 counter drop
         ct state invalid counter drop
-        # Deny LAN, host services and metadata even to the Tor process.
+        # Explicit external proxy exception, limited to its connector UID,
+        # address and port. No guest or API process may use this raw endpoint.
+        oifname "outside0" meta skuid 1201 ip daddr . tcp dport @proxy4 counter accept
+        # Deny every other LAN/host/metadata endpoint, including for Tor.
         oifname "outside0" ip daddr @reserved4 counter drop
         ct state established,related accept
         # API and future tool proxy may reach only the local policy-controlled
-        # Tor entry. Root uses its private Unix control socket, not TCP.
-        oifname "lo" meta skuid { 1300, 1301 } ip daddr 127.0.0.1 tcp dport 9050 counter accept
-        oifname "outside0" meta skuid 1200 meta l4proto tcp counter accept
-        meta skuid { 1300, 1301 } counter drop
+        # connector. Root uses its private Unix control socket, not TCP.
+        oifname "lo" meta skuid { 1300, 1301 } ip daddr 127.0.0.1 tcp dport 9051 counter accept
+        oifname "lo" meta skuid @tor_connectors ip daddr 127.0.0.1 tcp dport 9050 counter accept
+        oifname "outside0" meta skuid @tor_owners meta l4proto tcp counter accept
+        meta skuid { 1200, 1201, 1300, 1301 } counter drop
         counter drop
     }
 }

@@ -8,10 +8,16 @@ install -m 0755 /gateway-config/network.sh /usr/libexec/oblivion-gateway-network
 install -m 0644 /gateway-config/*.service /etc/systemd/system/
 groupmod -g 1200 debian-tor
 usermod -u 1200 -g 1200 debian-tor
+groupadd --gid 1201 oblivion-egress
+useradd --uid 1201 --gid 1201 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin oblivion-egress
 groupadd --gid 1300 oblivion-api
 useradd --uid 1300 --gid 1300 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin oblivion-api
 groupadd --gid 1301 oblivion-tools
 useradd --uid 1301 --gid 1301 --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin oblivion-tools
+# /var is a fresh tmpfs. The controller needs its writable mount before Tor
+# starts; create only an empty private directory, also in SOCKS mode.
+mkdir -p /etc/tmpfiles.d
+printf 'd /var/lib/tor 0700 debian-tor debian-tor -\n' > /etc/tmpfiles.d/oblivion-tor.conf
 passwd -l root
 for role in inside outside; do
     octet=01
@@ -37,8 +43,8 @@ systemctl mask tor.service tor@default.service nftables.service
 cat > /etc/systemd/system/oblivion-gateway.target <<'EOF'
 [Unit]
 Description=Oblivion isolated network gateway
-Requires=multi-user.target oblivion-gateway-network.service oblivion-tor.service
-After=multi-user.target oblivion-gateway-network.service oblivion-tor.service
+Requires=multi-user.target oblivion-gateway-network.service
+After=multi-user.target oblivion-gateway-network.service
 AllowIsolate=yes
 EOF
 ln -sf /etc/systemd/system/oblivion-gateway.target /etc/systemd/system/default.target

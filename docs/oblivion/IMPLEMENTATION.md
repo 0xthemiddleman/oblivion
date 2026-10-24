@@ -11,8 +11,10 @@ Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager fidato:
 archivio versionato, migrazione, scelta per apertura e nessuna rotazione
 automatica. Il [SOCKS5 globale](KEYS-AND-EGRESS.md) viene prima del proxy dei
 tool: il [connettore](EGRESS-CONNECTOR.md) è compilato e verificato separatamente,
-ma configurazione host, supervisore e firewall restano da integrare. Il percorso
-online attuale usa Tor.
+mentre l'integrazione con supervisore e firewall è scritta e attende compilazione
+e collaudo Linux. Le build sono sospese per spazio insufficiente sul Mac ed errori
+I/O nello storage Docker. Configurazione host e selezione nel manager restano da
+integrare; il percorso selezionabile dall'host usa ancora Tor.
 
 Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
 OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;
@@ -48,8 +50,10 @@ collega NIC, token locale e revoca al ciclo del volume. Lo [stato Tor](TOR-STATE
 viene importato prima dell’attivazione online, salvato selettivamente nel
 generale scrivibile e acquisito anche alla chiusura ordinata. Il bootstrap
 e la presenza delle guardie precedono nuove autorizzazioni online. Il collaudo
-del provider reale resta aperto. Lint e i 34 task di
-typecheck passano nell’ambiente Debian/Bun fissato dal repository.
+del provider reale resta aperto. La precedente verifica di lint e dei 34 task di
+typecheck è passata nell’ambiente Debian/Bun fissato dal repository. Per le
+modifiche correnti al trasporto, il comando canonico non è partito: Docker
+restituisce un errore I/O. Non si estende la precedente evidenza a questo diff.
 
 Il grant ora nasce soltanto dopo l'avvio di QEMU sospeso e resta associato al
 suo pidfd. La [revoca all'uscita del processo](session-exit-evidence.json)

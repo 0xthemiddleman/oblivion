@@ -14,6 +14,7 @@ from pathlib import Path
 ROLE = sys.argv[1]
 API = ("10.88.0.1", 8111)
 canaries = []
+stream = None
 
 
 def run(*command, **options):
@@ -42,13 +43,18 @@ def tor(command):
                 return "\n".join(lines)
 
 
-def request(token):
+def open_request(token):
     body = json.dumps({"model": "abliterated-model", "messages": [
         {"role": "user", "content": "synthetic network fixture"}], "stream": True})
-    with socket.create_connection(API, timeout=10) as connection:
-        connection.sendall(("POST /v1/chat/completions HTTP/1.1\r\nHost: gateway\r\n"
-            f"Authorization: Bearer {token}\r\nContent-Type: application/json\r\n"
-            f"Content-Length: {len(body)}\r\n\r\n{body}").encode())
+    connection = socket.create_connection(API, timeout=10)
+    connection.sendall(("POST /v1/chat/completions HTTP/1.1\r\nHost: gateway\r\n"
+        f"Authorization: Bearer {token}\r\nContent-Type: application/json\r\n"
+        f"Content-Length: {len(body)}\r\n\r\n{body}").encode())
+    return connection
+
+
+def request(token):
+    with open_request(token) as connection:
         data = b""
         while chunk := connection.recv(65536):
             data += chunk
@@ -84,24 +90,33 @@ def gateway(operation, configuration):
     if operation == "supervisor-info":
         pid = int(run("systemctl", "show", "oblivion-gateway-control.service", "--property=MainPID", "--value"))
         children = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
-        assert len(children) == 1
-        child = Path("/proc") / children[0]
+        assert len(children) == 2
         parent_status = Path(f"/proc/{pid}/status").read_text()
-        status = (child / "status").read_text()
-        assert "CapEff:\t00000000000000e3" in parent_status and "NoNewPrivs:\t1" in parent_status
+        assert "CapEff:\t00000000000010e3" in parent_status and "NoNewPrivs:\t1" in parent_status
         assert "Uid:\t0\t0\t0\t0" in parent_status
-        assert "Uid:\t1300\t1300\t1300\t1300" in status and "CapEff:\t0000000000000000" in status
-        assert all(f"{name}:\t0000000000000000" in status for name in ["CapInh", "CapPrm", "CapAmb"])
-        assert "NoNewPrivs:\t1" in status and (child / "environ").read_bytes() == b""
-        assert (child / "cmdline").read_bytes() == b"/usr/bin/oblivion-api\0"
-        assert next(line.split()[4:6] for line in (child / "limits").read_text().splitlines() if line.startswith("Max core file size")) == ["0", "0"]
-        return {"supervisor_pid": pid, "broker_pid": int(children[0]), "broker_uid": 1300, "broker_caps": 0}
-    if operation in ["supervisor-crash", "broker-crash"]:
+        processes = {}
+        for value in children:
+            child = Path("/proc") / value
+            name = (child / "comm").read_text().strip()
+            assert name in ["oblivion-api", "oblivion-egress"]
+            uid = 1300 if name == "oblivion-api" else 1201
+            status = (child / "status").read_text()
+            assert f"Uid:\t{uid}\t{uid}\t{uid}\t{uid}" in status
+            assert all(f"{field}:\t0000000000000000" in status for field in ["CapInh", "CapPrm", "CapEff", "CapAmb"])
+            assert "NoNewPrivs:\t1" in status and (child / "environ").read_bytes() == b""
+            assert (child / "cmdline").read_bytes() == f"/usr/bin/{name}\0".encode()
+            assert next(line.split()[4:6] for line in (child / "limits").read_text().splitlines() if line.startswith("Max core file size")) == ["0", "0"]
+            processes[name] = int(value)
+        assert set(processes) == {"oblivion-api", "oblivion-egress"}
+        return {"supervisor_pid": pid, "broker_pid": processes["oblivion-api"], "broker_uid": 1300, "broker_caps": 0,
+            "egress_pid": processes["oblivion-egress"], "egress_uid": 1201, "egress_caps": 0}
+    if operation in ["supervisor-crash", "broker-crash", "egress-crash"]:
         pid = int(run("systemctl", "show", "oblivion-gateway-control.service", "--property=MainPID", "--value"))
-        if operation == "broker-crash":
+        if operation != "supervisor-crash":
+            name = "oblivion-api" if operation == "broker-crash" else "oblivion-egress"
             children = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
-            assert len(children) == 1
-            pid = int(children[0])
+            assert len(children) == 2
+            pid = next(int(value) for value in children if Path(f"/proc/{value}/comm").read_text().strip() == name)
         os.kill(pid, signal.SIGKILL)
         return {"signalled": True}
     if operation == "supervisor-stopped":
@@ -113,15 +128,36 @@ def gateway(operation, configuration):
                 break
             assert time.monotonic() < deadline, (state, tor_state)
             time.sleep(0.01)
-        assert not any(path.read_text().strip() == "oblivion-api" for path in Path("/proc").glob("[0-9]*/comm"))
-        return {"supervisor": state, "tor": tor_state, "broker_absent": True}
+        assert not any(path.read_text().strip() in ["oblivion-api", "oblivion-egress"] for path in Path("/proc").glob("[0-9]*/comm"))
+        selectors = gateway("transport-state", {})["selectors"]
+        assert all(not values for values in selectors.values())
+        return {"supervisor": state, "tor": tor_state, "broker_absent": True, "egress_absent": True, "routes_empty": True}
+    if operation == "transport-state":
+        active = run("systemctl", "show", "oblivion-tor.service", "--property=ActiveState", "--value").decode().strip()
+        sets = {entry["set"]["name"]: entry["set"].get("elem", []) for entry in json.loads(run("nft", "-j", "list", "ruleset"))["nftables"] if "set" in entry}
+        return {"tor": active, "tor_state_file": Path("/var/lib/tor/state").exists(),
+            "selectors": {name: sets[name] for name in ["proxy4", "tor_owners", "tor_connectors"]}}
+    if operation == "proxy-probes":
+        port, other = configuration["port"], configuration["other_port"]
+        assert all(isinstance(value, int) and 1 <= value <= 65535 for value in [port, other])
+        # A real listening canary makes local Tor bypass denials meaningful.
+        with socket.socket() as canary:
+            canary.bind(("127.0.0.1", 9050))
+            canary.listen()
+            for uid, address, target in [(1300, "10.0.2.2", port), (1200, "10.0.2.2", port),
+                (1201, "10.0.2.2", other), (1300, "127.0.0.1", 9050), (1201, "127.0.0.1", 9050)]:
+                result = subprocess.run(["setpriv", f"--reuid={uid}", f"--regid={uid}", "--clear-groups", "--",
+                    "python3", "-c", "import socket,sys; s=socket.socket(); s.settimeout(.4); assert s.connect_ex((sys.argv[1],int(sys.argv[2]))) != 0", address, str(target)],
+                    capture_output=True, timeout=5, env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})
+                assert result.returncode == 0
+        return {"denied": 5}
     if operation == "rules":
         return json.loads(run("nft", "-j", "list", "ruleset"))
     if operation == "forwarding-on":
         run("busybox", "sysctl", "-q", "-w", "net.ipv4.ip_forward=1")
         return {"forwarding": True}
     if operation == "forwarding-off":
-        run("/usr/libexec/oblivion-gateway-network")
+        run("busybox", "sysctl", "-q", "-w", "net.ipv4.ip_forward=0")
         return {"forwarding": False}
     if operation == "tor-enable":
         tor("SETCONF DisableNetwork=0")
@@ -137,7 +173,7 @@ def gateway(operation, configuration):
     if operation == "tor-status":
         return {"bootstrapped": "PROGRESS=100" in tor("GETINFO status/bootstrap-phase")}
     if operation == "tor-check":
-        result = subprocess.run(["setpriv", "--reuid=1300", "--regid=1300", "--clear-groups", "--",
+        result = subprocess.run(["setpriv", "--reuid=1201", "--regid=1201", "--clear-groups", "--",
             "curl", "--silent", "--show-error", "--fail", "--connect-timeout", "20", "--max-time", "90",
             "--socks5-hostname", "127.0.0.1:9050", "--proxy-user", "oblivion-lab:synthetic-check",
             "https://check.torproject.org/api/ip"], capture_output=True, timeout=95,
@@ -166,11 +202,7 @@ assert ROLE in ["gateway", "chat"]
 assert len(Path("/proc/swaps").read_text().splitlines()) == 1
 tty.setraw(0)
 if ROLE == "gateway":
-    deadline = time.monotonic() + 10
-    while not all(Path(path).exists() for path in ["/run/tor/control", "/run/tor/control.authcookie"]):
-        assert time.monotonic() < deadline, "Tor control socket readiness deadline"
-        time.sleep(0.01)
-    assert "DisableNetwork=1" in tor("GETCONF DisableNetwork")
+    assert run("systemctl", "show", "oblivion-tor.service", "--property=ActiveState", "--value").decode().strip() == "inactive"
     assert Path("/proc/sys/net/ipv4/ip_forward").read_text().strip() == "0"
     # Actual listening sockets make negative ingress tests meaningful even if
     # a future service accidentally binds to the inside address.
@@ -188,7 +220,7 @@ else:
 reply({"ready": ROLE, "fixture_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()})
 for line in sys.stdin:
     command = json.loads(line)
-    assert set(command) <= {"id", "operation", "api_key", "token"}
+    assert set(command) <= {"id", "operation", "api_key", "token", "port", "other_port"}
     try:
         if command["operation"] == "poweroff":
             reply({"id": command["id"], "ok": True})
@@ -197,6 +229,29 @@ for line in sys.stdin:
             result = gateway(command["operation"], command)
         elif command["operation"] == "request":
             result = request(command["token"])
+        elif command["operation"] == "stream-start":
+            assert stream is None
+            stream = open_request(command["token"])
+            data = b""
+            while b"data:" not in data:
+                chunk = stream.recv(4096)
+                assert chunk and len(data) < 65536
+                data += chunk
+            assert data.startswith(b"HTTP/1.1 200")
+            result = {"active": True}
+        elif command["operation"] == "stream-closed":
+            assert stream is not None
+            stream.settimeout(10)
+            size = 0
+            try:
+                while chunk := stream.recv(4096):
+                    size += len(chunk)
+                    assert size < 65536
+            except ConnectionResetError:
+                pass
+            stream.close()
+            stream = None
+            result = {"closed": True}
         elif command["operation"] == "probes":
             result = probes()
         elif command["operation"] == "disconnected":

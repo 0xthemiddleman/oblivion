@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-24",
+  "repository_parent": "550f639c7d3633501b60f269731b09015a3f5e8b",
+  "status": "source integration written; Linux compilation and runtime verification pending",
+  "scope": "Per-grant API/egress supervisor, transport-specific firewall selectors, lazy Tor startup and two-VM SOCKS integration test runner. Host settings and manager selection remain unimplemented.",
+  "runtime_verified": false,
+  "production_kvm_tested": false,
+  "chat_tui_changed": false,
+  "static_checks": {
+    "rustfmt": "passed",
+    "python_ast_files": 5,
+    "shell_syntax": "passed",
+    "git_diff_check": "passed"
+  },
+  "fixture_smoke": {
+    "scope": "native fixture smoke only; curl, not production connector, supervisor or VM firewall",
+    "passed": true,
+    "cases": [
+      {
+        "authenticated": false,
+        "fixture": {
+          "contacts": 4,
+          "http_requests": 3,
+          "finished": 4,
+          "connect_rejected": 1,
+          "stream_started": 1,
+          "stream_closed": 1
+        },
+        "verified_tls": true,
+        "restart": true
+      },
+      {
+        "authenticated": true,
+        "fixture": {
+          "contacts": 5,
+          "http_requests": 3,
+          "finished": 5,
+          "auth_rejected": 1,
+          "connect_rejected": 1,
+          "stream_started": 1,
+          "stream_closed": 1
+        },
+        "verified_tls": true,
+        "restart": true
+      }
+    ],
+    "source_sha256": "b51797b28ca4c0fd96e419f6c901c0c7ae8d9c786b0aab93e2f90de36043111c"
+  },
+  "parser_regression": {
+    "scope": "packet parser regression on retained captures, no new VM execution",
+    "passed": true,
+    "captures": [
+      {
+        "file": "artifacts/oblivion-network/run-06/before-tor-outside.pcap",
+        "packets": 0,
+        "tcp": 0,
+        "flows": 0,
+        "fragments": 0
+      },
+      {
+        "file": "artifacts/oblivion-network/run-06/chat-inside.pcap",
+        "packets": 48,
+        "tcp": 28,
+        "flows": 12,
+        "fragments": 0
+      },
+      {
+        "file": "artifacts/oblivion-network/run-06/gateway-inside.pcap",
+        "packets": 48,
+        "tcp": 28,
+        "flows": 12,
+        "fragments": 0
+      },
+      {
+        "file": "artifacts/oblivion-network/run-06/gateway-outside.pcap",
+        "packets": 0,
+        "tcp": 0,
+        "flows": 0,
+        "fragments": 0
+      }
+    ]
+  },
+  "linux_build": {
+    "status": "environment_error",
+    "exit_code": 100,
+    "error": "Docker BuildKit metadata database input/output error",
+    "new_image_exported": false
+  },
+  "canonical_check": {
+    "command": "bun run check in the pinned Debian/Bun Docker image",
+    "status": "not_started",
+    "docker_exit_code": 125,
+    "error": "Docker image blob input/output error"
+  },
+  "environment": {
+    "platform": "macOS ARM64",
+    "free_bytes_at_report": 360603648,
+    "cleanup": "Only Oblivion rebuildable caches/artifacts and exported project build history; no global Docker reset/prune or unrelated project data removal."
+  },
+  "sources": {
+    "packages/oblivion-gateway/src/control.rs": "161c16d539343ab44a52962e854be6288222cf2e32814f6d5598a3c25d56da77",
+    "packages/oblivion-gateway/src/network.rs": "81615d8c06485f36b416779e48d318b332af5b69b67a7e19d7aa321f5a1aa54a",
+    "packages/oblivion-gateway/src/supervisor.rs": "afefade5fcc6faa28d5924052dff07ca1d70335d133eac59f3c6c3474a54739b",
+    "packages/oblivion-gateway/src/tor.rs": "998661c13e65262347fde7934a100453db8779808f71858c77340a977aae6fba",
+    "packages/oblivion-gateway/guest/firewall.nft": "2c3b88df8230bea62546a4ae6b4aa42fbe1c41958d761ba502593e5026f469ba",
+    "packages/oblivion-gateway/guest/install.sh": "1cd07891ba09bab4208be5172b7991ab8ac88f377ae854fd907a02d2b693e0f7",
+    "packages/oblivion-gateway/guest/oblivion-gateway-control.service": "188338e655eb369ba9a71220761ad3e3f6c695e5a730c8e8b07b470b063e7846",
+    "script/oblivion/Dockerfile.vm-lab": "a43a9515d5710b714df71f03719ad8c7de05b3836c4bc5a3735fcffbbb2e776d",
+    "script/oblivion/run-network-lab.py": "f3b7199262f33001a8cd202a95fbdf830b25c88242c24102d71a76dd0110bbf6",
+    "script/oblivion/run-transport-lab.py": "f21d6fa18780bbdc27b87168359d819e5bfbe109c515a8fc1e646f51f2874641",
+    "script/oblivion/vm-network-fixture.py": "e5cf7e3821fb8fe08d94bd83d4806e342d249e08940d8eac5dde223584d8e8bf",
+    "script/oblivion/transport_fixture.py": "b51797b28ca4c0fd96e419f6c901c0c7ae8d9c786b0aab93e2f90de36043111c",
+    "script/oblivion/packet_capture.py": "37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86"
+  },
+  "artifacts": {
+    "artifacts/oblivion-transport-runtime/build-image-01.log": "a5cc9230b12e78ddb14aa0e60f93589a428b73291942db25e5ba6f4d8f0cd2fb",
+    "artifacts/oblivion-transport-runtime/root-check.log": "1c001f5040cfaf675206ae0214399e139a05e599440e54aef11a98ca81ada0ef",
+    "artifacts/oblivion-transport-runtime/docker-storage-status.log": "90c7914fc823cb91713b08809df73175fa373ead0f3769c1c67e3747006ad579",
+    "artifacts/oblivion-transport-runtime/fixture-smoke.json": "d060d3ba3a36cdaee2d4420094eb9ef47e89f29e19e0c4addd4a5621e61a2a3e",
+    "artifacts/oblivion-transport-runtime/parser-regression.json": "563b15e622c4b670d6df2f5349ce5793b1953e2226ea020f76957a8ac2a369c3"
+  },
+  "remaining_gates": [
+    "Restore free disk space and Docker storage health, then compile both production and laboratory gateway binaries on Linux.",
+    "Run strict image/source verification, two-VM Tor regression and SOCKS authenticated/unauthenticated/failure/stream suites with outside packet captures.",
+    "Verify host-managed Tor state persistence and existing LUKS/session revocation against the new controller and connector.",
+    "Implement encrypted host transport settings, readonly selection and trusted manager controls without changing the OpenCode chat UI.",
+    "Run the canonical repository check; prior successful checks do not cover this diff.",
+    "Extend the selected transport to the authorized tools proxy before claiming global SOCKS support."
+  ]
+}

@@ -154,6 +154,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends tor nftables ip
 COPY packages/oblivion-gateway/guest/ /gateway-config/
 COPY --from=gateway-compiler /gateway-bundle/oblivion-api /usr/bin/oblivion-api
 COPY --from=gateway-compiler /gateway-bundle/oblivion-gateway-control /usr/bin/oblivion-gateway-control
+COPY --from=gateway-compiler /gateway-bundle/oblivion-egress /usr/bin/oblivion-egress
 RUN sh /gateway-config/install.sh && rm -rf /gateway-config
 # BuildKit mounts its own resolver read-only during RUN; COPY replaces the
 # image's file without touching that build-time mount.
@@ -241,3 +242,26 @@ COPY --from=stream-pack /stream-out/ /
 # Reuse a previously verified session image while changing gateway-only fixtures.
 FROM scratch AS stream-gateway-artifacts
 COPY --from=stream-pack /stream-out/gateway/ /
+
+# Transport integration lab: the production supervisor/connector/firewall with
+# a lab-only API trust root. No local synthetic SOCKS service is auto-started.
+FROM gateway-network-lab AS transport-network-lab
+COPY --from=stream-compiler /stream-bundle/oblivion-api /usr/bin/oblivion-api
+COPY --from=stream-compiler /stream-bundle/trust.diff /usr/lib/oblivion-transport-fixture/trust.diff
+
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS transport-network-pack
+RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
+COPY packages/oblivion-gateway/guest/ /sources/guest/
+COPY script/oblivion/vm-network-fixture.py script/oblivion/vm-network-setup.sh /sources/lab/
+COPY --from=gateway-compiler /gateway-bundle/sources.sha256 /sources/broker.sha256
+RUN --mount=type=bind,from=transport-network-lab,source=/,target=/lab,ro \
+    mkdir /out && cp /lab/boot/vmlinuz-* /out/kernel && cp /lab/boot/initrd.img-* /out/initrd \
+    && mksquashfs /lab /out/laboratory.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
+    && cp /lab/usr/lib/oblivion-transport-fixture/trust.diff /out/trust.diff \
+    && sha256sum /lab/usr/bin/oblivion-api /lab/usr/bin/oblivion-egress /lab/usr/bin/oblivion-gateway-control > /out/binaries.sha256 \
+    && cd /sources && find . -type f -print0 | sort -z | xargs -0 sha256sum > /out/sources.sha256 \
+    && cp broker.sha256 /out/broker-sources.sha256 \
+    && cd /out && sha256sum * > SHA256SUMS
+
+FROM scratch AS transport-network-artifacts
+COPY --from=transport-network-pack /out/ /

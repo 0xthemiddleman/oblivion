@@ -5,7 +5,10 @@ scegliere tra Tor, predefinito, e un proxy SOCKS5 globale per Oblivion.
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager e nel
 controller. Il percorso online usa ancora Tor: la scelta di un SOCKS5 esterno
 non è ancora attiva. Il [connettore](EGRESS-CONNECTOR.md) ha prove separate,
-ma storage, manager, supervisore e firewall devono ancora essere collegati.
+mentre supervisore e firewall sono ora collegati nel sorgente, in attesa del
+collaudo Linux. Storage e manager devono ancora essere collegati. Lo storage
+Docker del Mac restituisce errori I/O dopo l'esaurimento dello spazio: nessuna
+nuova evidenza VM viene dichiarata per queste modifiche.
 
 ## Chiavi salvate
 

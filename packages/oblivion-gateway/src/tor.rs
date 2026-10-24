@@ -13,6 +13,11 @@ pub struct Tor;
 impl Tor {
     pub fn initialize(state: Option<State>) -> io::Result<Self> {
         let had_guards = state.as_ref().is_some_and(State::has_guards);
+        // Lazy startup: SOCKS mode must never launch Tor. Starting disabled
+        // here initializes Tor's RAM state before import. Type=simple only
+        // confirms process creation: wait for control before asking it to stop.
+        service("start")?;
+        ready()?;
         service("stop")?;
         // Tor has only run with DisableNetwork=1 in this fresh VM. Replace its
         // initial RAM state before permitting any external connection.
@@ -31,17 +36,7 @@ impl Tor {
             fs::rename("/var/lib/tor/state.oblivion", "/var/lib/tor/state")?;
         }
         service("start")?;
-        let deadline = Instant::now() + Duration::from_secs(5);
-        loop {
-            match control("GETINFO version\r\n") {
-                Ok(lines) if lines == [format!("250-version={VERSION}\r\n")] => break,
-                Ok(_) => return Err(io::Error::other("unsupported_tor_version")),
-                Err(_) if Instant::now() < deadline => {
-                    std::thread::sleep(Duration::from_millis(50))
-                }
-                Err(error) => return Err(error),
-            }
-        }
+        ready()?;
         let tor = Self;
         if had_guards && !tor.snapshot(false)?.has_guards() {
             return Err(io::Error::other("tor_state_rejected"));
@@ -76,6 +71,18 @@ impl Tor {
             .take(LIMIT as u64 + 1)
             .read_to_string(&mut text)?;
         State::select(&text).map_err(|_| io::Error::other("invalid_tor_state"))
+    }
+}
+
+fn ready() -> io::Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        match control("GETINFO version\r\n") {
+            Ok(lines) if lines == [format!("250-version={VERSION}\r\n")] => return Ok(()),
+            Ok(_) => return Err(io::Error::other("unsupported_tor_version")),
+            Err(_) if Instant::now() < deadline => std::thread::sleep(Duration::from_millis(50)),
+            Err(error) => return Err(error),
+        }
     }
 }
 

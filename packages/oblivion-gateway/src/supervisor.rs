@@ -1,3 +1,4 @@
+use oblivion_transport::Transport;
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Write};
@@ -15,14 +16,24 @@ const FRAME_LIMIT: usize = 512 * 1024;
 #[derive(Deserialize)]
 #[serde(tag = "operation", rename_all = "kebab-case", deny_unknown_fields)]
 enum Request {
-    Configure { api_key: Zeroizing<String> },
-    Grant { token: Zeroizing<String> },
+    Configure {
+        api_key: Zeroizing<String>,
+        #[serde(default)]
+        transport: Transport,
+    },
+    Grant {
+        token: Zeroizing<String>,
+    },
     Revoke {},
     Status {},
     Shutdown {},
-    TorInitialize { state: Option<String> },
+    TorInitialize {
+        state: Option<String>,
+    },
     TorEnable {},
-    TorSnapshot { stop: bool },
+    TorSnapshot {
+        stop: bool,
+    },
 }
 
 #[derive(Serialize)]
@@ -67,8 +78,9 @@ pub fn run() -> io::Result<()> {
     result
 }
 
-fn serve(channel: &mut Channel, api: &mut Option<Api>) -> io::Result<()> {
+fn serve(channel: &mut Channel, api: &mut Option<Grant>) -> io::Result<()> {
     let mut key = None;
+    let mut transport = None;
     let mut tor = None;
     loop {
         let bytes = channel.read(api)?;
@@ -78,7 +90,11 @@ fn serve(channel: &mut Channel, api: &mut Option<Api>) -> io::Result<()> {
         let shutdown = matches!(request, Request::Shutdown {});
         match request {
             Request::TorInitialize { state } => {
-                if tor.is_some() || api.is_some() || key.is_none() {
+                if tor.is_some()
+                    || api.is_some()
+                    || key.is_none()
+                    || !matches!(transport, Some(Transport::Tor {}))
+                {
                     return Err(io::Error::other("invalid_tor_initialization"));
                 }
                 let state = state
@@ -123,13 +139,18 @@ fn serve(channel: &mut Channel, api: &mut Option<Api>) -> io::Result<()> {
                 )?;
                 continue;
             }
-            Request::Configure { api_key } => {
+            Request::Configure {
+                api_key,
+                transport: selected,
+            } => {
                 if key.is_some()
                     || !(16..=4096).contains(&api_key.len())
                     || !api_key.bytes().all(|byte| byte.is_ascii_graphic())
                 {
                     return Err(io::Error::other("invalid_configuration"));
                 }
+                crate::network::configure(&selected)?;
+                transport = Some(selected);
                 key = Some(api_key);
             }
             Request::Grant { token } => {
@@ -142,7 +163,13 @@ fn serve(channel: &mut Channel, api: &mut Option<Api>) -> io::Result<()> {
                 let key = key
                     .as_ref()
                     .ok_or_else(|| io::Error::other("not_configured"))?;
-                *api = Some(Api::start(key, &token)?);
+                let transport = transport
+                    .as_ref()
+                    .ok_or_else(|| io::Error::other("not_configured"))?;
+                if matches!(transport, Transport::Tor {}) && tor.is_none() {
+                    return Err(io::Error::other("tor_not_initialized"));
+                }
+                *api = Some(Grant::start(key, &token, transport)?);
             }
             Request::Revoke {} | Request::Shutdown {} => {
                 if let Some(mut current) = api.take() {
@@ -165,13 +192,68 @@ fn serve(channel: &mut Channel, api: &mut Option<Api>) -> io::Result<()> {
     }
 }
 
-struct Api {
+struct Grant {
+    api: Process,
+    egress: Process,
+}
+
+impl Grant {
+    fn start(key: &str, token: &str, transport: &Transport) -> io::Result<Self> {
+        #[derive(Serialize)]
+        struct EgressCredentials<'a> {
+            transport: &'a Transport,
+            session_token: &'a str,
+        }
+        let egress = Process::start(
+            Role::Egress,
+            Zeroizing::new(serde_json::to_vec(&EgressCredentials {
+                transport,
+                session_token: token,
+            })?),
+        )?;
+        #[derive(Serialize)]
+        struct ApiCredentials<'a> {
+            api_key: &'a str,
+            session_token: &'a str,
+            socks: &'static str,
+        }
+        let api = Process::start(
+            Role::Api,
+            Zeroizing::new(serde_json::to_vec(&ApiCredentials {
+                api_key: key,
+                session_token: token,
+                socks: "127.0.0.1:9051",
+            })?),
+        )?;
+        Ok(Self { api, egress })
+    }
+
+    fn stop(&mut self) -> io::Result<()> {
+        // Try both closures even if one fails. Process::drop also prevents a
+        // startup error from leaving the other service or its sockets alive.
+        let api = self.api.stop();
+        let egress = self.egress.stop();
+        api?;
+        egress
+    }
+}
+
+enum Role {
+    Api,
+    Egress,
+}
+
+struct Process {
     child: Child,
     control: Option<UnixStream>,
 }
 
-impl Api {
-    fn start(key: &str, token: &str) -> io::Result<Self> {
+impl Process {
+    fn start(role: Role, mut bytes: Zeroizing<Vec<u8>>) -> io::Result<Self> {
+        let (program, uid, ip, port) = match role {
+            Role::Api => ("/usr/bin/oblivion-api", 1300, [10, 88, 0, 1], 8111u16),
+            Role::Egress => ("/usr/bin/oblivion-egress", 1201, [127, 0, 0, 1], 9051u16),
+        };
         let (control, inherited) = UnixStream::pair()?;
         control.set_read_timeout(Some(Duration::from_secs(5)))?;
         control.set_write_timeout(Some(Duration::from_secs(5)))?;
@@ -185,9 +267,9 @@ impl Api {
         let enabled: libc::c_int = 1;
         let address = libc::sockaddr_in {
             sin_family: libc::AF_INET as _,
-            sin_port: 8111u16.to_be(),
+            sin_port: port.to_be(),
             sin_addr: libc::in_addr {
-                s_addr: u32::from_ne_bytes([10, 88, 0, 1]),
+                s_addr: u32::from_ne_bytes(ip),
             },
             sin_zero: [0; 8],
         };
@@ -212,7 +294,7 @@ impl Api {
         let channel = duplicate(inherited.as_raw_fd())?;
         let incoming = duplicate(listener.as_raw_fd())?;
         let parent = std::process::id() as libc::pid_t;
-        let mut command = Command::new("/usr/bin/oblivion-api");
+        let mut command = Command::new(program);
         command
             .env_clear()
             .current_dir("/")
@@ -225,7 +307,7 @@ impl Api {
                 libc::sigemptyset(&mut empty);
                 if libc::dup2(channel.as_raw_fd(), 3) < 0 || libc::dup2(incoming.as_raw_fd(), 4) < 0
                     || libc::sigprocmask(libc::SIG_SETMASK, &empty, std::ptr::null_mut()) != 0
-                    || libc::setgroups(0, std::ptr::null()) != 0 || libc::setgid(1300) != 0 || libc::setuid(1300) != 0
+                    || libc::setgroups(0, std::ptr::null()) != 0 || libc::setgid(uid) != 0 || libc::setuid(uid) != 0
                     // Credential changes clear PDEATHSIG: arm it afterwards and
                     // verify the supervisor did not die in the intervening gap.
                     || libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) != 0 || libc::getppid() != parent
@@ -239,18 +321,6 @@ impl Api {
         };
         drop(inherited);
         drop(listener);
-        // Borrow the strings: the serialized secret buffer is zeroed on drop.
-        #[derive(Serialize)]
-        struct Credentials<'a> {
-            api_key: &'a str,
-            session_token: &'a str,
-            socks: &'static str,
-        }
-        let mut bytes = Zeroizing::new(serde_json::to_vec(&Credentials {
-            api_key: key,
-            session_token: token,
-            socks: "127.0.0.1:9050",
-        })?);
         bytes.push(b'\n');
         let channel = api
             .control
@@ -282,7 +352,7 @@ impl Api {
     }
 }
 
-impl Drop for Api {
+impl Drop for Process {
     fn drop(&mut self) {
         // Startup and protocol errors cannot strand a listener. Abrupt parent
         // death is covered independently by PDEATHSIG and the systemd cgroup.
@@ -344,12 +414,12 @@ impl Channel {
         &self,
         events: i16,
         deadline: Option<Instant>,
-        api: &mut Option<Api>,
+        api: &mut Option<Grant>,
     ) -> io::Result<()> {
         loop {
             if let Some(api) = api {
-                if api.child.try_wait()?.is_some() {
-                    return Err(io::Error::other("api_exited"));
+                if api.api.child.try_wait()?.is_some() || api.egress.child.try_wait()?.is_some() {
+                    return Err(io::Error::other("grant_process_exited"));
                 }
             }
             if deadline.is_some_and(|end| Instant::now() >= end) {
@@ -386,7 +456,7 @@ impl Channel {
         &mut self,
         mut bytes: &mut [u8],
         deadline: Option<Instant>,
-        api: &mut Option<Api>,
+        api: &mut Option<Grant>,
     ) -> io::Result<()> {
         while !bytes.is_empty() {
             self.wait(libc::POLLIN, deadline, api)?;
@@ -400,7 +470,7 @@ impl Channel {
         Ok(())
     }
 
-    fn read(&mut self, api: &mut Option<Api>) -> io::Result<Zeroizing<Vec<u8>>> {
+    fn read(&mut self, api: &mut Option<Grant>) -> io::Result<Zeroizing<Vec<u8>>> {
         let mut header = [0; 4];
         self.read_bytes(&mut header[..1], None, api)?;
         let deadline = Some(Instant::now() + Duration::from_secs(5));
@@ -414,7 +484,7 @@ impl Channel {
         Ok(bytes)
     }
 
-    fn write(&mut self, bytes: &[u8], api: &mut Option<Api>) -> io::Result<()> {
+    fn write(&mut self, bytes: &[u8], api: &mut Option<Grant>) -> io::Result<()> {
         let header = (bytes.len() as u32).to_be_bytes();
         let deadline = Some(Instant::now() + Duration::from_secs(5));
         for mut chunk in [header.as_slice(), bytes] {
