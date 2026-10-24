@@ -112,6 +112,9 @@ impl Config {
             "--service-type=exec".to_owned(),
         ];
         let properties = vec![
+            // During shutdown let controller recovery request guest poweroff
+            // before systemd falls back to stopping the VM service itself.
+            "Before=oblivion-controller.service".to_owned(),
             "User=1100".to_owned(),
             "Group=1100".to_owned(),
             "UMask=0077".to_owned(),

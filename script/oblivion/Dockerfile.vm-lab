@@ -15,6 +15,17 @@ WORKDIR /build
 COPY packages/oblivion-host/ ./
 RUN cargo test --locked && cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
     && cargo build --locked --release --features lab-emulation --bin oblivion-storage
+RUN mkdir /bundle && cp /tmp/oblivion-storage /bundle/oblivion-storage \
+    && cp target/release/oblivion-storage /bundle/oblivion-storage-lab \
+    && cp target/release/oblivion-control target/release/oblivion-manager /bundle/ \
+    && cp host/*.service /bundle/ \
+    && find Cargo.toml Cargo.lock src tests host -type f -print0 | sort -z | xargs -0 sha256sum > /bundle/sources.sha256 \
+    && cd /bundle && sha256sum oblivion-* sources.sha256 > SHA256SUMS
+
+# Small development bundle, overlaid only in the disposable laboratory's RAM.
+# It avoids rebuilding both Debian filesystems for each controller change.
+FROM scratch AS host-artifacts
+COPY --from=compiler /bundle/ /
 
 FROM os AS guest
 RUN groupadd --gid 1000 oblivion && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /vault/home --shell /bin/sh oblivion \
@@ -43,7 +54,10 @@ ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin python3 \
     $(if [ "$TARGETARCH" = arm64 ]; then printf qemu-system-arm; else printf qemu-system-x86; fi) \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --gid 1100 oblivion-vm && useradd --uid 1100 --gid 1100 --no-create-home --shell /usr/sbin/nologin oblivion-vm
+    && groupadd --gid 1000 oblivion-manager \
+    && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /run/oblivion-manager --shell /usr/sbin/nologin oblivion-manager \
+    && groupadd --gid 1100 oblivion-vm && useradd --uid 1100 --gid 1100 --no-create-home --shell /usr/sbin/nologin oblivion-vm \
+    && passwd -l root
 COPY --from=compiler /tmp/oblivion-storage /usr/bin/oblivion-storage
 COPY --from=compiler /build/target/release/oblivion-storage /usr/bin/oblivion-storage-lab
 COPY --from=compiler /build/target/release/oblivion-control /usr/bin/oblivion-control

@@ -10,6 +10,7 @@ use zeroize::Zeroizing;
 const GENERAL: &str = "/dev/mapper/oblivion-general";
 const SESSION: &str = "/dev/mapper/oblivion-session";
 const RUN: &str = "/run/oblivion";
+const RECOVERY: &str = "/run/oblivion/recovery-required";
 const MOUNT: &str = "/run/oblivion/general";
 const MIB: u64 = 1024 * 1024;
 
@@ -36,6 +37,7 @@ struct Status {
     sessions: Vec<String>,
     vm_state: Option<String>,
     laboratory_emulation: bool,
+    recovery_required: bool,
 }
 
 pub fn main() -> Result<()> {
@@ -46,12 +48,31 @@ pub fn main() -> Result<()> {
     if args.len() == 3 && args[2] == "serve" {
         return crate::ipc::serve(Path::new(&args[1]), config.manager_uid);
     }
-    let _lock = lock()?;
     let op = args[2].as_str();
     require(
         args.len() == if matches!(op, "open" | "enter") { 4 } else { 3 },
         "usage",
     )?;
+    // Latch before taking the operation lock: a worker may still be completing
+    // when the manager dies. Its completion must not permit another opening.
+    if op == "recover" {
+        runtime()?;
+        OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .mode(0o600)
+            .custom_flags(libc::O_NOFOLLOW)
+            .open(RECOVERY)
+            .map_err(|_| Error("recovery_marker_failed"))?;
+    }
+    let _lock = lock()?;
+    if matches!(
+        op,
+        "init-general" | "unlock" | "unlock-ephemeral" | "create" | "open" | "enter"
+    ) {
+        require(!recovery_required()?, "recovery_required")?;
+    }
     match op {
         "init-general" => config.initialize(&password(true)?),
         "unlock" => config.unlock(&password(false)?, false),
@@ -79,11 +100,15 @@ pub fn main() -> Result<()> {
             }
             close_session()
         }
-        "lock" => {
+        "lock" | "recover" => {
             if config.vm.is_some() {
                 crate::vm::stop(false)?;
             }
-            close_general()
+            close_general()?;
+            if recovery_required()? {
+                fs::remove_file(RECOVERY).map_err(|_| Error("recovery_clear_failed"))?;
+            }
+            Ok(())
         }
         "status" => {
             let mode = mount_mode()?;
@@ -103,6 +128,7 @@ pub fn main() -> Result<()> {
                     None
                 },
                 laboratory_emulation: cfg!(feature = "lab-emulation"),
+                recovery_required: recovery_required()?,
             };
             println!(
                 "{}",
@@ -388,6 +414,38 @@ fn lock() -> Result<File> {
 }
 
 pub(crate) fn lock_named(name: &str) -> Result<File> {
+    runtime()?;
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(format!("{RUN}/{name}"))
+        .map_err(|_| Error("lock_failed"))?;
+    unsafe {
+        require(
+            libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) == 0,
+            "controller_busy",
+        )?;
+        // Trusted workers inherit the lock so a killed parent cannot release it
+        // while cryptsetup or mkfs is still modifying a volume.
+        require(
+            libc::fcntl(file.as_raw_fd(), libc::F_SETFD, 0) == 0,
+            "lock_inheritance_failed",
+        )?;
+    }
+    Ok(file)
+}
+
+fn recovery_required() -> Result<bool> {
+    Path::new(RECOVERY)
+        .try_exists()
+        .map_err(|_| Error("recovery_check_failed"))
+}
+
+fn runtime() -> Result<()> {
     fs::create_dir_all(RUN).map_err(|_| Error("runtime_directory_failed"))?;
     let meta = fs::symlink_metadata(RUN).map_err(|_| Error("runtime_directory_failed"))?;
     require(
@@ -406,29 +464,7 @@ pub(crate) fn lock_named(name: &str) -> Result<File> {
             "runtime_must_be_tmpfs",
         )?;
     }
-    let file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create(true)
-        .truncate(false)
-        .mode(0o600)
-        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
-        .open(format!("{RUN}/{name}"))
-        .map_err(|_| Error("lock_failed"))?;
-    unsafe {
-        require(
-            libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) == 0,
-            "controller_busy",
-        )?;
-        // A killed controller must not release the interlock while cryptsetup or
-        // mkfs is still running. Trusted children retain the same locked open file
-        // description until they exit; never pass this FD to a session guest.
-        require(
-            libc::fcntl(file.as_raw_fd(), libc::F_SETFD, 0) == 0,
-            "lock_inheritance_failed",
-        )?;
-    }
-    Ok(file)
+    Ok(())
 }
 
 fn trusted_file(path: &Path) -> Result<File> {

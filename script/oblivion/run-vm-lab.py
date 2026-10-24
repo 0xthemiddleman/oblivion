@@ -7,6 +7,7 @@ import hashlib
 import json
 import platform
 import re
+import shutil
 import subprocess
 import tempfile
 import time
@@ -18,6 +19,8 @@ parser.add_argument("--image", type=Path, required=True)
 parser.add_argument("--output", type=Path, required=True)
 parser.add_argument("--refresh-tui-test", action="store_true",
     help="Load the current synthetic TUI test into the lab initramfs, without rebuilding Debian")
+parser.add_argument("--services-bundle", type=Path,
+    help="Load compiled host binaries, service units and the crash fixture into laboratory RAM")
 args = parser.parse_args()
 if (platform.system(), platform.machine()) != ("Darwin", "arm64"):
     raise SystemExit("This laboratory runner currently requires macOS ARM64/HVF.")
@@ -28,10 +31,20 @@ if any("," in str(path) for path in (image, output)):
 output.mkdir(parents=True, exist_ok=False)
 initrd = image / "initrd"
 fixture = None
-if args.refresh_tui_test:
+bundle_manifest = None
+fixture_name = "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
+if args.refresh_tui_test and args.services_bundle:
+    raise SystemExit("Choose one laboratory fixture override.")
+if args.refresh_tui_test or args.services_bundle:
     if not (image / "tui-lab").exists():
         raise SystemExit("The fixture override requires a tui-host laboratory image.")
-    fixture = Path(__file__).with_name("vm-tui-test.py").read_bytes()
+    fixture = Path(__file__).with_name(fixture_name).read_bytes()
+    if args.services_bundle:
+        bundle_manifest = (args.services_bundle / "SHA256SUMS").read_text()
+        for line in bundle_manifest.splitlines():
+            digest, name = line.split()
+            if Path(name).name != name or hashlib.sha256((args.services_bundle / name).read_bytes()).hexdigest() != digest:
+                raise SystemExit("Host bundle integrity check failed.")
     # Debian's initramfs-tools executes its generated ORDER file, not every
     # executable in init-bottom. Preserve that order and append the lab hook.
     order = None
@@ -49,17 +62,31 @@ if args.refresh_tui_test:
     with tempfile.TemporaryDirectory(prefix="oblivion-lab-initrd-") as temporary:
         root = Path(temporary)
         (root / "scripts/init-bottom").mkdir(parents=True)
-        (root / "scripts/oblivion-tui-test.py").write_bytes(fixture)
+        (root / "scripts/oblivion-lab-test.py").write_bytes(fixture)
+        bundle_hook = ""
+        if args.services_bundle:
+            (root / "scripts/oblivion-host").mkdir()
+            # Copy only manifest-covered inputs; a previous export may have left
+            # stale units in the output directory after a source file was removed.
+            for name in [line.split()[1] for line in bundle_manifest.splitlines()] + ["SHA256SUMS"]:
+                shutil.copy2(args.services_bundle / name, root / "scripts/oblivion-host" / name)
+            bundle_hook = ('mkdir /run/oblivion-lab-bundle\n'
+                'mount -t tmpfs -o mode=0755,nodev,nosuid,size=16m tmpfs /run/oblivion-lab-bundle\n'
+                'cp -a /scripts/oblivion-host/. /run/oblivion-lab-bundle/\n'
+                'mount -o remount,ro /run/oblivion-lab-bundle\n'
+                'for binary in oblivion-storage oblivion-storage-lab oblivion-control oblivion-manager; do\n'
+                ' mount --bind "/run/oblivion-lab-bundle/$binary" "${rootmnt:-/root}/usr/bin/$binary"\n'
+                'done\n')
         hook = root / "scripts/init-bottom/zz-oblivion-lab-fixture"
         hook.write_text('#!/bin/sh\nset -eu\ncase "${1:-}" in prereqs) exit 0;; esac\n'
-            'mount --bind /scripts/oblivion-tui-test.py "${rootmnt:-/root}/usr/libexec/oblivion-vm-test"\n')
+            'mount --bind /scripts/oblivion-lab-test.py "${rootmnt:-/root}/usr/libexec/oblivion-vm-test"\n' + bundle_hook)
         hook.chmod(0o755)
         (hook.parent / "ORDER").write_bytes(order + b'\n/scripts/init-bottom/zz-oblivion-lab-fixture "$@"\n')
         archive = subprocess.check_output(["bsdtar", "--format=newc", "--uid=0", "--gid=0",
             "-cf", "-", "scripts"], cwd=root)
     initrd = output / "lab-initrd"
     # Linux accepts concatenated compressed initramfs archives. Only the
-    # synthetic host test is overlaid; guest roots and controller binaries stay fixed.
+    # test and optional host bundle are overlaid; guest filesystems stay fixed.
     initrd.write_bytes((image / "initrd").read_bytes() + gzip.compress(archive, mtime=0))
 disk = output / "data.raw"
 with disk.open("xb") as stream:
@@ -78,7 +105,8 @@ with (output / "serial.log").open("xb") as log:
         "-device", "virtio-blk-pci,drive=data",
     ], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
 serial = (output / "serial.log").read_text(errors="replace")
-fixture_verified = fixture is None or ("OBLIVION_TUI_FIXTURE_SHA256 " + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
+fixture_verified = fixture is None or (("OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 ") + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
+bundle_verified = bundle_manifest is None or ("OBLIVION_HOST_BUNDLE_SHA256 " + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
 markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVION_VM_TEMP_CANARY_d9ae",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
 if (image / "opencode.sha256").exists():
@@ -101,7 +129,7 @@ with disk.open("rb") as stream:
         overlap = chunk[-128:]
 summary = {
     "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
-    "workload": ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
+    "workload": "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
     "outer_accelerator": "hvf", "inner_accelerator": "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
     "checks": [line.strip() for line in serial.splitlines() if line.startswith("PASS:")],
@@ -110,10 +138,11 @@ summary = {
     "compiled_sources": (image / "sources.sha256").read_text(),
     "opencode_sha256": (image / "opencode.sha256").read_text().split()[0] if (image / "opencode.sha256").exists() else None,
     "lab_initrd_sha256": hashlib.sha256(initrd.read_bytes()).hexdigest(),
-    "runtime_fixture_override": {"file": "vm-tui-test.py", "sha256": hashlib.sha256(fixture).hexdigest()} if fixture is not None else None,
+    "runtime_fixture_override": {"file": fixture_name, "sha256": hashlib.sha256(fixture).hexdigest()} if fixture is not None else None,
+    "runtime_host_bundle": {"manifest": bundle_manifest, "sources": (args.services_bundle / "sources.sha256").read_text(), "verified_in_guest": bundle_verified} if bundle_manifest else None,
     "fixture_verified": fixture_verified,
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 print(json.dumps(summary, indent=2))
-if result.returncode or not summary["guest_pass"] or found or not fixture_verified:
+if result.returncode or not summary["guest_pass"] or found or not fixture_verified or not bundle_verified:
     raise SystemExit(1)

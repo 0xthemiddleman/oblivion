@@ -1,0 +1,60 @@
+{
+  "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
+  "workload": "systemd service crash/recovery with real manager and VM",
+  "outer_accelerator": "hvf",
+  "inner_accelerator": "tcg",
+  "production_kvm_tested": false,
+  "seconds": 141.78,
+  "qemu_exit": 0,
+  "checks": [
+    "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+    "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+    "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+    "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+    "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+    "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+    "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+    "PASS: synthetic passwords never appear on the managed console"
+  ],
+  "guest_pass": true,
+  "plaintext_markers_on_disk": [],
+  "disk_sha256": "351575687d6b992b388eca76dbe497cf88024fb0005a1dd9cdcef2aeeda922c0",
+  "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nec892c68a05ee4244946df9fe222cfe9bd785ee465c2efc457cbe7f4579e3cc2  initrd\n9421152c43e6453ae285e007276d6109152f9c402da05b29f33a75125b6c5f65  host.squashfs\n5f5dc1832ec5d93491b6f9cdbb0fda9350938d31ae20b97c340b46fbd5c1d78a  host-packages.tsv\nb23d84696f492da1c5998e8f4fb026d3357aa72b7b95de89d1e5104f172b2786  guest-packages.tsv\na36c778f9d32f3f7277cfc98f982b02dfc2ad2eca32fa51c2e7107ecf2542228  sources.sha256\n4c2ea2b26806121daa5691859e7c8aa026a367be39013ab5a61944d2c7c99953  opencode.sha256\n63735a8f31993e05f5b26f2e3c4853d30956992ff31bfbcef017c6af8ec0ae74  opencode-build.json\nb723fa211b1b2ba2cd8b6380cad7d1e81ea5d9bda8abea675c9032217d244b51  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n",
+  "compiled_sources": "49097522336dc37a308a33f45c295b37c7ca1455625680c462b1b14c65bb9916  packages/oblivion-host/Cargo.lock\n9bcca247036e12020bcd751369da184a605f8894ff5f627f7040138b42f0c01d  packages/oblivion-host/Cargo.toml\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  packages/oblivion-host/examples/ipc-probe.rs\n0a590f20a1be5d6b6bd2358871fe01d9a24e9fb485b4ccfe963e124f421805c9  packages/oblivion-host/guest/install.sh\n36e3dce8146baeae85971e22312bdde95ddce8c2b497e051fe7c0375f7e8c1dd  packages/oblivion-host/guest/oblivion-conversation.service\n0e7d92bf6f2abafc4c00978558973102dfb0e1868ff644d64e9b34fc12196c52  packages/oblivion-host/guest/oblivion-vault.service\ne48a7666d23bdfffd4ea7fe21550afd862b901e85d2c0499f3ef6ad1457dc33c  packages/oblivion-host/guest/prepare.sh\nbff4458cad0b5bb5128e9fbe9093ae1080d4d31b2b7851b505721b0d4d8fadec  packages/oblivion-host/src/client.rs\nc93e5eae70ae5e999ff2d885910ad22d565f0494705f432223e000617d08a0ed  packages/oblivion-host/src/control.rs\n0a6b2c537d6af7cd810266eae2b580a33a6ab1cbab9a002be577ab7638c843e6  packages/oblivion-host/src/ipc.rs\na68fc4a96fdb02e9540208c80612033491253ed3a1fe72e29cf8a8b93040be86  packages/oblivion-host/src/lib.rs\n6b3c0f9b24cdfc054bfe7042cdd4ede5b98b70ad8c1e1023bd4191b3a1d7fe9e  packages/oblivion-host/src/main.rs\n8b35445de30b9e2b715c7e9f2c65559e6134d94f4f84ba8d64901bcbde0105e2  packages/oblivion-host/src/manager.rs\nadb8637029a0a7dc35fa637dcc51112761a825fe307337c6b63614090c24ad6c  packages/oblivion-host/src/storage.rs\nbf147d38b44c179516573fc63be01767687ee077baa1bff94871d151b18f06ed  packages/oblivion-host/src/terminal.rs\n3ec9ada2f431cc36583643d2df0762c780916bc4ccb9f713d672410bb3e8a141  packages/oblivion-host/src/vm.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  packages/oblivion-host/tests/console.rs\n77db6f82ff1bdae21702bcb0a2f0212516d40d7bd00df188badf92b2b04aff3c  script/oblivion/Dockerfile.vm-lab\n240de4cdc55d395f1612f1545594f5b17f0a0666187e42f73c0167741447ee58  script/oblivion/Dockerfile.vm-lab.dockerignore\na9e490199781422e9f4f71a0da99ff66fac496eb10484e12bbfef5b76920356a  script/oblivion/run-vm-lab.py\n10e89b26e7a5c9fe0a8f405c36f1ec187759e67318f75a4e99fcbfe9dec0ab09  script/oblivion/vm-chat-probe.py\n0eb3a9da1a99b7f3fb85d47c148108b2c5921d77fb1f09ccdeca6d065c53628c  script/oblivion/vm-common-setup.sh\n7e54a8db69f2757d61b45844c41457e54025ddbbd12882300d6f93e53602a14a  script/oblivion/vm-guest-fixture.sh\nd83153c91a952a0dbe390dcdcb615d4766db61fa1e633b375d0656d0c7c7ae61  script/oblivion/vm-host-setup.sh\n26377b467bc729b9ea574d76de4fe87ac57ac6adde97f45b2040f28e1d68f8cd  script/oblivion/vm-lab-pack.sh\n1590c7bae0ebf8b9c55beea426766a0d53c36b387a875c50dbf44d81e2c82747  script/oblivion/vm-lab-test.py\nae8c44b7047fcf7bd72ab435d9072da785956af537d6fcd1d2767068ef98944c  script/oblivion/vm-manager-test.py\n7cb5eda51d0d2e0a1e8b3e848c75685193a34ea54a8dc2fbe609d092b22e5bf7  script/oblivion/vm-tui-guest.py\n0ce9695e207a21c1d74951652af2d0e0bbadb2b3b27e31bb1f5bf258287eede4  script/oblivion/vm-tui-test.py\n",
+  "opencode_sha256": "31e23f46019d921b47c3fb6fe2f28af9477eaaa274d711354ea436275a25bd15",
+  "lab_initrd_sha256": "6cc1e764358f21445f7d9e246f109345ed85514ca8379c3373b214718cd2fe9b",
+  "runtime_fixture_override": {
+    "file": "vm-services-test.py",
+    "sha256": "1131f26bb23323eb087937bdc5db072529296f7aba522aebc442c259bf2df02a"
+  },
+  "runtime_host_bundle": {
+    "manifest": "b4c2a53c1e618cf0303c97850894557dcc20c4845015316b7a70d66b60f64353  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n97818abbf41ade17ff02f04c6b1ed772c27b64ea58abc072b0a7aaa88d200e55  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\n55c2bb2898ae85bce93868b07061b7f78c7a79ce8c4ee0d54e04475798d27c64  oblivion-storage\n445ebb37c0548c50c145516330bf5a6f52cf8b0960356f766a37a646c0f95e66  oblivion-storage-lab\n8e9783fd77382ea08d3013f27b9133d6370717d85a7d8359d0eb3f83e9efb8fa  sources.sha256\n",
+    "sources": "49097522336dc37a308a33f45c295b37c7ca1455625680c462b1b14c65bb9916  Cargo.lock\n9bcca247036e12020bcd751369da184a605f8894ff5f627f7040138b42f0c01d  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\nbff4458cad0b5bb5128e9fbe9093ae1080d4d31b2b7851b505721b0d4d8fadec  src/client.rs\nc93e5eae70ae5e999ff2d885910ad22d565f0494705f432223e000617d08a0ed  src/control.rs\n652e9ff0de67e4c2414c0b04c0b74ae6b394a1545b756a374b51888b3104f130  src/ipc.rs\na68fc4a96fdb02e9540208c80612033491253ed3a1fe72e29cf8a8b93040be86  src/lib.rs\n6b3c0f9b24cdfc054bfe7042cdd4ede5b98b70ad8c1e1023bd4191b3a1d7fe9e  src/main.rs\n372ac5cf45bde631e9fc7e26780d44b90792a25e21f6b27fcd1cdba002f08a81  src/manager.rs\nce4e162e21f68bbb0ae0fcd77ddedc12715f37cab17740f0b07dfdc62d370035  src/storage.rs\nbf147d38b44c179516573fc63be01767687ee077baa1bff94871d151b18f06ed  src/terminal.rs\n6188a2e4f3a5b6aea5125b55f630c32c329d3b65bbfa83813a0993d53a0d467b  src/vm.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\n",
+    "verified_in_guest": true
+  },
+  "fixture_verified": true,
+  "local_artifacts": "artifacts/oblivion-services/run-04",
+  "runner_sha256": "036104d62f5c88258c9973aa3737a6083a4850bd5c1888d7df6641ee8c0254ae",
+  "serial_sha256": "ba3c48ce00026235f471713b3e5e7fb10131a1a57d2edd8f8c6611405c7c52f4",
+  "build_definition_sha256": "ebf7ed90f8b69fa4d8ba15d7f5bbbaf78d9e46ac9fc4d9e0b48ff832cd9ad549",
+  "checks_outside_vm": {
+    "rust_macos": "4 passed",
+    "rust_linux": "4 passed; normal and lab-emulation binaries compiled",
+    "repository_check": "34 tasks passed (cached); lint passed"
+  },
+  "previous_run": {
+    "local_artifacts": "artifacts/oblivion-services/run-03",
+    "checks": 7,
+    "seconds": 142.09,
+    "scope": "same host binaries; before adding busy-lock and IPC rejection assertions"
+  },
+  "limits": [
+    "Synthetic data only; no physical disks or real API key.",
+    "Mac ARM outer HVF and nested TCG; production KVM not tested.",
+    "Existing immutable Debian image plus manifest-verified RAM host bundle; not a bootable product release.",
+    "The old host image receives public manager UID/GID records in RAM; current host Dockerfile creates that account.",
+    "SIGKILL manager/controller with open VM, unresponsive QEMU and busy operation lock are covered; interruption during cryptsetup/format, disk full, OOM and power loss remain open.",
+    "Physical console reset/scrollback and full system shutdown ordering remain release gates.",
+    "No change to gateway/provider network or transfer implementation."
+  ]
+}

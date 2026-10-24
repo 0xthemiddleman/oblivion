@@ -13,16 +13,16 @@ generale è chiuso, Invio apre il campo password nascosto. Dopo lo sblocco mostr
 solo identificatori neutri delle sessioni; nessun titolo o contenuto della chat
 è copiato nell'indice amministrativo.
 
-| Comando | Effetto |
-| --- | --- |
-| Invio sul generale chiuso | Password generale; nessuna sessione aperta automaticamente |
-| N | Nuova password e conferma; crea il volume e apre la nuova VM |
-| J/K o frecce, poi Invio | Seleziona un identificatore; chiede la password e apre quel vault |
-| Ctrl+] nella console | Chiede la chiusura della VM; torna alla lista solo dopo la chiusura LUKS |
-| C con sessione ancora aperta | Riprova la chiusura ordinata |
-| F, poi seconda conferma F | Arresto forzato esplicito, con avviso sulla possibile perdita di modifiche |
-| B | Blocca sessione e generale |
-| Q | Blocca entrambi e termina il manager |
+| Comando                      | Effetto                                                                    |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| Invio sul generale chiuso    | Password generale; nessuna sessione aperta automaticamente                 |
+| N                            | Nuova password e conferma; crea il volume e apre la nuova VM               |
+| J/K o frecce, poi Invio      | Seleziona un identificatore; chiede la password e apre quel vault          |
+| Ctrl+] nella console         | Chiede la chiusura della VM; torna alla lista solo dopo la chiusura LUKS   |
+| C con sessione ancora aperta | Riprova la chiusura ordinata                                               |
+| F, poi seconda conferma F    | Arresto forzato esplicito, con avviso sulla possibile perdita di modifiche |
+| B                            | Blocca sessione e generale                                                 |
+| Q                            | Blocca entrambi e termina il manager                                       |
 
 Le password si inseriscono fuori dalla VM, senza eco né history; i buffer
 posseduti dal manager sono azzerati e il processo Linux disabilita i core dump
@@ -36,6 +36,13 @@ Gli errori di operazione non sono trasformati in uno stato «bloccato». La UI
 rilegge lo stato derivato dal kernel; una VM non responsiva mantiene il volume
 aperto e il blocco delle altre sessioni. Il ritorno dalla sola console non
 equivale alla chiusura: il manager attende la conferma del controller.
+
+Le nuove [unità di sistema e il recupero](HOST-SERVICES.md) supervisionano manager
+e controller. Se il recupero fallisce, il manager mostra **RECUPERO NECESSARIO**;
+il controller vieta nuove aperture anche dopo un riavvio della UI. B riprova il
+blocco ordinato; F seguito da una seconda F arresta forzatamente la VM e tenta
+il blocco di entrambi i volumi. Annullare conserva la sessione aperta. Sotto
+systemd, Q blocca tutto e riavvia il manager sulla schermata iniziale.
 
 ## Confine della console
 
@@ -180,8 +187,9 @@ Linux del laboratorio. Tutte le credenziali e i dati di prova sono sintetici.
   degli agenti, percorso dei file e inventario dei comandi residui.
 - Completare input incollato e multilinea, ridimensionamento, ripristino del
   rendering dopo riconnessione e verifica visiva sulla console Linux fisica.
-- Gestire avvio automatico, crash/arresto del manager e confinamento dei servizi
-  nella live. Un crash del processo non garantisce ancora il blocco automatico.
+- Integrare le unità di sistema nella live e completare guasti durante creazione,
+  OOM, shutdown completo e power loss. Il laboratorio copre ora i crash dei
+  processi di manager/controller e il recupero con VM non responsiva.
 - Aggiungere effimero completo, impostazioni, broker/rete e trasferimenti.
 - Completare animazione opzionale, accessibilità e flusso di prima preparazione.
 

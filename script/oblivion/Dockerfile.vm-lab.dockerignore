@@ -13,6 +13,8 @@ packages/oblivion-host/*
 !packages/oblivion-host/tests/**
 !packages/oblivion-host/guest/
 !packages/oblivion-host/guest/**
+!packages/oblivion-host/host/
+!packages/oblivion-host/host/**
 !script/
 script/*
 !script/oblivion/

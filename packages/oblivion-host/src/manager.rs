@@ -12,6 +12,7 @@ struct Status {
     sessions: Vec<String>,
     vm_state: Option<String>,
     laboratory_emulation: bool,
+    recovery_required: bool,
 }
 
 fn main() {
@@ -64,7 +65,9 @@ fn run(preview: bool) -> Result<()> {
         if status.laboratory_emulation {
             view.push_str(" LABORATORIO TCG - solo dati sintetici\r\n\r\n");
         }
-        if !status.general_mounted {
+        if status.recovery_required {
+            view.push_str(" RECUPERO NECESSARIO - nuove aperture bloccate\r\n\r\n [B] Riprova chiusura e blocco\r\n [F] Arresto forzato e blocco\r\n");
+        } else if !status.general_mounted {
             view.push_str(if status.general_open {
                 " Archivio generale da richiudere.\r\n\r\n [B] Blocca\r\n"
             } else {
@@ -130,15 +133,15 @@ fn run(preview: bool) -> Result<()> {
                 control::request("lock", None, &[])?;
                 return Ok(());
             }
-            if !status.general_open && matches!(key, b'\r' | b'\n') {
+            if !status.recovery_required && !status.general_open && matches!(key, b'\r' | b'\n') {
                 if let Some(secret) = terminal.password("Password del volume generale")? {
                     busy(&mut terminal, "Sblocco del volume generale")?;
                     control::request("unlock", None, &secret)?;
                 }
                 return Ok(());
             }
-            if status.session_open {
-                if matches!(key, b'\r' | b'\n') {
+            if status.recovery_required || status.session_open {
+                if !status.recovery_required && matches!(key, b'\r' | b'\n') {
                     requested_new = enter_console(&mut terminal)?;
                 }
                 if key == b'c' {
@@ -151,6 +154,9 @@ fn run(preview: bool) -> Result<()> {
                     if terminal.input(-1)?.as_slice().eq_ignore_ascii_case(b"f") {
                         busy(&mut terminal, "Chiusura forzata")?;
                         control::request("force-close", None, &[])?;
+                        if status.recovery_required {
+                            control::request("lock", None, &[])?;
+                        }
                     }
                 }
                 return Ok(());
