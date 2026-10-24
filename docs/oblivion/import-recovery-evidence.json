@@ -308,7 +308,30 @@
         "status": "completed",
         "conclusion": "success"
       }
-    ]
+    ],
+    "manager_import_artifact": {
+      "path": "artifacts/oblivion-import-recovery/previous-x86-manager/import-results/summary.json",
+      "sha256": "38b16fe05d7e1fc9055e4e7e6eeb3bf895799d921e53ed8cea1bddabcf25d64d",
+      "architecture": "x86_64",
+      "outer_accelerator": "kvm",
+      "inner_accelerator": "tcg",
+      "seconds": 239.67,
+      "checks": [
+        "PASS: manager opens a readonly networkless import VM without sharing a filesystem",
+        "PASS: cancelling the manifest destroys the source VM and leaves the active chat unchanged",
+        "PASS: confirmed files are verified, group-editable and visible only inside the session",
+        "PASS: source VM death invalidates approval and closes the session through the manager",
+        "PASS: imported documents and later edits survive a fresh VM and LUKS reopening",
+        "PASS: an unresponsive recipient stays interlocked until explicit forced closure reaps both VMs",
+        "PASS: blocking from the approval screen revokes the copy before both LUKS volumes close",
+        "PASS: ephemeral import and edits disappear at closure with the persistent general byte-identical",
+        "PASS: manager output contains neither document payloads nor volume passwords"
+      ],
+      "guest_pass": true,
+      "disk_sha256": "03e2a0dbb4530d7100d2ff0b8b120d01aba1a483c061091ce5ee5cdc32c8e7cb",
+      "import_source_sha256": "fc4f713e2707ebe50af7e54eb834ca425b002621c36c2a83afde0a7208d26c98",
+      "plaintext_markers_on_disk": []
+    }
   },
   "current_ci": "Updated manager-import job includes the killed-receiver fixture; not yet observed on this implementation.",
   "limits": [
