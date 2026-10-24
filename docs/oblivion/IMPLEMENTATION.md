@@ -9,9 +9,12 @@ rilascio, non un blocco allo sviluppo sul Mac.
 
 Il lavoro sui documenti parte dal [motore di copia](FILE-COPY.md), con file
 selezionati, quote, hash, percorsi risolti da descrittori e ricezione privata.
-Il componente non apre device o reti e non monta filesystem. La selezione e
-conferma nel manager, il servizio isolato, le porte delle VM e la copia USB
-completa restano da implementare: i test del core non sostituiscono quei gate.
+Il componente non apre device o reti e non monta filesystem. Gli endpoint
+compilati sono ora provati su porte virtio-serial di VM separate: sei controlli
+con sorgente virtuale readonly, destinazione LUKS e cancellazione. Passano 23
+test sul Mac e in Debian ARM64/x86-64. Selezione e conferma nel manager,
+autorizzazione/revoca nel controller, consegna alla chat e USB fisica restano
+da integrare: la prova di laboratorio non sostituisce quei gate.
 
 Ultima verifica locale: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
 passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,

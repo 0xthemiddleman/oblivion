@@ -2,8 +2,9 @@
 
 Il pacchetto `packages/oblivion-transfer` implementa il primo componente del
 percorso USB → sessione → USB: selezione di file e cartelle, offerta validata,
-stream di byte e ricezione in un deposito privato. Non è ancora collegato al
-manager, a una USB o a porte delle VM. Non abilita importazioni nella chat.
+stream di byte e ricezione in un deposito privato. Il binario `oblivion-copy`
+è ora provato fra due VM con porte virtio-serial dedicate. Non è ancora
+collegato al manager o a una USB fisica e non abilita importazioni nella chat.
 
 Il confine resta quello di [NETWORK-AND-FILES.md](NETWORK-AND-FILES.md): la VM
 di importazione vede il solo dispositivo autorizzato; quella della chat
@@ -80,6 +81,40 @@ il recupero del servizio dovrà gestirla senza presentarla come copia riuscita.
 La destinazione deve essere nel volume della sessione o in RAM, secondo la
 modalità; la libreria non sceglie né verifica il tipo di storage.
 
+## Endpoint e scadenza del canale
+
+`oblivion-copy send|receive <radice-locale> <budget-ms>` usa esclusivamente il
+descrittore 3 ereditato dal launcher fidato. Non crea listener e non riceve
+percorsi di socket dal peer. Nomi selezionati, offerta e ricevuta passano sul
+canale privato, senza argv, environment o output di console. Il processo
+disabilita i core dump; su Linux applica anche `PR_SET_DUMPABLE=0` e
+`PR_SET_NO_NEW_PRIVS=1`. Un errore produce soltanto `transfer_failed` su stderr;
+le future unità di prodotto devono disabilitarne la persistenza.
+
+Il mittente riceve identificatore, quote e selezione, prepara l'offerta e
+aspetta una conferma con lo stesso identificatore e digest del manifest.
+Solo allora invia i byte. Il ricevitore richiede un'offerta corrispondente
+alla conferma fornita dal controller prima di creare la transazione. Il
+mittente verifica identificatore, hash, byte e numero di voci della ricevuta
+prima di rispondere `copied`. Ogni processo gestisce una sola operazione.
+
+L'endpoint **non è l'autorità che concede il permesso**: il launcher deve
+vincolare il descrittore e l'offerta alla VM corrente e alla decisione presa
+nel manager. Il controllo di questi campi non autentica da solo un peer.
+Emissione e revoca della capacità amministrativa restano da integrare.
+
+Il canale abilita I/O non bloccante e usa una sola scadenza monotona per
+letture e scritture, anche frammentate. Il progresso non rinnova il budget;
+un peer che non legge non può bloccare indefinitamente una scrittura sul
+canale. Le prove distinguono timeout, EOF e cancellazione. Questo non impone
+una scadenza alle chiamate bloccanti del filesystem: la supervisione deve
+poter terminare l'ambiente anche quando un disco o `fsync` non risponde.
+
+Se la copia viene pubblicata ma la ricevuta si perde, il mittente segnala
+errore e la copia completa può restare nel deposito privato del destinatario.
+Non si ripete automaticamente la copia e non si presenta l'esito come certo;
+il recupero del servizio deve riconciliare questi casi prima della consegna.
+
 ## Verifiche e integrazione ancora necessaria
 
 Le [evidenze di componente](file-copy-evidence.json) registrano **12 test passati**
@@ -93,23 +128,39 @@ oltre il buffer, ricevuta, permessi, sorgenti modificate, alias, tipi speciali,
 header malformati, quote, overflow, interruzione e rifiuto di sovrascritture.
 Il Dockerfile dedicato e i job CI ARM64/x86 eseguono gli stessi test in Debian.
 
-Queste prove di componente **non** dimostrano USB → VM → USB o assenza di
-tracce sull'intera live. Per completare il percorso servono:
+Le [prove degli endpoint](file-copy-endpoints-evidence.json) portano la suite
+a **23 test passati** sul Mac e in Debian ARM64/x86-64: cinque sul canale,
+sei con i binari reali e dodici del core. La prova successiva avvia due VM
+Debian ARM64/HVF senza rete, con sistema readonly, sorgente virtuale readonly
+e destinazione LUKS2. Passano sei controlli in 6,45 secondi: selezione, ricevuta,
+nessun mount condiviso, sorgente byte-identica, chiusura del volume e
+cancellazione di una copia interrotta su una porta virtio-serial reale.
+Il marcatore del documento non compare nei due dischi destinatari chiusi.
+
+La sorgente del laboratorio è intenzionalmente un disco virtuale in chiaro;
+la copia originale vi rimane. Non è una scansione di tutti i file della live.
+Il KDF economico della fixture LUKS serve solo al test e non modifica la
+configurazione crittografica del controller di produzione. Su Mac QEMU non
+supporta il flag Linux `dump-guest-core=off`: il runner imposta `RLIMIT_CORE=0`,
+senza presentare HVF come prova dell'isolamento Linux/KVM previsto dal prodotto.
+
+Queste prove **non** completano USB → sessione di chat → USB. Servono ancora:
 
 1. Identità e unità isolate del ricevitore, con deposito LUKS/tmpfs e recupero.
 2. Ambiente di importazione senza rete e device autorizzato readonly; export
    con autorizzazione di scrittura distinta e smontaggio verificato.
-3. Canale locale dedicato, capacità monouso vincolata a VM, manifest, quota e
-   scadenza; timeout assoluti e cancellazione anche durante letture bloccate.
+3. Collegamento del canale dedicato al controller, con capacità monouso
+   vincolata a VM, manifest, quota e scadenza; gestione dei guasti del filesystem.
 4. Selezione e conferma nel manager fidato, consegna alla chat e revoca su
    blocco/cambio sessione; una sola sessione aperta resta obbligatoria.
 5. Prove VM con ENOSPC, USB rimossa, crash, nomi ostili, flush fallito e scansione
    dei residui, poi prova sul supporto fisico. A→B e OnionShare seguono.
 
 Il core accetta un `Read`/`Write` limitato dal chiamante e non apre socket o
-device di trasporto. Una lettura bloccante senza deadline non è adatta al
-servizio. La prima integrazione proverà una porta virtio-serial dedicata,
-separata da console, token API e controllo amministrativo.
+device di trasporto. L'endpoint dispone ora del canale con deadline; le porte
+provate in laboratorio restano separate da console, token API e controllo
+amministrativo. La nuova CI prevede la stessa prova VM su ARM64 e x86-64;
+il report locale non ne anticipa l'esito.
 
 Riferimenti tecnici: [I/O e sincronizzazione Rust](https://doc.rust-lang.org/std/fs/struct.File.html),
 [SHA-256 incrementale RustCrypto](https://docs.rs/sha2/0.10.9/sha2/),

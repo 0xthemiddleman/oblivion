@@ -191,8 +191,10 @@ Il [motore di copia iniziale](FILE-COPY.md) è ora implementato in
 `packages/oblivion-transfer`: offerta limitata, selezione di file/cartelle,
 stream con hash e ricezione in una transazione privata nuova. Rifiuta link,
 percorsi esterni e sovrascritture; le prove usano filesystem e socket reali.
-È un componente: VM di importazione, porte locali, autorizzazioni e manager
-non sono ancora collegati. I flussi seguenti restano il risultato da ottenere.
+Gli endpoint con conferma, deadline e ricevuta sono ora provati fra VM con
+porte virtio-serial, sorgente virtuale readonly e destinazione LUKS. Il flusso
+di prodotto non è completo: controller, autorizzazioni, manager e dispositivi
+fisici non sono ancora collegati. I flussi seguenti restano il risultato da ottenere.
 
 Proponiamo nella UI fidata le operazioni Importa, Esporta e Copia in un'altra sessione. Invia con OnionShare e Ricevi con OnionShare sono operazioni distinte, avviate dall'utente e inizialmente disponibili solo in modalità Tor; un SOCKS generico non sostituisce i servizi onion. Sono funzioni dell'ambiente Oblivion; gli strumenti dell'agente restano quelli di OpenCode.
 

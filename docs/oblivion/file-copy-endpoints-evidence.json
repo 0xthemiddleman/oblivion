@@ -1,0 +1,192 @@
+{
+  "date": "2026-10-24",
+  "status": "endpoint-and-private-vm-port-verified",
+  "implementation_commit": "a00976af5b740d69987ca0a4cbd5cb29db328fa5",
+  "verification": {
+    "macos_arm64": {
+      "tests_passed": 23,
+      "channel_tests": 5,
+      "compiled_endpoint_tests": 6,
+      "copy_engine_tests": 12,
+      "clippy": "passed"
+    },
+    "canonical_repository_check": {
+      "tasks_passed": 34,
+      "cached_tasks": 34
+    },
+    "debian_arm64": {
+      "tests_passed": 23,
+      "rustc": "rustc 1.85.1 (4eb161250 2025-03-15) (built from a source tarball)",
+      "endpoint_sha256": "4cf29bead971ed9fa30ee37095db7e5f5d25a362a1ec78a108c955dec135f8d5",
+      "sources_sha256": "ea8626d26704eec0ca5c5cb30d0153efafbf66c39c90b699a2c9a6c037c997b5",
+      "host": "Docker Desktop on macOS ARM64"
+    },
+    "debian_amd64": {
+      "tests_passed": 23,
+      "rustc": "rustc 1.85.1 (4eb161250 2025-03-15) (built from a source tarball)",
+      "endpoint_sha256": "4cd815c288e78e56618ad1ae7cf4e4ed18cc1c6ffa68ca8f9833d2d042eba974",
+      "sources_sha256": "ea8626d26704eec0ca5c5cb30d0153efafbf66c39c90b699a2c9a6c037c997b5",
+      "host": "Docker Desktop on macOS ARM64 with x86 emulation"
+    }
+  },
+  "vm": {
+    "passed": true,
+    "architecture": "aarch64",
+    "accelerator": "hvf",
+    "scope": "Synthetic virtual disks and separate VM endpoints; no physical USB, trusted manager, production controller grant or chat delivery tested.",
+    "seconds": 6.45,
+    "checks": [
+      "Real compiled endpoints copy only selected files through separate virtio-serial ports and a bounded host relay; the receiver verifies bytes and the sender verifies its receipt.",
+      "Both guests verify readonly system images, no network interface beyond loopback, no swap and no shared filesystem mount.",
+      "The receiver publishes the verified tree inside its LUKS2 volume, flushes, unmounts and closes the mapping before normal VM shutdown.",
+      "The synthetic external source disk is passed readonly and remains byte-identical after the transfer.",
+      "Disconnecting a real virtio-serial transfer leaves no partial transaction; the receiver closes its encrypted volume and powers down.",
+      "The synthetic document canary is absent from both closed recipient disk images; the source copy intentionally remains on its original plaintext fixture disk."
+    ],
+    "endpoint_sha256": "4cf29bead971ed9fa30ee37095db7e5f5d25a362a1ec78a108c955dec135f8d5",
+    "runner_sha256": "e6df17d255003923ee1c9cc23aaac495416cb9bf5894a02589727e46847e67e2",
+    "disks": {
+      "receive-cancel.luks": "4901337efae55efccd3843e6b2bf9b0c3c22c57329ba63939ce3539d4ce9c7bd",
+      "receive-success.luks": "cec9b66b13ca0ca79ceaac9083311924cf50a0926ead44f270085dc5295bce05"
+    }
+  },
+  "protocol": [
+    "Each endpoint owns an inherited descriptor; selected names, approval and receipt stay off argv and environment.",
+    "The sender requires matching transfer ID and offered manifest digest before releasing file bytes.",
+    "The receiver validates the offered manifest against its approval and local limits before receiving files.",
+    "The sender verifies the matching receipt before reporting copied; one process handles one operation.",
+    "A monotonic nonblocking transport deadline covers fragmented reads and writes without renewal on progress."
+  ],
+  "limits": [
+    "No trusted-manager approval, controller capability issuer/revocation, physical USB or delivery to the chat integrated yet.",
+    "The VM laboratory uses separate disposable Debian ARM64/HVF machines; it does not prove production Linux/x86/KVM isolation.",
+    "Only the two recipient virtual disk images are scanned for the stated document canary; the source fixture intentionally retains its plaintext copy.",
+    "The synthetic LUKS KDF is deliberately cheap; production controller settings are unchanged.",
+    "Transport deadlines do not interrupt blocked filesystem I/O; supervision and storage-failure recovery remain open.",
+    "A lost receipt can leave a completed private copy with uncertain sender status; no automatic retry or exactly-once claim.",
+    "On macOS QEMU 10.2 cannot apply the Linux per-mapping dump flag. RLIMIT_CORE=0 is enforced; Linux keeps dump-guest-core=off and mem-merge=off.",
+    "The configured ARM64/x86 CI VM jobs have not yet run for this commit."
+  ],
+  "prior_attempts": [
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-01/summary.json",
+      "passed": false,
+      "reason": "QEMU rejected the Linux-only per-mapping dump flag on macOS, initially observed as ConnectionRefused during startup."
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-02/summary.json",
+      "passed": false,
+      "reason": "The QEMU diagnostic confirmed unsupported dump-guest-core=off on this host. The final runner applies that flag on Linux and retains RLIMIT_CORE=0 on Mac."
+    }
+  ],
+  "retained_files": [
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/arm64-build.log",
+      "sha256": "bf172cb1b11c4485ca701a9bcf63ad768ced087761fe39319842f3e55ceff19a"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/amd64-build.log",
+      "sha256": "2e1233d36d55a1182555b1e935ad3e3755bfd1284ed6fb1f1f006498d1ce949b"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-image-build-02.log",
+      "sha256": "eea25947e4b9d03d1459da8755871ddb8d4b6ab2de549d8ed3a3923b52c0662e"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/final-check.log",
+      "sha256": "0ac76c70f3770aa11aa8f3d1a4cffb9db539281858cb23feaa8ef5c712898afb"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-01/summary.json",
+      "sha256": "65024a13e793f85cf7e1988d957c3e3cdee503a1768c4d0e5e2e99c627cb0e3e"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-01/send-success.log",
+      "sha256": "483803346b2aeb1909c21e03f9ddaaeb3d400176412520bbe1ccdc8480bf3326"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-02/summary.json",
+      "sha256": "c03f073f85e07d8f48efc4c1ec14ac2b26cdceaef99cfeea24df510d61babd5b"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-02/send-success.log",
+      "sha256": "483803346b2aeb1909c21e03f9ddaaeb3d400176412520bbe1ccdc8480bf3326"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-03/summary.json",
+      "sha256": "672edd5c4fb0df4d76706c43d31948439cbb2a4c0e2a6e1d01db7689b55b7294"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-03/send-success.log",
+      "sha256": "f06594db24c93e3e306391bef500717c0218207ce786554b830019f24b78ef51"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-03/receive-success.log",
+      "sha256": "a862ad5a13ea463e7265920c0cd070a48ea4c1867a78c4594d6225f679a8091e"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-03/receive-cancel.log",
+      "sha256": "45357c5c50413c6fe825283fa6bd8e127279cdb5984870e9b8d161f4043facc6"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-image-v2/SHA256SUMS",
+      "sha256": "0b62cd333fe318dec192f86fc6afc011fc5a246f6f1db82c5d592b69cf23b8c3"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-image-v2/sources.sha256",
+      "sha256": "19dbe64ff4956826579a53f59e0a5010a0f7198a8112e7d861227dc3f332d802"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/vm-image-v2/endpoint.sha256",
+      "sha256": "4e38295f483492640670f25cd479d78693a44b4e166c3b3e63c6ea25a26725c3"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-arm64/tests.log",
+      "sha256": "ab7539cf708e64f104b3341c0db493f38b840f78a9d482a476518ead1222ddcd"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-arm64/build.log",
+      "sha256": "bf7dca0b070fc85230fcc882652445ace9521bdb8b580a3b25a32b34d0d8a62e"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-arm64/sources.sha256",
+      "sha256": "ea8626d26704eec0ca5c5cb30d0153efafbf66c39c90b699a2c9a6c037c997b5"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-arm64/rustc.txt",
+      "sha256": "6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-arm64/SHA256SUMS",
+      "sha256": "5bc4d396d23c2f0e964c1fc0cf7b0b8d813c0d9f2f2249456446fdb1f3880416"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-arm64/oblivion-copy",
+      "sha256": "4cf29bead971ed9fa30ee37095db7e5f5d25a362a1ec78a108c955dec135f8d5"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-amd64/tests.log",
+      "sha256": "bf18762f567f5ea0b4a6bbcd17864dbaf0c014117094f2c8d8a07178b78fa17a"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-amd64/build.log",
+      "sha256": "40802a46630e0c203982b570f4687419e278b8e1d4255e498c5a146209f337b6"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-amd64/sources.sha256",
+      "sha256": "ea8626d26704eec0ca5c5cb30d0153efafbf66c39c90b699a2c9a6c037c997b5"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-amd64/rustc.txt",
+      "sha256": "6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-amd64/SHA256SUMS",
+      "sha256": "c4af70f9e4a83dbd984aa91c75a4d90bf04c536ee8cdff1c38e46a99611c1bff"
+    },
+    {
+      "path": "artifacts/oblivion-transfer-endpoints/linux-amd64/oblivion-copy",
+      "sha256": "4cd815c288e78e56618ad1ae7cf4e4ed18cc1c6ffa68ca8f9833d2d042eba974"
+    }
+  ]
+}
