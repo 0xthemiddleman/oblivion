@@ -7,9 +7,10 @@ Lo sviluppo procede sul Mac ARM disponibile: Docker per build e prove del binari
 Debian/HVF e guest TCG per il laboratorio VM. L'hardware x86/KVM è un gate di
 rilascio, non un blocco allo sviluppo sul Mac.
 
-Nuovi requisiti: [chiavi multiple e SOCKS5 globale](KEYS-AND-EGRESS.md), con
-Tor predefinito e nessun fallback. La loro implementazione viene prima del
-proxy dei tool: il codice attuale usa ancora una sola chiave e Tor online.
+Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager fidato:
+archivio versionato, migrazione, scelta per apertura e nessuna rotazione
+automatica. Il [SOCKS5 globale](KEYS-AND-EGRESS.md) viene prima del proxy dei
+tool e resta da implementare; il percorso online attuale usa Tor.
 
 Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
 OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;
@@ -24,7 +25,7 @@ le nuove schermate amministrative rimangono nel manager host separato.
 | Console e manager        | [Prototipo Rust](MANAGER.md): password nascoste, IPC, console filtrata, TUI interattiva e stato di recupero persistente fra riavvii dei servizi                               | Paste esteso/resize, guasti I/O e console fisica                                      |
 | Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest          | Altri download/plugin, immagini aggiornate e rifinitura della TUI                     |
 | Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | SOCKS5 globale, provider reale, proxy dei tool e shutdown                             |
-| Credenziale API          | [Gestione nella TUI fidata](CREDENTIALS.md), file root 0600 nel generale, aggiornamento atomico e blocchi readonly/recupero/sessione aperta                                   | Archivio chiavi multiple, selezione/migrazione, provider reale e Wi-Fi                |
+| Credenziali API          | [Chiavi nominate nella TUI fidata](CREDENTIALS.md), archivio root 0600 nel generale, migrazione atomica, selezione in RAM e blocchi readonly/recupero/sessione aperta         | Provider reale, power loss durante migrazione e Wi-Fi                                 |
 | Documenti                | Flussi concordati                                                                                                                                                             | USB, copie A→B, OnionShare, quote e annullamento                                      |
 | Effimero                 | Solo sblocco RO del profilo implementato                                                                                                                                      | Guest RAM completo e zero scritture end-to-end                                        |
 | Live USB                 | Debian minimale scelta                                                                                                                                                        | Immagine x86, provisioning, boot fisico, firmware e periferiche                       |

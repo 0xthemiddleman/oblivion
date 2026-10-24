@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.28 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.29 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -21,9 +21,10 @@ anche attraverso controller LUKS e due VM, con provider sintetico.
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md)
 raccoglie i risultati e i gate aperti.
 
-Sono ora richiesti [più API key salvate e un proxy SOCKS5 globale alternativo](docs/oblivion/KEYS-AND-EGRESS.md),
-con Tor predefinito. Questa estensione è da implementare: il codice attuale
-usa una sola chiave e il percorso online Tor.
+Le [API key multiple](docs/oblivion/CREDENTIALS.md) sono ora salvabili e
+selezionabili nel manager fidato, con migrazione del formato precedente e
+nessuna rotazione automatica. Il [proxy SOCKS5 globale alternativo](docs/oblivion/KEYS-AND-EGRESS.md)
+resta da implementare; Tor rimane il percorso online predefinito.
 
 Restano da completare collaudo Abliteration reale e shutdown globale, proxy dei tool,
 trasferimenti USB e OnionShare, sessione effimera completa, rifinitura della TUI,

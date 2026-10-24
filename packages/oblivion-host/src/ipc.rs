@@ -32,6 +32,7 @@ enum Operation {
     Console,
     SetApiKey,
     ClearApiKey,
+    ApiKeys,
 }
 
 #[derive(Deserialize)]
@@ -123,7 +124,15 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         .read_exact(&mut header)
         .map_err(|_| Error("invalid_frame"))?;
     let request: Request = serde_json::from_slice(&header).map_err(|_| Error("invalid_request"))?;
-    require(request.secret_len <= 1024, "invalid_secret_length")?;
+    require(
+        request.secret_len
+            <= if matches!(request.operation, Operation::ApiKeys) {
+                4096
+            } else {
+                1024
+            },
+        "invalid_secret_length",
+    )?;
     require(
         matches!(
             request.operation,
@@ -148,6 +157,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
             | Operation::Create
             | Operation::Open
             | Operation::SetApiKey
+            | Operation::ApiKeys
     );
     require(
         needs_secret == (request.secret_len > 0),
@@ -183,6 +193,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         Operation::Status => "status",
         Operation::SetApiKey => "set-api-key",
         Operation::ClearApiKey => "clear-api-key",
+        Operation::ApiKeys => "api-keys",
         Operation::Console => unreachable!(),
     };
     let mut command =

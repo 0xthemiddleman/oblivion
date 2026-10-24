@@ -39,13 +39,22 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     }
     let needs_secret = matches!(
         operation.as_str(),
-        "init-general" | "unlock" | "unlock-ephemeral" | "create" | "open" | "set-api-key"
+        "init-general"
+            | "unlock"
+            | "unlock-ephemeral"
+            | "create"
+            | "open"
+            | "set-api-key"
+            | "api-keys"
     );
-    let mut secret = Zeroizing::new(Vec::with_capacity(1025));
+    let limit = if operation == "api-keys" { 4096 } else { 1024 };
+    let mut secret = Zeroizing::new(Vec::with_capacity(limit + 1));
     if needs_secret {
-        std::io::stdin().take(1025).read_to_end(&mut secret)?;
+        std::io::stdin()
+            .take(limit as u64 + 1)
+            .read_to_end(&mut secret)?;
     }
-    if secret.len() > 1024 {
+    if secret.len() > limit {
         return Err("secret_too_large".into());
     }
     let header = serde_json::to_vec(&json!({

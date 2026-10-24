@@ -30,10 +30,13 @@ una schermata dedicata. Dettagli e prove in [recupero della creazione](STORAGE-R
 | B                            | Blocca sessione e generale                                                 |
 | Q                            | Blocca entrambi e termina il manager                                       |
 
-Con il generale sbloccato e nessuna sessione aperta, **A** imposta la
-[credenziale Abliteration](CREDENTIALS.md) con input nascosto; **X** la rimuove
-dopo conferma. La UI mostra solo se è configurata. Il collegamento al gateway
-resta da completare.
+Con il generale sbloccato e nessuna sessione aperta, **G** gestisce le
+[chiavi Abliteration nominate](CREDENTIALS.md): aggiunta nascosta, rinomina,
+sostituzione, predefinita e rimozione confermata. **A** e **X** nella schermata
+principale impostano o rimuovono la chiave selezionata. La UI mostra nomi e
+stato, mai i segreti. Con più chiavi propone la scelta prima dell'apertura;
+in readonly permette solo la selezione in RAM. Il controller consegna al
+gateway esclusivamente quella selezionata.
 
 Le password si inseriscono fuori dalla VM, senza eco né history; i buffer
 posseduti dal manager sono azzerati e il processo Linux disabilita i core dump

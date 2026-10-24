@@ -12,12 +12,13 @@ import tty
 from pathlib import Path
 
 ROOT = Path("/usr/lib/oblivion-stream-fixture")
-KEY = b"Bearer OBLIVION_API_KEY_CANARY_5c91"
+KEYS = {b"Bearer OBLIVION_API_KEY_CANARY_5c91": "initial", b"Bearer OBLIVION_API_NEXT_CANARY_86ab": "alternate"}
 lock = threading.Lock()
 active = set()
 closed = set()
 errors = []
 sequence = 0
+credentials = {}
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.load_cert_chain(ROOT / "cert.pem", ROOT / "key.pem")
 
@@ -62,7 +63,7 @@ def serve(connection):
                         name, value = line.split(b":", 1)
                         assert name.lower() not in headers
                         headers[name.lower()] = value.strip()
-                    assert headers[b"authorization"] == KEY
+                    assert headers[b"authorization"] in KEYS
                     assert headers[b"host"] == b"api.abliteration.ai"
                     size = int(headers[b"content-length"])
                     assert 0 < size <= 16 * 1024 * 1024
@@ -84,6 +85,7 @@ def serve(connection):
                             sequence += 1
                             identifier = sequence
                             active.add(identifier)
+                            credentials[identifier] = KEYS[headers[b"authorization"]]
                     tls.sendall(f"{len(payload):x}\r\n".encode() + payload + b"\r\n")
                     if not chat:
                         tls.sendall(b"0\r\n\r\n")
@@ -125,7 +127,7 @@ for line in sys.stdin:
     request = json.loads(line)
     assert set(request) == {"operation", "id"} and request["operation"] == "status"
     with lock:
-        value = {"id": request["id"], "active": sorted(active), "closed": sorted(closed), "errors": errors.copy()}
+        value = {"id": request["id"], "active": sorted(active), "closed": sorted(closed), "errors": errors.copy(), "credentials": credentials.copy()}
     value["fixture_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     value["api_sha256"] = hashlib.sha256(Path("/usr/bin/oblivion-api").read_bytes()).hexdigest()
     print("OBLIVION_STREAM " + json.dumps(value, separators=(",", ":")), flush=True)

@@ -2,15 +2,15 @@
 
 Requisiti aggiunti il 24 ottobre 2026: salvare più API key Abliteration e
 scegliere tra Tor, predefinito, e un proxy SOCKS5 globale per Oblivion.
-Queste funzioni sono da implementare: il prototipo attuale conserva una sola
-chiave e il suo percorso online usa Tor. Le prove precedenti restano valide
-per quella configurazione, senza attestare ancora il nuovo percorso SOCKS.
+Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager e nel
+controller. Il percorso online usa ancora Tor: la scelta di un SOCKS5 esterno
+resta da implementare e le prove precedenti non attestano quel trasporto.
 
 ## Chiavi salvate
 
-Il manager fidato gestirà un elenco di chiavi con nome e identificatore opaco:
+Il manager fidato gestisce un elenco di chiavi con nome e identificatore opaco:
 aggiunta con campo nascosto, rinomina, rimozione confermata e scelta di una
-predefinita. Prima dell'apertura si potrà scegliere quale usare per quella
+predefinita. Prima dell'apertura, con più chiavi, si sceglie quale usare per quella
 sessione. La selezione vale per tutte le chiamate AI, inclusi titoli e
 compaction, fino alla chiusura. Non vengono cambiate le password LUKS.
 
@@ -28,10 +28,10 @@ un errore: nessuna rotazione automatica, selezione alternativa o nuovo invio
 su un altro account. Una chiave diversa non garantisce un'identità diversa
 se le chiavi appartengono allo stesso account del provider.
 
-La migrazione da `profile/abliteration.key` deve essere atomica e recuperabile:
+La migrazione da `profile/abliteration.key` avviene alla prima modifica:
 il vecchio segreto si elimina solo dopo la pubblicazione durevole del nuovo
 archivio. In lettura sola viene presentato come unica chiave disponibile senza
-migrazione. Nel profilo effimero si possono scegliere chiavi salvate in RAM;
+migrazione. Nel profilo in sola lettura si possono scegliere chiavi salvate in RAM;
 aggiunte, rinomine, rimozioni e modifica della predefinita non vengono salvate.
 
 ## Un percorso globale scelto dall'utente
@@ -98,8 +98,11 @@ SOCKS verrà mostrato come non disponibile, senza avviare Tor di nascosto.
 1. Estendere storage e IPC host da una chiave a un archivio versionato;
    preservare aggiornamenti atomici, readonly, permessi e recupero. Aggiungere
    selezione e gestione nella TUI fidata, quindi migrare il formato precedente.
+   **Implementato**; le evidenze e i limiti sono nella pagina delle credenziali.
 2. Consegnare al supervisore la sola chiave scelta e un profilo di trasporto
    tipizzato. Mantenere immutabile la coppia chiave/percorso durante l'apertura.
+   La consegna della chiave selezionata è implementata; il profilo di trasporto
+   configurabile resta da realizzare.
 3. Inserire un connettore locale del gateway per Tor o SOCKS esterno, riusabile
    dal broker e dal futuro proxy dei tool. Separare il token locale e le
    credenziali di isolamento Tor dall'autenticazione del SOCKS esterno.

@@ -89,8 +89,21 @@ impl Terminal {
     }
 
     pub fn password(&mut self, title: &str) -> Result<Option<Zeroizing<Vec<u8>>>> {
+        self.field(title, true)
+    }
+
+    pub fn name(&mut self, title: &str) -> Result<Option<String>> {
+        let Some(bytes) = self.field(title, false)? else {
+            return Ok(None);
+        };
+        let name = std::str::from_utf8(&bytes)?.to_owned();
+        crate::keys::valid_name(&name)?;
+        Ok(Some(name))
+    }
+
+    fn field(&mut self, title: &str, hidden: bool) -> Result<Option<Zeroizing<Vec<u8>>>> {
         self.flush_input();
-        self.write(&format!("{CLEAR}{BRAND} OBLIVION - controllo fidato{RESET}\r\n\r\n {title}\r\n\r\n {ACTION}Invio conferma | Esc annulla{RESET}\r\n\r\n Password nascosta: \x1b[?25h"))?;
+        self.write(&format!("{CLEAR}{BRAND} OBLIVION - controllo fidato{RESET}\r\n\r\n {title}\r\n\r\n {ACTION}Invio conferma | Esc annulla{RESET}\r\n\r\n {}: \x1b[?25h", if hidden { "Password nascosta" } else { "Nome" }))?;
         let mut secret = Zeroizing::new(Vec::with_capacity(1024));
         loop {
             let input = self.input(-1)?;
@@ -125,6 +138,13 @@ impl Terminal {
                         secret.push(byte);
                     }
                     _ => {}
+                }
+                if !hidden {
+                    let text: String = String::from_utf8_lossy(&secret)
+                        .chars()
+                        .filter(|c| !c.is_control())
+                        .collect();
+                    self.write(&format!("\r\x1b[2K Nome: {text}"))?;
                 }
             }
         }

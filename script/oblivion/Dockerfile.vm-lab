@@ -234,3 +234,7 @@ RUN --mount=type=bind,from=stream-gateway,source=/,target=/gateway,ro \
 
 FROM scratch AS stream-artifacts
 COPY --from=stream-pack /stream-out/ /
+
+# Reuse a previously verified session image while changing gateway-only fixtures.
+FROM scratch AS stream-gateway-artifacts
+COPY --from=stream-pack /stream-out/gateway/ /

@@ -1,4 +1,5 @@
 use oblivion_host::control::{self, Result};
+use oblivion_host::keys;
 use oblivion_host::terminal::{self, ACTION, BRAND, CLEAR, FEEDBACK, LOGO, RESET, Terminal};
 use serde::Deserialize;
 
@@ -19,6 +20,7 @@ struct Status {
     laboratory_emulation: bool,
     recovery_required: bool,
     api_key_present: Option<bool>,
+    api_keys: Option<keys::Status>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
@@ -105,7 +107,7 @@ fn run(preview: bool) -> Result<()> {
         {
             view.push_str(" SESSIONE ANCORA APERTA\r\n\r\n [Invio] Console   [C] Chiudi e blocca\r\n [F] Chiusura forzata\r\n");
         } else if status.general_readonly {
-            view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [B] Blocca\r\n");
+            view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [G] Scegli chiave API  [B] Blocca\r\n");
         } else {
             view.push_str(if incomplete {
                 " Creazioni interrotte - mai aperte come chat\r\n\r\n"
@@ -137,13 +139,22 @@ fn run(preview: bool) -> Result<()> {
                 status.session_bytes / 1048576
             ));
             view.push_str(&format!(
-                " API Abliteration: {}  [A] Imposta  [X] Rimuovi\r\n",
+                " API Abliteration: {}  [A] Imposta  [X] Rimuovi  [G] Chiavi\r\n",
                 if status.api_key_present == Some(true) {
                     "configurata"
                 } else {
                     "non configurata"
                 }
             ));
+            if let Some(keys) = &status.api_keys {
+                let name = keys
+                    .entries
+                    .iter()
+                    .find(|entry| Some(&entry.id) == keys.selected.as_ref())
+                    .map(|entry| entry.name.as_str())
+                    .unwrap_or("nessuna");
+                view.push_str(&format!(" Chiave selezionata: {name}\r\n"));
+            }
             if let Some(gateway) = &status.gateway_state {
                 view.push_str(
                     if gateway == "active" && status.gateway_vm_state.as_deref() == Some("active") {
@@ -252,7 +263,14 @@ fn run(preview: bool) -> Result<()> {
                 }
                 return Ok(());
             }
-            if !status.general_mounted || status.general_readonly {
+            if !status.general_mounted {
+                return Ok(());
+            }
+            if key == b'g' {
+                key_menu(&mut terminal, false)?;
+                return Ok(());
+            }
+            if status.general_readonly {
                 return Ok(());
             }
             if key == b'a' {
@@ -302,6 +320,14 @@ fn run(preview: bool) -> Result<()> {
             if key != b'n' && id.is_none() {
                 return Ok(());
             }
+            if status
+                .api_keys
+                .as_ref()
+                .is_some_and(|keys| keys.entries.len() > 1)
+                && !key_menu(&mut terminal, true)?
+            {
+                return Ok(());
+            }
             let Some(secret) = (if id.is_some() {
                 terminal.password("Password della sessione")?
             } else {
@@ -329,6 +355,9 @@ fn run(preview: bool) -> Result<()> {
             notice = match error.to_string().as_str() {
                 "passwords_do_not_match" => "Le password non coincidono.",
                 "password_too_short" => "Usa almeno 16 byte per la nuova password.",
+                "invalid_key_name" => "Nome non valido: da 1 a 64 byte, senza caratteri di controllo o spazi ai bordi.",
+                "api_key_missing" => "Seleziona una chiave API salvata prima di aprire la sessione.",
+                "too_many_api_keys" => "Archivio pieno: sono consentite al massimo 64 chiavi.",
                 "invalid_api_key" => {
                     "API key non valida: usa da 16 a 1024 caratteri ASCII senza spazi."
                 }
@@ -389,4 +418,143 @@ fn enter_console(terminal: &mut Terminal) -> Result<bool> {
     busy(terminal, "Chiusura della sessione")?;
     control::request("close", None, &[])?;
     Ok(result? == terminal::Action::New)
+}
+
+fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {
+    let mut selected = 0usize;
+    loop {
+        let status: Status = serde_json::from_str(&control::request("status", None, &[])?)?;
+        let keys = status.api_keys.ok_or("general_not_open")?;
+        selected = selected.min(keys.entries.len().saturating_sub(1));
+        let mut view = format!("{CLEAR}{BRAND} OBLIVION - chiavi Abliteration{RESET}\r\n\r\n");
+        if choosing {
+            view.push_str(" Scegli la chiave per questa apertura.\r\n");
+        }
+        let limit = terminal.size().0.saturating_sub(10).max(1) as usize;
+        for (index, entry) in keys
+            .entries
+            .iter()
+            .enumerate()
+            .skip(selected.saturating_sub(limit - 1))
+            .take(limit)
+        {
+            view.push_str(&format!(
+                " {} {}{}{}\r\n",
+                if index == selected { ">" } else { " " },
+                entry.name,
+                if keys.default.as_ref() == Some(&entry.id) {
+                    " [predefinita]"
+                } else {
+                    ""
+                },
+                if keys.selected.as_ref() == Some(&entry.id) {
+                    " [selezionata]"
+                } else {
+                    ""
+                }
+            ));
+        }
+        if keys.entries.is_empty() {
+            view.push_str(" Nessuna chiave salvata.\r\n");
+        }
+        view.push_str("\r\n [Invio] Usa  [J/K] Seleziona  [Esc] Indietro\r\n");
+        if !status.general_readonly && !choosing {
+            view.push_str(
+                " [A] Aggiungi  [R] Rinomina  [S] Sostituisci\r\n [D] Predefinita  [X] Rimuovi\r\n",
+            );
+        }
+        terminal.write(&view)?;
+        let input = terminal.input(-1)?;
+        let byte = match input.as_slice() {
+            b"\x1b[A" => b'k',
+            b"\x1b[B" => b'j',
+            [byte] => byte.to_ascii_lowercase(),
+            _ => continue,
+        };
+        if byte == 27 {
+            return Ok(false);
+        }
+        if byte == b'j' {
+            selected = (selected + 1).min(keys.entries.len().saturating_sub(1));
+            continue;
+        }
+        if byte == b'k' {
+            selected = selected.saturating_sub(1);
+            continue;
+        }
+        let entry = keys.entries.get(selected);
+        let command = if matches!(byte, b'\r' | b'\n') {
+            let Some(entry) = entry else {
+                continue;
+            };
+            keys::Command::Select {
+                id: entry.id.clone(),
+            }
+        } else {
+            if status.general_readonly || choosing {
+                continue;
+            }
+            if byte == b'a' {
+                let Some(name) = terminal.name("Nome della nuova chiave (massimo 64 byte)")? else {
+                    continue;
+                };
+                let Some(bytes) = terminal
+                    .password("API key Abliteration - salvata nel volume generale cifrato")?
+                else {
+                    continue;
+                };
+                keys::Command::Add {
+                    name,
+                    key: zeroize::Zeroizing::new(std::str::from_utf8(&bytes)?.to_owned()),
+                }
+            } else {
+                let Some(entry) = entry else {
+                    continue;
+                };
+                match byte {
+                    b'r' => {
+                        let Some(name) = terminal.name("Nuovo nome della chiave")? else {
+                            continue;
+                        };
+                        keys::Command::Rename {
+                            id: entry.id.clone(),
+                            name,
+                        }
+                    }
+                    b's' => {
+                        let Some(bytes) =
+                            terminal.password("Sostituisci la API key selezionata")?
+                        else {
+                            continue;
+                        };
+                        keys::Command::Replace {
+                            id: entry.id.clone(),
+                            key: zeroize::Zeroizing::new(std::str::from_utf8(&bytes)?.to_owned()),
+                        }
+                    }
+                    b'd' => keys::Command::Default {
+                        id: entry.id.clone(),
+                    },
+                    b'x' => {
+                        terminal.flush_input();
+                        terminal.write(&format!("{CLEAR} Rimuovere la chiave {}?\r\n Premi X di nuovo per confermare; altro tasto annulla.", entry.name))?;
+                        if !terminal.input(-1)?.as_slice().eq_ignore_ascii_case(b"x") {
+                            continue;
+                        }
+                        keys::Command::Remove {
+                            id: entry.id.clone(),
+                        }
+                    }
+                    _ => continue,
+                }
+            }
+        };
+        let selected = matches!(command, keys::Command::Select { .. });
+        let bytes = zeroize::Zeroizing::new(serde_json::to_vec(&command)?);
+        busy(terminal, "Aggiornamento delle chiavi")?;
+        control::request("api-keys", None, &bytes)?;
+        if selected {
+            return Ok(true);
+        }
+    }
 }

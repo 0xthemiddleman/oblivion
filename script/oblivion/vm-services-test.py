@@ -58,6 +58,34 @@ def status():
     return json.loads(command("status"))
 
 
+def key_command(action, **fields):
+    return json.dumps({"action": action, **fields}).encode()
+
+
+def stored_key():
+    path = Path("/run/oblivion/general/profile/abliteration.keys.json")
+    if not path.exists():
+        return path.with_name("abliteration.key").read_bytes()
+    selected = status()["api_keys"]["selected"]
+    return next((entry["key"].encode() for entry in json.loads(path.read_text())["entries"] if entry["id"] == selected), None)
+
+
+def fill_profile(path):
+    with path.open("xb") as file:
+        space = os.statvfs(path.parent)
+        allocated = space.f_bavail * space.f_frsize - 65536
+        os.posix_fallocate(file.fileno(), 0, allocated)
+        deadline = time.monotonic() + 5
+        while True:
+            assert time.monotonic() < deadline, "profile fill deadline"
+            try:
+                os.posix_fallocate(file.fileno(), allocated, 4096)
+                allocated += 4096
+            except OSError as error:
+                assert error.errno == errno.ENOSPC
+                return
+
+
 def read_terminal():
     if select.select([master], [], [], 0.1)[0]:
         data = os.read(master, 65536)
@@ -347,8 +375,8 @@ with socket.socket(socket.AF_UNIX) as client:
     assert status()["api_key_present"] is False
     send(b"a", "API key Abliteration - salvata")
     send(API_KEY + b"\r", "API Abliteration: configurata")
-    key_file = Path("/run/oblivion/general/profile/abliteration.key")
-    assert key_file.read_bytes() == API_KEY
+    key_file = Path("/run/oblivion/general/profile/abliteration.keys.json")
+    assert stored_key() == API_KEY
     assert key_file.stat().st_uid == 0 and key_file.stat().st_mode & 0o777 == 0o600
     assert API_KEY.decode() not in command("status")
     forbidden = subprocess.run(["cat", str(key_file)], user=1000, group=1000, extra_groups=[], capture_output=True)
@@ -356,8 +384,8 @@ with socket.socket(socket.AF_UNIX) as client:
     check("trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it")
     for secret in [b"too short", b"invalid-key with-spaces", b"invalid-key-with-newline\n"]:
         assert command("set-api-key", secret=secret, success=False) == "invalid_api_key"
-        assert key_file.read_bytes() == API_KEY
-    pending_key = key_file.with_name("abliteration.key.pending")
+        assert stored_key() == API_KEY
+    pending_key = key_file.with_name("abliteration.keys.json.pending")
     pending_key.symlink_to(key_file)
     assert command("set-api-key", secret=NEXT_API_KEY, success=False) == "file_unavailable"
     pending_key.unlink()
@@ -366,52 +394,97 @@ with socket.socket(socket.AF_UNIX) as client:
     pending_key.unlink()
     pending_key.write_bytes(b"interrupted-key-update")
     command("set-api-key", secret=NEXT_API_KEY)
-    assert key_file.read_bytes() == NEXT_API_KEY and not pending_key.exists()
+    assert stored_key() == NEXT_API_KEY and not pending_key.exists()
     check("invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry")
     filler_key = key_file.with_name("key-space-fixture")
-    with filler_key.open("xb") as file:
-        space = os.statvfs(key_file.parent)
-        allocated = space.f_bavail * space.f_frsize - 65536
-        os.posix_fallocate(file.fileno(), 0, allocated)
-        deadline = time.monotonic() + 5
-        while True:
-            assert time.monotonic() < deadline, "profile fill deadline"
-            try:
-                os.posix_fallocate(file.fileno(), allocated, 4096)
-                allocated += 4096
-            except OSError as error:
-                assert error.errno == errno.ENOSPC
-                break
+    legacy_key = key_file.with_name("abliteration.key")
+    legacy_key.write_bytes(NEXT_API_KEY)
+    key_file.unlink()  # Recreate the previously supported, root-owned format.
+    assert status()["api_keys"]["entries"][0]["name"] == "Importata"
+    assert not key_file.exists()
+    fill_profile(filler_key)
     assert command("set-api-key", secret=API_KEY, success=False) == "profile_write_failed"
-    assert key_file.read_bytes() == NEXT_API_KEY
+    assert stored_key() == NEXT_API_KEY
     filler_key.unlink()
     command("set-api-key", secret=API_KEY)
-    assert key_file.read_bytes() == API_KEY
-    check("profile exhaustion preserves the previous key; retry publishes a complete replacement")
+    assert stored_key() == API_KEY
+    assert not legacy_key.exists()
+    check("legacy key is read without migration; ENOSPC preserves it and retry publishes the versioned archive before deleting the legacy file")
+    fill_profile(filler_key)
+    before_key = key_file.read_bytes()
+    assert command("set-api-key", secret=NEXT_API_KEY, success=False) == "profile_write_failed"
+    assert key_file.read_bytes() == before_key
+    filler_key.unlink()
+    command("set-api-key", secret=API_KEY)
+    # Publication may have completed before legacy cleanup. Never fall back to
+    # the old credential, including when the authoritative archive is invalid.
+    legacy_key.write_bytes(NEXT_API_KEY)
+    assert stored_key() == API_KEY
+    before_key = key_file.read_bytes()
+    key_file.write_bytes(b'{"version":999}')
+    assert command("status", success=False) == "invalid_key_archive"
+    key_file.write_bytes(before_key)
+    command("set-api-key", secret=API_KEY)
+    assert not legacy_key.exists()
+    check("full-disk replacement preserves the archive; published archives take precedence over leftover legacy secrets and malformed archives fail closed")
     send(b"b", "Archivio generale bloccato")
     assert status()["api_key_present"] is None
     send(b"\r", "Password del volume generale")
     send(GENERAL + b"\r", "API Abliteration: configurata")
-    assert key_file.read_bytes() == API_KEY
+    assert stored_key() == API_KEY
     send(b"x", "Premi X di nuovo")
     send(b"a", "API Abliteration: configurata")
-    assert key_file.read_bytes() == API_KEY
+    assert stored_key() == API_KEY
     send(b"x", "Premi X di nuovo")
     send(b"x", "API Abliteration: non configurata")
-    assert not key_file.exists() and status()["api_key_present"] is False
+    assert json.loads(key_file.read_text())["entries"] == [] and status()["api_key_present"] is False
     send(b"a", "API key Abliteration - salvata")
     send(API_KEY + b"\r", "API Abliteration: configurata")
     check("key persists across lock/unlock; removal requires confirmation and cancellation preserves it")
-    send(b"n", "Nuova sessione - password")
+    first_key = status()["api_keys"]["selected"]
+    send(b"g", "chiavi Abliteration")
+    send(b"a", "Nome della nuova chiave")
+    send(b"Lavoro\r", "API key Abliteration - salvata")
+    send(NEXT_API_KEY + b"\r", "Lavoro")
+    second_key = status()["api_keys"]["entries"][1]["id"]
+    assert first_key != second_key and status()["api_keys"]["selected"] == first_key
+    send(b"j", "> Lavoro")
+    send(b"r", "Nuovo nome della chiave")
+    send(b"Archivio\r", "> Archivio")
+    send(b"d", "Archivio [predefinita]")
+    assert status()["api_keys"]["default"] == second_key
+    send(b"k", "> Predefinita")
+    before_key = key_file.read_bytes()
+    send(b"\r", "Chiave selezionata: Predefinita")
+    assert key_file.read_bytes() == before_key and stored_key() == API_KEY
+    assert status()["api_keys"]["selected"] == first_key
+    check("trusted manager adds and renames a second hidden key, saves its default and selects another key only in RAM")
+    send(b"n", "Scegli la chiave per questa apertura")
+    send(b"j", "> Archivio")
+    send(b"\r", "Nuova sessione - password")
+
     send(PASSWORD + b"\r", "Ripeti la password")
     send(PASSWORD + b"\r", "Conversazioni e documenti")
     wait_screen("/exit blocca")
     session_id = status()["sessions"][0]
     assert command("set-api-key", secret=NEXT_API_KEY, success=False) == "session_must_be_closed"
     assert command("clear-api-key", success=False) == "session_must_be_closed"
-    assert key_file.read_bytes() == API_KEY
-    check("an open session prevents changes to the infrastructure credential")
+    assert stored_key() == NEXT_API_KEY
+    assert command("api-keys", secret=key_command("select", id=first_key), success=False) == "session_must_be_closed"
+    assert command("api-keys", secret=key_command("remove", id=second_key), success=False) == "session_must_be_closed"
+    check("key picker chooses the opening credential; an active session blocks key mutations and identity changes")
     send(b"\x1d", "Sessioni protette")
+    send(b"g", "chiavi Abliteration")
+    send(b"j", "> Archivio")
+    send(b"x", "Premi X di nuovo")
+    send(b"x", "chiavi Abliteration")
+    assert status()["api_keys"]["selected"] is None and status()["api_keys"]["default"] is None
+    assert status()["api_key_present"] is False and len(status()["api_keys"]["entries"]) == 1
+    send(b"d", "Predefinita [predefinita]")
+    assert status()["api_keys"]["selected"] is None
+    send(b"\r", "Chiave selezionata: Predefinita")
+    assert stored_key() == API_KEY
+    check("removing the selected key never rotates to the remaining account; explicit default and selection restore access")
     archive = Path(f"/run/oblivion/general/sessions/{session_id}.luks")
     before = file_digest(archive)
     Path("/run/oblivion/general/profile/canary").write_bytes(b"OBLIVION_VM_A_CANARY_4d02")
@@ -421,12 +494,18 @@ with socket.socket(socket.AF_UNIX) as client:
     assert status()["api_key_present"] is True
     assert command("set-api-key", secret=NEXT_API_KEY, success=False) == "general_not_writable"
     assert command("clear-api-key", success=False) == "general_not_writable"
+    for body in [key_command("add", name="No", key=NEXT_API_KEY.decode()), key_command("rename", id=first_key, name="No"),
+                 key_command("remove", id=first_key), key_command("default", id=first_key),
+                 key_command("replace", id=first_key, key=NEXT_API_KEY.decode())]:
+        assert command("api-keys", secret=body, success=False) == "general_not_writable"
+    command("api-keys", secret=key_command("select", id=first_key))
+    assert status()["api_keys"]["selected"] == first_key
     pending_id = next(Path("/run/oblivion/general/sessions").glob("*.pending")).stem
     assert command("discard-session-pending", pending_id, success=False) == "general_not_writable"
     assert status()["incomplete_sessions"] == []
     command("lock")
     assert file_digest("/data/general.luks") == encrypted_before
-    check("read-only profile exposes only credential presence, rejects key changes and pending deletion, and remains byte-identical")
+    check("read-only profile exposes key metadata and permits RAM selection, rejects all key mutations and pending deletion, and remains byte-identical")
     terminal.reset()
     os.kill(manager_pid, signal.SIGKILL)
     manager_pid = wait_restart(MANAGER, manager_pid)

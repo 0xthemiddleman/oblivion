@@ -192,6 +192,15 @@ command("set-api-key", secret=KEY)
 ready()
 a = command("create", secret=PASSWORD)
 b = command("create", secret=b"synthetic-session-password-b")
+if STREAM:
+    command("api-keys", secret=json.dumps({"action": "add", "name": "Seconda", "key": NEXT.decode()}).encode())
+    initial_key, alternate_key = [entry["id"] for entry in status()["api_keys"]["entries"]]
+    assert status()["api_keys"]["selected"] == initial_key
+    previous_gateway, _ = ready()
+    command("api-keys", secret=json.dumps({"action": "select", "id": initial_key}).encode())
+    assert ready()[0] == previous_gateway
+    check("reselecting the current key records the RAM choice without restarting its gateway or Tor bootstrap")
+
 
 
 def console():
@@ -294,7 +303,8 @@ if STREAM:
     assert stream_status()["active"] == []
     client.sendall(b"stream\n")
     receive(client, b"OBLIVION_STREAM_STARTED")
-    assert stream_status()["active"] == [1]
+    observed = stream_status()
+    assert observed["active"] == [1] and observed["credentials"] == {"1": "initial"}
     check("compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker")
 
 # Keep the old guest alive while requesting close: the VM interlock rejects
@@ -313,6 +323,10 @@ client.close()
 assert not status()["session_open"] and not Path(f"/proc/{chat}").exists()
 check("revocation precedes vault closure and removes broker access even while the old guest remains running")
 
+if STREAM:
+    previous_gateway, _ = ready()
+    command("api-keys", secret=json.dumps({"action": "select", "id": alternate_key}).encode())
+    assert ready()[0] != previous_gateway and not Path(f"/proc/{previous_gateway}").exists()
 command("enter", b, secret=b"synthetic-session-password-b")
 client = console()
 second = probe(client)
@@ -325,18 +339,23 @@ assert watched_pids(owner) == [chat] and gateway_status()["active"]
 if STREAM:
     client.sendall(b"stream\n")
     receive(client, b"OBLIVION_STREAM_STARTED")
-    assert stream_status()["active"] == [2]
+    observed = stream_status()
+    assert observed["active"] == [1] and observed["credentials"] == {"1": "alternate"}
+    check("explicit key selection replaces the gateway VM; the real compiled adapter sends the alternate key only through the broker")
 os.kill(chat, signal.SIGKILL)
 client.close()
 await_revocation(owner)
 if STREAM:
-    stream_closed(2)
+    stream_closed(1)
     assert status()["session_open"]
     check("session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure")
 assert command("enter", a, secret=PASSWORD, success=False) == "session_already_open"
 command("close")
 assert not status()["session_open"]
 check("B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close")
+if STREAM:
+    command("api-keys", secret=json.dumps({"action": "select", "id": initial_key}).encode())
+
 
 command("enter", a, secret=PASSWORD)
 client = console()

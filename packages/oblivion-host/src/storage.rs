@@ -1,3 +1,4 @@
+use oblivion_host::keys;
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::fs::{self, File, OpenOptions};
@@ -49,6 +50,7 @@ struct Status {
     laboratory_emulation: bool,
     recovery_required: bool,
     api_key_present: Option<bool>,
+    api_keys: Option<keys::Status>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
@@ -107,6 +109,7 @@ pub fn main() -> Result<()> {
             | "discard-session-pending"
             | "set-api-key"
             | "clear-api-key"
+            | "api-keys"
     ) {
         require(!recovery_required()?, "recovery_required")?;
     }
@@ -139,6 +142,7 @@ pub fn main() -> Result<()> {
         }
         "unlock" | "unlock-ephemeral" => {
             config.unlock(&password(false)?, op == "unlock-ephemeral")?;
+            clear_key_selection()?;
             config.start_gateway()
         }
         "create" => config.create(&password(true)?),
@@ -147,22 +151,46 @@ pub fn main() -> Result<()> {
                 mount_mode()? == MountMode::ReadWrite,
                 "general_not_writable",
             )?;
+            let archive = read_api_keys()?;
+            let status = archive.status(key_selection()?);
+            let command = if op == "clear-api-key" {
+                status.selected.map(|id| keys::Command::Remove { id })
+            } else {
+                let bytes = password(false)?;
+                let key = Zeroizing::new(
+                    std::str::from_utf8(&bytes)
+                        .map_err(|_| Error("invalid_api_key"))?
+                        .to_owned(),
+                );
+                Some(if let Some(id) = status.selected {
+                    keys::Command::Replace { id, key }
+                } else {
+                    require(status.entries.is_empty(), "api_key_missing")?;
+                    keys::Command::Add {
+                        name: "Predefinita".to_owned(),
+                        key,
+                    }
+                })
+            };
             require(
                 !mapping_open("oblivion-session")? && crate::vm::stopped()?,
                 "session_must_be_closed",
             )?;
-            let secret = if op == "set-api-key" {
-                Some(password(false)?)
-            } else {
-                None
-            };
-            // Never retain a running VM with the previous credential after a
-            // profile change, including a failed replacement on a full disk.
-            if config.gateway.is_some() {
-                crate::gateway::stop()?;
+            if let Some(command) = command {
+                config.change_keys(command)?;
             }
-            update_api_key(secret)?;
-            config.start_gateway()
+            Ok(())
+        }
+        "api-keys" => {
+            let mut bytes = Zeroizing::new(Vec::new());
+            std::io::stdin()
+                .take(4097)
+                .read_to_end(&mut bytes)
+                .map_err(|_| Error("secret_read_failed"))?;
+            require(bytes.len() <= 4096, "invalid_secret_length")?;
+            let command =
+                serde_json::from_slice(&bytes).map_err(|_| Error("invalid_key_command"))?;
+            config.change_keys(command)
         }
         "open" => config.open(&args[3], &password(false)?),
         "enter" => {
@@ -206,6 +234,7 @@ pub fn main() -> Result<()> {
                 crate::vm::stop(false)?;
             }
             close_general()?;
+            clear_key_selection()?;
             if recovery_required()? {
                 fs::remove_file(RECOVERY).map_err(|_| Error("recovery_clear_failed"))?;
             }
@@ -213,6 +242,11 @@ pub fn main() -> Result<()> {
         }
         "status" => {
             let mode = mount_mode()?;
+            let api_keys = if mode == MountMode::Closed {
+                None
+            } else {
+                Some(read_api_keys()?.status(key_selection()?))
+            };
             let status = Status {
                 general_present: config
                     .general_image
@@ -260,11 +294,8 @@ pub fn main() -> Result<()> {
                 } else {
                     None
                 },
-                api_key_present: if mode == MountMode::Closed {
-                    None
-                } else {
-                    Some(api_key_present()?)
-                },
+                api_key_present: api_keys.as_ref().map(|keys| keys.selected.is_some()),
+                api_keys,
             };
             println!(
                 "{}",
@@ -277,6 +308,62 @@ pub fn main() -> Result<()> {
 }
 
 impl Config {
+    fn change_keys(&self, command: keys::Command) -> Result<()> {
+        let mode = mount_mode()?;
+        require(mode != MountMode::Closed, "general_not_open")?;
+        require(
+            mode == MountMode::ReadWrite || matches!(command, keys::Command::Select { .. }),
+            "general_not_writable",
+        )?;
+        require(
+            !mapping_open("oblivion-session")? && crate::vm::stopped()?,
+            "session_must_be_closed",
+        )?;
+        let mut archive = read_api_keys()?;
+        let before = archive.status(key_selection()?);
+        let selection = match command {
+            keys::Command::Select { id } => {
+                require(archive.key(&id).is_some(), "api_key_missing")?;
+                Some(id)
+            }
+            command => {
+                archive.change(command).map_err(Error)?;
+                None
+            }
+        };
+        // Retrying an opening with the same key must not restart Tor bootstrap.
+        // Still record the explicit choice, independently of the saved default.
+        if let Some(id) = selection.as_deref() {
+            if before.selected.as_deref() == Some(id)
+                && (self.gateway.is_none()
+                    || (crate::gateway::state()? == "active"
+                        && crate::vm::state_role(crate::vm::Role::Gateway)? == "active"))
+            {
+                return write_key_selection(Some(id));
+            }
+        }
+        // No old credential remains delegated across a profile/selection change,
+        // including a failed write. Restart requires the selected key to exist.
+        if self.gateway.is_some() {
+            crate::gateway::stop()?;
+        }
+        if let Some(id) = selection {
+            write_key_selection(Some(&id))?;
+        } else {
+            save_api_keys(&archive)?;
+            if before.entries.is_empty() {
+                clear_key_selection()?;
+            } else if before
+                .selected
+                .as_ref()
+                .is_some_and(|id| archive.key(id).is_none())
+            {
+                write_key_selection(None)?;
+            }
+        }
+        self.start_gateway()
+    }
+
     fn start_gateway(&self) -> Result<()> {
         if self.gateway.is_some() && api_key_present()? {
             crate::gateway::start()?;
@@ -466,9 +553,11 @@ impl Config {
     }
 }
 
-fn api_key_present() -> Result<bool> {
+fn read_api_keys() -> Result<keys::Archive> {
     let directory = match fs::symlink_metadata(PROFILE) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(keys::Archive::empty());
+        }
         Err(_) => return Err(Error("profile_unavailable")),
         Ok(directory) => directory,
     };
@@ -476,33 +565,94 @@ fn api_key_present() -> Result<bool> {
         directory.is_dir() && directory.uid() == 0 && directory.mode() & 0o077 == 0,
         "unsafe_profile",
     )?;
-    let path = Path::new(PROFILE).join("abliteration.key");
+    let path = Path::new(PROFILE).join("abliteration.keys.json");
     match fs::symlink_metadata(&path) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(false),
-        Err(_) => Err(Error("profile_unavailable")),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => return Err(Error("profile_unavailable")),
         Ok(_) => {
-            let file = trusted_file(&path)?;
-            require(
-                (16..=1024).contains(&file.metadata().map_err(|_| Error("metadata_failed"))?.len()),
-                "invalid_api_key",
-            )?;
-            Ok(true)
+            let mut bytes = Zeroizing::new(Vec::new());
+            trusted_file(&path)?
+                .take(keys::LIMIT as u64 + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|_| Error("profile_unavailable"))?;
+            return keys::Archive::decode(&bytes).map_err(Error);
         }
     }
+    let path = Path::new(PROFILE).join("abliteration.key");
+    match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(keys::Archive::empty());
+        }
+        Err(_) => return Err(Error("profile_unavailable")),
+        Ok(_) => {}
+    }
+    let mut key = Zeroizing::new(String::new());
+    trusted_file(&path)?
+        .take(1025)
+        .read_to_string(&mut key)
+        .map_err(|_| Error("invalid_api_key"))?;
+    keys::Archive::legacy(key).map_err(Error)
+}
+
+fn api_key_present() -> Result<bool> {
+    Ok(read_api_keys()?.status(key_selection()?).selected.is_some())
 }
 
 fn read_api_key() -> Result<Zeroizing<Vec<u8>>> {
-    require(api_key_present()?, "api_key_missing")?;
-    let mut key = Zeroizing::new(Vec::new());
-    trusted_file(&Path::new(PROFILE).join("abliteration.key"))?
-        .take(1025)
-        .read_to_end(&mut key)
-        .map_err(|_| Error("profile_unavailable"))?;
+    let archive = read_api_keys()?;
+    let id = archive
+        .status(key_selection()?)
+        .selected
+        .ok_or(Error("api_key_missing"))?;
+    Ok(Zeroizing::new(
+        archive
+            .key(&id)
+            .ok_or(Error("api_key_missing"))?
+            .as_bytes()
+            .to_vec(),
+    ))
+}
+
+// Absence uses the saved default. An empty selection explicitly disables it;
+// removing a selected key must never silently select another account.
+fn key_selection() -> Result<Option<Option<String>>> {
+    let path = Path::new(RUN).join("api-key-selection");
+    match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(Error("selection_unavailable")),
+        Ok(_) => {}
+    }
+    let mut id = String::new();
+    trusted_file(&path)?
+        .take(33)
+        .read_to_string(&mut id)
+        .map_err(|_| Error("selection_unavailable"))?;
     require(
-        (16..=1024).contains(&key.len()) && key.iter().all(u8::is_ascii_graphic),
-        "invalid_api_key",
+        id.is_empty() || keys::valid_id(&id),
+        "invalid_key_selection",
     )?;
-    Ok(key)
+    Ok(Some(if id.is_empty() { None } else { Some(id) }))
+}
+
+fn clear_key_selection() -> Result<()> {
+    let path = Path::new(RUN).join("api-key-selection");
+    if key_selection()?.is_some() {
+        fs::remove_file(path).map_err(|_| Error("selection_write_failed"))?;
+    }
+    Ok(())
+}
+
+fn write_key_selection(id: Option<&str>) -> Result<()> {
+    clear_key_selection()?;
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(Path::new(RUN).join("api-key-selection"))
+        .map_err(|_| Error("selection_write_failed"))?;
+    file.write_all(id.unwrap_or("").as_bytes())
+        .map_err(|_| Error("selection_write_failed"))
 }
 
 pub(crate) fn tor_state() -> Result<Option<oblivion_tor_state::State>> {
@@ -563,18 +713,22 @@ pub(crate) fn save_tor_state(state: &oblivion_tor_state::State) -> Result<()> {
     sync_directory(Path::new(PROFILE))
 }
 
-fn update_api_key(secret: Option<Zeroizing<Vec<u8>>>) -> Result<()> {
-    let present = api_key_present()?;
-    if let Some(secret) = &secret {
-        require(
-            (16..=1024).contains(&secret.len()) && secret.iter().all(u8::is_ascii_graphic),
-            "invalid_api_key",
-        )?;
-    }
+fn save_api_keys(archive: &keys::Archive) -> Result<()> {
     let directory = Path::new(PROFILE);
-    let pending = directory.join("abliteration.key.pending");
-    // A failed write leaves the previous key intact. Only this fixed, private
-    // staging file may be discarded on a later update, under the operation lock.
+    let path = directory.join("abliteration.keys.json");
+    let pending = directory.join("abliteration.keys.json.pending");
+    let mut legacy = Vec::new();
+    for name in ["abliteration.key", "abliteration.key.pending"] {
+        let file = directory.join(name);
+        match fs::symlink_metadata(&file) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err(Error("profile_unavailable")),
+            Ok(_) => {
+                trusted_file(&file)?;
+                legacy.push(file);
+            }
+        }
+    }
     match fs::symlink_metadata(&pending) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
         Err(_) => return Err(Error("profile_unavailable")),
@@ -583,13 +737,6 @@ fn update_api_key(secret: Option<Zeroizing<Vec<u8>>>) -> Result<()> {
             fs::remove_file(&pending).map_err(|_| Error("profile_write_failed"))?;
         }
     }
-    let path = directory.join("abliteration.key");
-    let Some(secret) = secret else {
-        if present {
-            fs::remove_file(path).map_err(|_| Error("profile_write_failed"))?;
-        }
-        return sync_directory(directory);
-    };
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -597,10 +744,16 @@ fn update_api_key(secret: Option<Zeroizing<Vec<u8>>>) -> Result<()> {
         .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
         .open(&pending)
         .map_err(|_| Error("profile_write_failed"))?;
-    file.write_all(&secret)
+    file.write_all(&archive.encode().map_err(Error)?)
         .and_then(|()| file.sync_all())
         .map_err(|_| Error("profile_write_failed"))?;
     fs::rename(pending, path).map_err(|_| Error("profile_write_failed"))?;
+    sync_directory(directory)?;
+    // The versioned archive is authoritative even if cleanup is interrupted.
+    // Publish and fsync it before removing any legacy credential.
+    for file in legacy {
+        fs::remove_file(file).map_err(|_| Error("profile_write_failed"))?;
+    }
     sync_directory(directory)
 }
 

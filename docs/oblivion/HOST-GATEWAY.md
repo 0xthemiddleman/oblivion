@@ -1,7 +1,7 @@
 # Gateway collegato al volume generale
 
 Il controller Linux ora può avviare una VM gateway dopo lo sblocco del generale
-e consegnarle la chiave salvata nel profilo. Il collegamento usa il
+e consegnarle la chiave selezionata nell'[archivio del profilo](CREDENTIALS.md). Il collegamento usa il
 [protocollo privato del supervisore](GATEWAY-CONTROL.md). La [rete della sessione](SESSION-NETWORK.md) usa un token locale revocabile.
 Lo [stato Tor](TOR-STATE.md) viene importato dal generale prima di abilitare
 la rete; una nuova apertura online richiede bootstrap completo e guardie
@@ -10,12 +10,15 @@ acquisite dal servizio host.
 ## Ciclo di vita
 
 - Generale chiuso: il gateway non viene avviato.
-- Sblocco senza chiave salvata: il manager rimane disponibile, gateway fermo.
-- Sblocco con chiave, anche readonly: parte `oblivion-gateway-host.service`,
-  che legge il file root 0600 nel generale e avvia la VM gateway.
+- Sblocco senza chiave predefinita: il manager rimane disponibile, gateway fermo.
+- Sblocco con predefinita, anche readonly: parte `oblivion-gateway-host.service`,
+  che legge la sola chiave selezionata dall'archivio root 0600 e avvia la VM gateway.
 - Salvataggio o sostituzione della chiave: richiede tutte le sessioni chiuse;
   ferma il vecchio gateway prima dell'aggiornamento atomico e avvia una VM nuova.
-- Rimozione della chiave: ferma prima il gateway, poi cancella il file.
+- Cambio di selezione: stessa chiusura del gateway precedente, nuova VM con la
+  sola chiave scelta. Se è già selezionata e il gateway è attivo, non si riavvia.
+- Rimozione della chiave selezionata: ferma prima il gateway, poi aggiorna
+  l'archivio; nessun'altra chiave viene selezionata automaticamente.
 - Chiusura di una sessione: il gateway resta disponibile per il profilo.
 - Blocco e recovery: fermano il proprietario del canale e verificano la fine
   della VM gateway prima di chiudere sessione e generale.

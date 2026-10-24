@@ -32,7 +32,7 @@ pub fn protect() -> Result<()> {
 }
 
 fn connect(operation: &str, session: Option<&str>, secret: &[u8]) -> Result<UnixStream> {
-    if secret.len() > 1024 {
+    if secret.len() > if operation == "api-keys" { 4096 } else { 1024 } {
         return Err("secret_too_large".into());
     }
     let stream = UnixStream::connect("/run/oblivion-control.sock")?;
