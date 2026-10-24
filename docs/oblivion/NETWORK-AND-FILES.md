@@ -44,6 +44,18 @@ La VM non può raggiungere il SOCKS Tor o quello esterno senza policy, il Contro
 
 Proxy esplicito e compatibilità dei tool sono una scelta da misurare. Impostare le variabili proxy aiuta i client compatibili ma non costituisce la protezione: i client che le ignorano devono fallire. Se uno strumento richiede DNS autonomo o TCP trasparente, occorre un'integrazione che mantenga la stessa policy, non un'eccezione che apra tutto il trasporto. Preservare il toolset non significa garantire il funzionamento di qualunque comando di rete.
 
+La revisione del sorgente v2 corrente trova `webfetch` in
+`packages/core/src/tool/plugin/webfetch.ts`: usa il servizio `HttpClient`
+iniettato; il client globale corrispondente usa `FetchHttpClient.layer` in
+`packages/util/src/effect/app-node-platform.ts`. Non contiene un
+client SOCKS autonomo. La [documentazione Bun](https://bun.sh/docs/runtime/networking/fetch)
+descrive proxy HTTP tramite ambiente o opzione `proxy`, con CONNECT per HTTPS
+e richieste proxy HTTP per destinazioni HTTP. Questo identifica il punto di
+integrazione, senza provare il comportamento del binario fissato a Bun 1.4.4:
+occorre esercitare entrambi i protocolli con quel client, redirect compresi.
+Il servizio API locale deve continuare a usare il proprio canale ristretto;
+le credenziali del proxy esterno restano fuori da ambiente e filesystem del guest.
+
 **Servizio API e significato delle autorizzazioni**
 
 L'adapter nativo di OpenCode rimane il client. Il suo endpoint viene configurato verso il servizio locale ristretto, che aggiunge la API key soltanto nella richiesta al provider. Il guest non riceve la chiave reale; token locali vengono limitati alla sessione e revocati alla chiusura. Il servizio controlla modelli, endpoint, dimensioni e opzioni consentite, gestisce streaming e cancellazione, e rifiuta redirect verso altre origini. Non è un proxy HTTP generico.
