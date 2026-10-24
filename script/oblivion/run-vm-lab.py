@@ -293,6 +293,19 @@ if disk:
 captures = None
 if args.tor_online:
     captures = {"uplink": capture(output / "uplink.pcap"), "before_enable": capture(output / "before-enable.pcap") if (output / "before-enable.pcap").exists() else None}
+webtools = None
+if args.stream_socks:
+    recorded = [line.removeprefix("OBLIVION_WEBTOOLS_PCAP ") for line in serial.splitlines() if line.startswith("OBLIVION_WEBTOOLS_PCAP ")]
+    if recorded:
+        assert len(recorded) == 1
+        path = output / "webtools-outside.pcap"
+        path.write_bytes(base64.b64decode(recorded[0], validate=True))
+        webtools = capture(path)
+        assert webtools["tcp"] > 0 and webtools["tcp"] == webtools["ipv4"]
+        assert webtools["udp"] == webtools["ipv6"] == webtools["ipv4_fragments"] == 0
+        for source, source_port, destination, destination_port in webtools["tcp_flows"]:
+            assert (source == "10.0.2.15" and destination == "10.0.2.2" and destination_port == 9050) or (
+                source == "10.0.2.2" and source_port == 9050 and destination == "10.0.2.15")
 summary = {
     "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
     "workload": "selective Tor state persistence and bootstrap" if args.tor_state else "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
@@ -320,10 +333,11 @@ summary = {
     "external_socks_streams": args.stream_socks,
     "session_opencode_sha256": (session_image / "opencode.sha256").read_text().split()[0] if session_image else None,
     "captures": captures,
+    "webtools_outside_capture": webtools,
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 print(json.dumps(summary, indent=2))
-if result.returncode or not summary["guest_pass"] or found or not fixture_verified or not bundle_verified or not adapter_verified:
+if result.returncode or not summary["guest_pass"] or found or not fixture_verified or not bundle_verified or not adapter_verified or (args.stream_socks and webtools is None):
     raise SystemExit(1)
 if captures:
     assert captures["before_enable"] is not None

@@ -35,6 +35,10 @@ HTTP/HTTPS, redirect vietato, dominio e porta non autorizzati, shell e regole
 separate A/B. I due test nativi della fixture passano; la nuova prova nelle VM
 non è ancora eseguita. La CI permette di proseguire mentre il Docker locale
 rimane fermo per spazio insufficiente ed errori I/O.
+È preparata anche la cattura esterna del traffico della prima apertura di A:
+attivazione esclusivamente nel laboratorio, controllo del percorso SOCKS e
+assenza di chiave API/token locali in chiaro. Il filtro QMP è provato sul Mac;
+la cattura con il client nelle VM resta pendente.
 
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
 limiti e incidenti precedenti, incluso il guasto di riapertura della console non

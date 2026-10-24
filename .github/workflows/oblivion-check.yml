@@ -341,6 +341,7 @@ jobs:
             artifacts/ci/host-results/serial.log
             artifacts/ci/stream-results/summary.json
             artifacts/ci/stream-results/serial.log
+            artifacts/ci/stream-results/webtools-outside.pcap
             artifacts/ci/stream-images/gateway/SHA256SUMS
             artifacts/ci/stream-images/gateway/stream.json
             artifacts/ci/stream-images/gateway/trust.diff

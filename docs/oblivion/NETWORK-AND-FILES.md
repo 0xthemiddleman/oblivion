@@ -71,6 +71,17 @@ tramite `NODE_EXTRA_CA_CERTS`; non si disabilita la verifica TLS e non cambia
 la fiducia dell'immagine di produzione. Due test nativi della fixture passano
 con socket e TLS reali; la prova Bun/OpenCode nelle VM è ancora da eseguire.
 
+La prova host ora prepara anche una cattura esterna della prima apertura di A,
+dalle richieste iniziali fino alla revoca e chiusura. Solo il driver di
+laboratorio attiva `filter-dump` tramite il QMP privato; nessuna opzione di
+cattura è aggiunta al controller o al launcher di produzione. Prima di
+esportare il PCAP sintetico, chiude il filtro e verifica che non contenga
+la chiave API o il token locale in chiaro. Il runner richiede esclusivamente
+TCP verso il SOCKS configurato, senza DNS/UDP, IPv6 o frammenti IP, e conserva
+il PCAP con il suo hash. La prova nativa su QEMU Mac conferma soltanto
+creazione/chiusura del filtro e flush del file; il traffico delle VM è ancora
+da collaudare. Questa finestra non copre da sola ogni apertura successiva o Tor.
+
 **Motore delle regole: prima implementazione.**
 `packages/oblivion-transport/src/policy.rs` definisce il formato versionato e
 la decisione pura, riusabile da host e gateway. Accetta al massimo 128 regole

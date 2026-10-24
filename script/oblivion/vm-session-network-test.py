@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Real session A-to-B network grants, token handoff and revocation."""
 import hashlib
+import base64
 import json
 import os
 import shutil
@@ -50,6 +51,24 @@ def status():
 
 def property(unit, name):
     return run("systemctl", "show", unit, "--property=" + name, "--value")
+
+
+def qmp(role, operation, arguments=None):
+    path = "/run/oblivion-gateway-vm/qmp.sock" if role == "gateway" else "/run/oblivion-session/qmp.sock"
+    with socket.socket(socket.AF_UNIX) as client:
+        client.settimeout(10)
+        client.connect(path)
+        with client.makefile("rwb", buffering=0) as channel:
+            assert "QMP" in json.loads(channel.readline(65536))
+            for identifier, request in enumerate([{"execute": "qmp_capabilities"},
+                    {"execute": operation, **({"arguments": arguments} if arguments is not None else {})}]):
+                channel.write(json.dumps({**request, "id": identifier}).encode() + b"\n")
+                while True:
+                    reply = json.loads(channel.readline(65536))
+                    if "event" in reply:
+                        continue
+                    assert reply.get("id") == identifier and "return" in reply, reply
+                    break
 
 
 def check(label):
@@ -340,6 +359,9 @@ def probe(client):
     return token
 
 
+if SOCKS:
+    qmp("gateway", "object-add", {"qom-type": "filter-dump", "id": "webtools-capture",
+        "netdev": "outside", "file": "/run/oblivion-gateway-vm/webtools-outside.pcap"})
 command("enter", a, secret=PASSWORD)
 chat = int(property("oblivion-session.service", "MainPID"))
 assert property("oblivion-session.service", "PrivateNetwork") == "yes"
@@ -390,6 +412,16 @@ command("force-leave")
 client.close()
 assert not status()["session_open"] and not Path(f"/proc/{chat}").exists()
 check("revocation precedes vault closure and removes broker access even while the old guest remains running")
+if SOCKS:
+    qmp("gateway", "object-del", {"id": "webtools-capture"})
+    packets = Path("/run/oblivion-gateway-vm/webtools-outside.pcap").read_bytes()
+    assert 24 < len(packets) <= 4 * 1024 * 1024
+    assert not any(secret in packets for secret in [KEY, NEXT, first])
+    # Only the disposable laboratory exports synthetic traffic, after the
+    # capture is closed. Production launchers never enable this QMP filter.
+    print("OBLIVION_WEBTOOLS_PCAP " + base64.b64encode(packets).decode(), flush=True)
+    Path("/run/oblivion-gateway-vm/webtools-outside.pcap").unlink()
+    check("the laboratory captures A's compiled-client traffic outside the gateway, without a cleartext provider key or local capability")
 
 if STREAM:
     previous_gateway, _ = ready()
@@ -477,19 +509,7 @@ _, owner = ready()
 chat = int(property("oblivion-session.service", "MainPID"))
 assert watched_pids(owner) == [chat]
 # Exit QEMU normally without invoking the storage close/revoke operation.
-with socket.socket(socket.AF_UNIX) as qmp:
-    qmp.settimeout(10)
-    qmp.connect("/run/oblivion-session/qmp.sock")
-    with qmp.makefile("rwb", buffering=0) as channel:
-        assert "QMP" in json.loads(channel.readline())
-        for operation in ["qmp_capabilities", "quit"]:
-            channel.write(json.dumps({"execute": operation}).encode() + b"\n")
-            while True:
-                reply = json.loads(channel.readline())
-                if "event" in reply:
-                    continue
-                assert "return" in reply
-                break
+qmp("session", "quit")
 client.close()
 await_revocation(owner)
 command("close")
