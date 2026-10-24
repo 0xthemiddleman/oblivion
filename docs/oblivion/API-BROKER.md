@@ -14,8 +14,9 @@ riassegnare a un'altra sessione. Il controller gli consegnerà la chiave reale;
 OpenCode riceverà soltanto un token locale revocabile. Il broker non monta il
 profilo generale o i vault e non aggiunge dipendenze HTTP/TLS al controller LUKS.
 Il [salvataggio della credenziale](CREDENTIALS.md) nel generale cifrato è ora
-implementato nella TUI fidata. La consegna al broker rimane da collegare al
-ciclo di vita reale del gateway.
+implementato nella TUI fidata. Il [servizio host](HOST-GATEWAY.md) ora consegna
+la chiave al supervisore e gestisce la VM gateway insieme al generale. Restano
+da collegare l’autorizzazione del broker e il token della singola sessione.
 
 ## Superficie ammessa
 

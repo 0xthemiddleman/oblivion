@@ -1,4 +1,6 @@
 #[cfg(target_os = "linux")]
+mod gateway;
+#[cfg(target_os = "linux")]
 mod ipc;
 #[cfg(target_os = "linux")]
 mod storage;

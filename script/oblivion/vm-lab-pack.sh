@@ -33,7 +33,7 @@ for binary in /host/usr/bin/qemu-system-* /host/usr/lib/*/qemu/*.so; do
         (cd /host && cp -L --parents ".$library" /host/usr/lib/oblivion/vm/qemu-root/)
     done
 done
-for directory in dev proc sys run/oblivion-session tmp; do mkdir -p "/host/usr/lib/oblivion/vm/qemu-root/$directory"; done
+for directory in dev proc sys run/oblivion-session run/oblivion-gateway-vm tmp; do mkdir -p "/host/usr/lib/oblivion/vm/qemu-root/$directory"; done
 # Mount targets must exist before packing the immutable hypervisor root.
 touch /host/usr/lib/oblivion/vm/qemu-root/kernel /host/usr/lib/oblivion/vm/qemu-root/initrd /host/usr/lib/oblivion/vm/qemu-root/root.squashfs
 rm -rf /guest/boot /guest/var/cache/apt /guest/var/lib/apt/lists /host/var/cache/apt /host/var/lib/apt/lists

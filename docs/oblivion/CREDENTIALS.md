@@ -2,9 +2,11 @@
 
 Il manager fidato permette di salvare, sostituire e rimuovere la API key
 Abliteration dopo lo sblocco del volume generale, con tutte le sessioni chiuse.
-Il [ricevitore privato nel gateway](GATEWAY-CONTROL.md) è implementato; il
-collegamento dal controller LUKS e la configurazione dell’adapter rimangono un
-passaggio successivo. Salvare la credenziale non avvia connessioni di rete.
+Il [collegamento dal controller LUKS](HOST-GATEWAY.md) al supervisore privato
+è implementato: con il gateway configurato, salvare la credenziale avvia una
+VM dedicata e gliela consegna. Tor resta disabilitato e non viene ancora
+autorizzato un broker per la chat. Adapter e token della sessione sono il passo
+successivo.
 
 ## Comportamento
 
@@ -22,8 +24,10 @@ Il manager passa la credenziale sul canale locale autenticato già usato per le
 password. L’operazione `set-api-key` ammette il solo segreto; `clear-api-key`
 non ne accetta uno. Nessun percorso, comando o contenuto di file viene scelto
 dal chiamante. Non esiste un’operazione per rileggere la chiave dal manager.
-Il controller resta l’unico lettore del file salvato; il passo successivo dovrà
-consegnarlo al broker attraverso un canale fidato, mai alla chat.
+Il file salvato è letto solo dai servizi fidati del controller. Il proprietario
+del canale lo consegna al supervisore della VM gateway, mai alla chat. Un
+aggiornamento ferma il vecchio gateway prima di modificare il file; il blocco
+globale verifica la fine della VM prima di chiudere il generale.
 
 ## Persistenza
 

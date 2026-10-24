@@ -4,7 +4,8 @@
 **due VM indipendenti su Mac/HVF**. Il broker API di produzione gira nella VM
 gateway; il client di prova nella VM chat usa soltanto un token locale.
 La VM avviata dal controller delle sessioni mantiene ancora `-nic none`:
-questo laboratorio non è ancora collegato a LUKS, manager e adapter OpenCode.
+il [laboratorio host](HOST-GATEWAY.md) ora collega il gateway al generale LUKS,
+ma rete della chat e adapter OpenCode rimangono da integrare.
 Il [supervisore Rust](GATEWAY-CONTROL.md) riceve la chiave su una porta virtio
 privata e gestisce il broker. La fixture Python non riceve più la chiave e non
 avvia il processo API. L’immagine finale viene provata senza modifiche ai
@@ -117,8 +118,8 @@ termina il processo Tor con SIGKILL e verifica l'errore API senza fallback.
 
 Restano da completare:
 
-1. Collegare il supervisore al lifecycle della VM gateway e alla consegna dei
-   segreti dal generale; verificare revoca e attesa nel passaggio A→B reale.
+1. Collegare la rete della chat, assegnare il token locale alla sessione e
+   verificare revoca e attesa nel passaggio A→B reale.
 2. Persistenza selettiva dello stato Tor e comportamento dell'avvio effimero.
 3. Proxy dei tool con consenti/blocca/chiedi e revoca dei tunnel.
 4. Adapter OpenCode, streaming e tool calling attraverso questo broker;

@@ -10,10 +10,35 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-const UNIT: &str = "oblivion-session.service";
 const DEVICE: &str = "/dev/mapper/oblivion-session";
-const QMP: &str = "/run/oblivion-session/qmp.sock";
 pub const VM_UID: u32 = 1100;
+pub const GATEWAY_UID: u32 = 1101;
+
+#[derive(Clone, Copy)]
+pub enum Role {
+    Session,
+    Gateway,
+}
+
+impl Role {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Session => "oblivion-session",
+            Self::Gateway => "oblivion-gateway-vm",
+        }
+    }
+
+    fn uid(self) -> u32 {
+        match self {
+            Self::Session => VM_UID,
+            Self::Gateway => GATEWAY_UID,
+        }
+    }
+
+    pub fn runtime(self) -> String {
+        format!("/run/{}", self.name())
+    }
+}
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -92,31 +117,34 @@ impl Config {
     }
 
     pub fn start(&self) -> Result<()> {
-        require(stopped()?, "vm_already_running")?;
-        let device = fs::metadata(DEVICE).map_err(|_| Error("session_device_missing"))?;
-        require(
-            device.file_type().is_block_device(),
-            "invalid_session_device",
-        )?;
-        unsafe {
+        self.start_role(Role::Session)
+    }
+
+    pub fn start_role(&self, role: Role) -> Result<()> {
+        require(stopped_role(role)?, "vm_already_running")?;
+        if matches!(role, Role::Session) {
+            let device = fs::metadata(DEVICE).map_err(|_| Error("session_device_missing"))?;
             require(
-                libc::chown(c"/dev/mapper/oblivion-session".as_ptr(), VM_UID, VM_UID) == 0,
-                "device_owner_failed",
+                device.file_type().is_block_device(),
+                "invalid_session_device",
             )?;
+            unsafe {
+                require(
+                    libc::chown(c"/dev/mapper/oblivion-session".as_ptr(), VM_UID, VM_UID) == 0,
+                    "device_owner_failed",
+                )?;
+            }
         }
         let mut args = vec![
             "--quiet".to_owned(),
             "--collect".to_owned(),
-            "--unit=oblivion-session".to_owned(),
-            "--description=Oblivion isolated session".to_owned(),
+            format!("--unit={}", role.name()),
+            format!("--description=Oblivion isolated {}", role.name()),
             "--service-type=exec".to_owned(),
         ];
         let properties = vec![
-            // During shutdown let controller recovery request guest poweroff
-            // before systemd falls back to stopping the VM service itself.
-            "Before=oblivion-controller.service".to_owned(),
-            "User=1100".to_owned(),
-            "Group=1100".to_owned(),
+            format!("User={}", role.uid()),
+            format!("Group={}", role.uid()),
             "UMask=0077".to_owned(),
             format!("RootDirectory={}", self.root.display()),
             format!(
@@ -125,22 +153,27 @@ impl Config {
                 self.initrd.display(),
                 self.filesystem.display()
             ),
-            format!(
-                "BindPaths={DEVICE}:/dev/oblivion-session{}",
-                if matches!(self.accelerator, Accelerator::Kvm) {
-                    " /dev/kvm"
-                } else {
-                    ""
-                }
-            ),
-            "RuntimeDirectory=oblivion-session".to_owned(),
+            format!("RuntimeDirectory={}", role.name()),
             "RuntimeDirectoryMode=0700".to_owned(),
-            "ReadWritePaths=/run/oblivion-session".to_owned(),
+            format!("ReadWritePaths={}", role.runtime()),
             "TemporaryFileSystem=/tmp:rw,nosuid,nodev,size=32M".to_owned(),
             "PrivateDevices=yes".to_owned(),
-            format!("DeviceAllow={DEVICE} rw"),
-            "PrivateNetwork=yes".to_owned(),
-            "RestrictAddressFamilies=AF_UNIX".to_owned(),
+            format!(
+                "PrivateNetwork={}",
+                if matches!(role, Role::Session) {
+                    "yes"
+                } else {
+                    "no"
+                }
+            ),
+            format!(
+                "RestrictAddressFamilies={}",
+                if matches!(role, Role::Session) {
+                    "AF_UNIX"
+                } else {
+                    "AF_UNIX AF_INET"
+                }
+            ),
             "ProtectSystem=strict".to_owned(),
             "ProtectHome=yes".to_owned(),
             "ProtectProc=invisible".to_owned(),
@@ -174,8 +207,23 @@ impl Config {
                 .into_iter()
                 .map(|property| format!("--property={property}")),
         );
+        if matches!(role, Role::Session) {
+            args.extend([
+                // Controller recovery asks this persistent guest to power off
+                // before systemd falls back to stopping the VM itself.
+                "--property=Before=oblivion-controller.service".to_owned(),
+                format!("--property=BindPaths={DEVICE}:/dev/oblivion-session"),
+                format!("--property=DeviceAllow={DEVICE} rw"),
+            ]);
+        }
+        if matches!(role, Role::Gateway) {
+            // No ordering dependency: the owner's ExecStopPost waits for this
+            // VM, so Before=owner/controller would deadlock their stop jobs.
+            args.push("--property=BindsTo=oblivion-gateway-host.service".to_owned());
+        }
         if matches!(self.accelerator, Accelerator::Kvm) {
             args.extend([
+                "--property=BindPaths=/dev/kvm".to_owned(),
                 "--property=DeviceAllow=/dev/kvm rw".to_owned(),
                 "--property=SupplementaryGroups=kvm".to_owned(),
             ]);
@@ -206,23 +254,56 @@ impl Config {
             "-object".to_owned(), "rng-random,filename=/dev/urandom,id=rng".to_owned(),
             "-device".to_owned(), "virtio-rng-pci,rng=rng".to_owned(),
             "-sandbox".to_owned(), "on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny".to_owned(),
-            "-qmp".to_owned(), "unix:/run/oblivion-session/qmp.sock,server=on,wait=off".to_owned(),
-            "-serial".to_owned(), "unix:/run/oblivion-session/console.sock,server=on,wait=off".to_owned(),
+            "-qmp".to_owned(), format!("unix:{}/qmp.sock,server=on,wait=off", role.runtime()),
+            "-serial".to_owned(), if matches!(role, Role::Session) { format!("unix:{}/console.sock,server=on,wait=off", role.runtime()) } else { "null".to_owned() },
             "-kernel".to_owned(), "/kernel".to_owned(), "-initrd".to_owned(), "/initrd".to_owned(),
             "-append".to_owned(), format!("root=/dev/vda ro rootfstype=squashfs console={console} quiet loglevel=0 systemd.show_status=false panic=-1"),
             "-drive".to_owned(), "file=/root.squashfs,format=raw,if=none,id=root,readonly=on".to_owned(),
             "-device".to_owned(), "virtio-blk-pci,drive=root,serial=oblivion-root".to_owned(),
-            "-drive".to_owned(), "file=/dev/oblivion-session,format=raw,if=none,id=vault,cache=none".to_owned(),
-            "-device".to_owned(), "virtio-blk-pci,drive=vault,serial=oblivion-vault".to_owned(),
         ]);
+        if matches!(role, Role::Session) {
+            args.extend([
+                "-drive".to_owned(),
+                "file=/dev/oblivion-session,format=raw,if=none,id=vault,cache=none".to_owned(),
+                "-device".to_owned(),
+                "virtio-blk-pci,drive=vault,serial=oblivion-vault".to_owned(),
+            ]);
+        }
+        if matches!(role, Role::Gateway) {
+            // Connect the private control channel before the guest opens its
+            // virtio port. No secret is part of QEMU's command line or files.
+            args.extend([
+                "-S".to_owned(),
+                "-device".to_owned(),
+                "virtio-serial-pci".to_owned(),
+                "-chardev".to_owned(),
+                format!(
+                    "socket,id=control,path={}/control.sock,server=on,wait=off",
+                    role.runtime()
+                ),
+                "-device".to_owned(),
+                "virtserialport,chardev=control,name=oblivion.gateway".to_owned(),
+                "-netdev".to_owned(),
+                format!(
+                    "stream,id=inside,server=on,addr.type=unix,addr.path={}/inside.sock",
+                    role.runtime()
+                ),
+                "-device".to_owned(),
+                "virtio-net-pci,netdev=inside,mac=52:54:00:6f:00:01,romfile=".to_owned(),
+                "-netdev".to_owned(),
+                "user,id=outside,ipv6=off".to_owned(),
+                "-device".to_owned(),
+                "virtio-net-pci,netdev=outside,mac=52:54:00:6f:00:02,romfile=".to_owned(),
+            ]);
+        }
         execute("/usr/bin/systemd-run", &args)?;
         let deadline = Instant::now() + Duration::from_secs(30);
         while Instant::now() < deadline {
-            if stopped()? {
+            if stopped_role(role)? {
                 return Err(Error("vm_start_failed"));
             }
-            if PathBuf::from(QMP).exists() {
-                qmp("query-status")?;
+            if PathBuf::from(role.runtime()).join("qmp.sock").exists() {
+                qmp(role, "query-status")?;
                 return Ok(());
             }
             std::thread::sleep(Duration::from_millis(25));
@@ -232,8 +313,16 @@ impl Config {
 }
 
 pub fn state() -> Result<String> {
+    state_role(Role::Session)
+}
+
+pub fn state_role(role: Role) -> Result<String> {
+    unit_state(&format!("{}.service", role.name()))
+}
+
+pub fn unit_state(unit: &str) -> Result<String> {
     let output = Command::new("/usr/bin/systemctl")
-        .args(["show", UNIT, "--property=ActiveState", "--value"])
+        .args(["show", unit, "--property=ActiveState", "--value"])
         .env_clear()
         .env("LC_ALL", "C")
         .stdin(Stdio::null())
@@ -254,22 +343,33 @@ pub fn state() -> Result<String> {
 }
 
 pub fn stopped() -> Result<bool> {
-    Ok(matches!(state()?.as_str(), "inactive" | "failed"))
+    stopped_role(Role::Session)
+}
+
+pub fn stopped_role(role: Role) -> Result<bool> {
+    Ok(matches!(state_role(role)?.as_str(), "inactive" | "failed"))
 }
 
 pub fn stop(force: bool) -> Result<()> {
-    if stopped()? {
+    stop_role(Role::Session, force)
+}
+
+pub fn stop_role(role: Role, force: bool) -> Result<()> {
+    if stopped_role(role)? {
         return Ok(());
     }
     if force {
-        execute("/usr/bin/systemctl", &["stop".to_owned(), UNIT.to_owned()])?;
-        require(stopped()?, "vm_still_running")?;
+        execute(
+            "/usr/bin/systemctl",
+            &["stop".to_owned(), format!("{}.service", role.name())],
+        )?;
+        require(stopped_role(role)?, "vm_still_running")?;
         return Ok(());
     }
-    qmp("system_powerdown")?;
+    qmp(role, "system_powerdown")?;
     let deadline = Instant::now() + Duration::from_secs(30);
     while Instant::now() < deadline {
-        if stopped()? {
+        if stopped_role(role)? {
             return Ok(());
         }
         std::thread::sleep(Duration::from_millis(100));
@@ -278,7 +378,7 @@ pub fn stop(force: bool) -> Result<()> {
     Err(Error("vm_shutdown_timeout"))
 }
 
-fn execute(program: &str, args: &[String]) -> Result<()> {
+pub fn execute(program: &str, args: &[String]) -> Result<()> {
     let status = Command::new(program)
         .args(args)
         .env_clear()
@@ -291,8 +391,14 @@ fn execute(program: &str, args: &[String]) -> Result<()> {
     require(status.success(), "vm_command_failed")
 }
 
-fn qmp(operation: &str) -> Result<Value> {
-    let stream = UnixStream::connect(QMP).map_err(|_| Error("vm_control_unavailable"))?;
+pub fn resume_gateway() -> Result<()> {
+    qmp(Role::Gateway, "cont")?;
+    Ok(())
+}
+
+fn qmp(role: Role, operation: &str) -> Result<Value> {
+    let stream = UnixStream::connect(format!("{}/qmp.sock", role.runtime()))
+        .map_err(|_| Error("vm_control_unavailable"))?;
     stream
         .set_read_timeout(Some(Duration::from_secs(5)))
         .map_err(|_| Error("vm_control_failed"))?;

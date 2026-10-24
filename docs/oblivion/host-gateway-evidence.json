@@ -1,0 +1,166 @@
+{
+  "date": "2026-10-24",
+  "scope": "Host LUKS credential delivery and gateway VM lifecycle on macOS ARM64; real Debian systemd/cryptsetup/QEMU, production gateway root, synthetic credentials, no Internet or provider request.",
+  "sources": {
+    "packages/oblivion-host/src/gateway.rs": "5b164b21269db84622b13ab895dceca1936923b7f0fb8d1a54bbf9926db557bd",
+    "packages/oblivion-host/src/vm.rs": "b5e307b42b592e7348217c6b1af4201328c1950c38c79a1ff899a1712ebcc7f8",
+    "packages/oblivion-host/src/storage.rs": "21dabf448e24c0e0aec55c665359bcf3713655aca8f8b434e55ec9e49a66f854",
+    "packages/oblivion-host/src/ipc.rs": "7da8a099dd5fd947be5f17b7baa96523fda9c9b3a321a166d5e9e793aca57605",
+    "packages/oblivion-host/src/main.rs": "34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f",
+    "packages/oblivion-host/src/manager.rs": "6558a87d51f89b159cbfbd9655e804bdc85d9096a748394acc379abba962f652",
+    "packages/oblivion-host/host/oblivion-gateway-host.service": "64e97f9ae51ae7fd61466335dee0f4c60586a1d24ea11425a8958f985cbfa67b",
+    "script/oblivion/Dockerfile.vm-lab": "e79cdd41c73605c87ab17c29916f7c80d69aa6397d9e2f34d3fa2c09e04f22a4",
+    "script/oblivion/vm-lab-pack.sh": "566ccc563d775eb495e47163320346e292d9dfef0a1142132ca64517734a73a0",
+    "script/oblivion/run-vm-lab.py": "ce521591d70f70db9374941bbe70a60eb0aeed210ded53ffd54c748b862518ad",
+    "script/oblivion/vm-gateway-host-test.py": "6689b7090435316e22a84d7e458f88ae36cf1762c61d73f759c64f597d76d248",
+    "script/oblivion/vm-services-test.py": "f07bdb7238234a48964fc3a3391f82811ac8a4f7fa6ee91febd96211e5c0d965"
+  },
+  "environment": {
+    "outer_accelerator": "hvf",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "outer_network": "none",
+    "gateway_tor_network": "disabled",
+    "session_network": "none",
+    "base_image_manifest_sha256": "60745c1fb4fa9f27174a4d22c7bbf36eaef87cbd56e8044fbf99bd5a24eabff2",
+    "gateway_image_manifest": "cd22a7975cdb4213e3973203130f6ac3d1561f0e1784c99d46cbb9a4bfffed8e  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\n93d32328d3f7bddac65d06ccdad2efb35a250a4aee6be47b7f9b5224a14abde8  gateway.squashfs\n11718c4d2d3692d85004c19531afd89ebc360936c6e31105061e5039fa99c607  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nccb33b5e735d7f4d6a656d4ed1495cdb7ca831a6de175d7bc2a9ee9dba62cf6b  lab-packages.tsv\n0fdd30ca0092551da9a491801b34956938104ea9e417a546b554ee14d85d98a5  laboratory.squashfs\nadbdf9d8a5bd9d95513433a9efbefeacfcedd2f55ce5289b54761f7031c27bd5  sources.sha256\n",
+    "gateway_image_manifest_sha256": "b021a0b1c5685de157f8761b62d45ba1867f1380254491b07aa96349300bd164",
+    "host_bundle_manifest": "ea2cafabedb0bef3f49bf4c06f2535993e8b692b9fc2d8a0ca805f990c225d66  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n64e97f9ae51ae7fd61466335dee0f4c60586a1d24ea11425a8958f985cbfa67b  oblivion-gateway-host.service\n3b7c60d8772254d77511475450deafa9e289d5a6db511f6ddba5785fc48e116a  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\na24273b593a764b78f8aefedaf3967601c59bdb48a96e7bbbddee4c9de285afb  oblivion-storage\n2390d150452891cd1c7621b68c50ba411d2254682cf473b627f6e6e843e13fb4  oblivion-storage-lab\ne2401c727cee5e04f1810dbeb26117902a6ba8b7a64d3b05fac04505d77f127d  sources.sha256\n",
+    "host_bundle_sources": "49097522336dc37a308a33f45c295b37c7ca1455625680c462b1b14c65bb9916  Cargo.lock\n9bcca247036e12020bcd751369da184a605f8894ff5f627f7040138b42f0c01d  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n64e97f9ae51ae7fd61466335dee0f4c60586a1d24ea11425a8958f985cbfa67b  host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\n2f4d99b7904f01ec0a8f4fb2616f017c7d91e0cfb16677d4b7617bf95471a98e  src/client.rs\nc93e5eae70ae5e999ff2d885910ad22d565f0494705f432223e000617d08a0ed  src/control.rs\n5b164b21269db84622b13ab895dceca1936923b7f0fb8d1a54bbf9926db557bd  src/gateway.rs\n7da8a099dd5fd947be5f17b7baa96523fda9c9b3a321a166d5e9e793aca57605  src/ipc.rs\na68fc4a96fdb02e9540208c80612033491253ed3a1fe72e29cf8a8b93040be86  src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  src/main.rs\n6558a87d51f89b159cbfbd9655e804bdc85d9096a748394acc379abba962f652  src/manager.rs\n21dabf448e24c0e0aec55c665359bcf3713655aca8f8b434e55ec9e49a66f854  src/storage.rs\nbf147d38b44c179516573fc63be01767687ee077baa1bff94871d151b18f06ed  src/terminal.rs\nb5e307b42b592e7348217c6b1af4201328c1950c38c79a1ff899a1712ebcc7f8  src/vm.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\n",
+    "host_bundle_manifest_sha256": "396f16a2c2d06b6d2476d1a7e1d116d7d919873ea755d116ce8430301316ff71",
+    "lab_overrides": [
+      "Current host executables and units overlaid in RAM on the earlier immutable laboratory host.",
+      "Public gateway account entries and public QEMU root/mount target supplied in RAM; new host build contains both.",
+      "Gateway kernel, initrd and readonly squashfs copied into RAM and checked against exact byte sizes and SHA256 digests.",
+      "Host gateway unit uses the lab-emulation executable, laboratory config and volatile journal stderr; production stdout/stderr remain null.",
+      "Controller stop composition uses the real controller unit with only lab executable/config and manager Wants removed; the 19-check regression separately runs the real manager."
+    ]
+  },
+  "lifecycle": {
+    "local_artifacts": "artifacts/oblivion-gateway-host/run-08",
+    "passed": true,
+    "seconds": 129.97,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: saving the protected credential starts a distinct UID 1101 gateway VM and completes private configuration",
+      "PASS: credential replacement destroys the previous VM; removal stops both owner and VM before deleting the key[   37.099477] EXT4-fs (dm-0): unmounting filesystem 5b95fab8-f981-41cd-bfd8-672b64d89dd1.",
+      "PASS: failed gateway startup preserves the saved key and open-state report; explicit lock and unlock recover",
+      "PASS: session and gateway run with different host UIDs and roots; session cannot see private control or change the key[   58.664933] EXT4-fs (dm-0): unmounting filesystem 5b95fab8-f981-41cd-bfd8-672b64d89dd1.",
+      "PASS: host owner death removes gateway credential memory; explicit lock then closes the general LUKS mapping",
+      "PASS: an unresponsive gateway expires the private status deadline and is killed before recovery closes storage",
+      "PASS: readonly general supplies the saved credential without modifying any byte of the encrypted profile",
+      "PASS: explicit recovery stops gateway before closing the general",
+      "PASS: controller service stop closes gateway and LUKS without a dependency deadlock or credentials in runtime files"
+    ],
+    "qemu_exit": 0,
+    "summary_sha256": "be80afbe67e28bd7898706529c3b8b5d101b752e500d0f2ec2ac3d3735a28973",
+    "serial_sha256": "fac23c270cc1b18ff60a4099761e2eb812641b1f54bd14b7dfbb66709871065d",
+    "fixture": {
+      "file": "vm-gateway-host-test.py",
+      "sha256": "6689b7090435316e22a84d7e458f88ae36cf1762c61d73f759c64f597d76d248"
+    },
+    "fixture_verified": true,
+    "bundle_verified_in_guest": true,
+    "lab_initrd_sha256": "2e1f51f40f868223fc0704f83867f22a1dd09f22601846686a805c9eff83922a",
+    "disk_sha256": "b5fb6c3550ab0dfa901e05f8cd704a6bd7807242904c52aa3354566edf74753a",
+    "plaintext_markers_on_disk": []
+  },
+  "regression": {
+    "local_artifacts": "artifacts/oblivion-gateway-host/regression-01",
+    "passed": true,
+    "seconds": 190.85,
+    "checks": [
+      "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+      "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+      "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+      "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+      "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+      "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+      "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+      "PASS: profile exhaustion preserves the previous key; retry publishes a complete replacement",
+      "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+      "PASS: an open session prevents changes to the infrastructure credential",
+      "PASS: read-only profile exposes only credential presence, rejects key changes and pending deletion, and remains byte-identical",
+      "PASS: interrupted session formatting survives restart, cannot open, and is discarded only after confirmation",
+      "PASS: disk exhaustion is explicit, preserves existing archives and permits reopening after pending cleanup",
+      "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+      "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+      "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+      "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+      "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+      "PASS: synthetic passwords and API keys never appear on the managed console"
+    ],
+    "qemu_exit": 0,
+    "summary_sha256": "fc12593805bee5cdec389d968556823b561a3981b485d7fae0c161925a7b804c",
+    "serial_sha256": "7817ac354b56ee1e44fab7ea2a9614af8cf3e4a88306a34ce8e4837ed89c5d13",
+    "fixture": {
+      "file": "vm-services-test.py",
+      "sha256": "f07bdb7238234a48964fc3a3391f82811ac8a4f7fa6ee91febd96211e5c0d965"
+    },
+    "fixture_verified": true,
+    "bundle_verified_in_guest": true,
+    "lab_initrd_sha256": "9f5045c3ecc1d5e5ca9442aac5a11598804386dc3c88218fab195d2ef20beaad",
+    "disk_sha256": "019c80a7c70c83f428cb85ba6757a9ad3fcf1487b8e0eeb07dbdfeee86f3efa6",
+    "plaintext_markers_on_disk": []
+  },
+  "earlier_success": {
+    "local_artifacts": "artifacts/oblivion-gateway-host/run-07",
+    "checks": 9,
+    "seconds": 114.22,
+    "summary_sha256": "d1e2697984ef165b323efb5fe2d15c1e378db3a5f98860fab3564584e5fde9c7"
+  },
+  "failed_attempts": [
+    {
+      "local_artifacts": "artifacts/oblivion-gateway-host/run-01",
+      "summary_sha256": "b6143f7f262c497f332bc91f2d0449c959c271ea63da061e5cc784f372d669ae",
+      "cause_and_resolution": "Virtio block serial was truncated; shortened the lab disk serial to oblivion-gw-image."
+    },
+    {
+      "local_artifacts": "artifacts/oblivion-gateway-host/run-02",
+      "summary_sha256": "1a36b7417315202750049e60028c09152b7f10d29b04b8ec11328b87db390d1f",
+      "cause_and_resolution": "The old immutable host image lacked UID 1101; new host build defines the account, fixture supplies equivalent public account entries in RAM."
+    },
+    {
+      "local_artifacts": "artifacts/oblivion-gateway-host/run-03",
+      "summary_sha256": "2f42c4df8f447f250f3d76c6fd686028762c58ff359df2c3211bf736bfb43c14",
+      "cause_and_resolution": "Same missing UID 1101, with additional volatile service diagnostics."
+    },
+    {
+      "local_artifacts": "artifacts/oblivion-gateway-host/run-04",
+      "summary_sha256": "ca7b90d83490b60178cab1ecfafc610e677d2f51ffdae49aa9e2d4b3ccceb777",
+      "cause_and_resolution": "QEMU copied under noexec /run could not execute; fixture now uses a separate readonly executable tmpfs containing only public QEMU files."
+    },
+    {
+      "local_artifacts": "artifacts/oblivion-gateway-host/run-05",
+      "summary_sha256": "1bca44b40f2f2f9922952a18a40793802647a2e96cc25a4d9a036b01d1db5a86",
+      "cause_and_resolution": "The minimal QEMU root lacked the optional PXE ROM; production gateway NICs now explicitly disable the unused boot ROM."
+    },
+    {
+      "local_artifacts": "artifacts/oblivion-gateway-host/run-06",
+      "summary_sha256": "bc4415b97f696c7a4cbf68c5b598f3ddb05b89480cf9e4fc31bb406600a37a4a",
+      "cause_and_resolution": "Gateway Before ordering formed a stop-job cycle with owner ExecStopPost; removed gateway ordering while retaining BindsTo and the session shutdown ordering."
+    }
+  ],
+  "checks": {
+    "native_console_tests": 4,
+    "linux_console_tests": 4,
+    "native_clippy": "passed --all-targets --features lab-emulation -- -D warnings; Linux code compiled by the Debian build and exercised in the VM",
+    "rust_format": "passed",
+    "python_syntax": "passed",
+    "repository_check": "lint and 34 typecheck tasks passed; all 34 typecheck tasks were cache hits",
+    "repository_log_sha256": "12d4fea6d8163fb604274a6ec353130e5d093a670edeb03009ef87c34039c350",
+    "linux_build_log_sha256": "86480122a935399e5e5727f770c27b02f0f5e545ae9dde92ab3355ff3a19d776"
+  },
+  "limits": [
+    "Process exit and missing sockets establish VM termination in these tests, not physical erasure of all host RAM copies.",
+    "Fixed synthetic marker scans cover the inspected runtime files and final raw data disk; they are not a complete syscall trace or proof that all sensitive data is absent.",
+    "Host gateway configures the supervisor but issues no grant and does not enable Tor. Chat NIC, token delivery and adapter are not connected.",
+    "The readonly general-profile test is not full ephemeral session mode.",
+    "This is a laboratory overlay, not a bootable final Oblivion live image."
+  ],
+  "remaining_gates": [
+    "Session NIC, one-session token delivery, grant/revoke and A-to-B lifecycle integration",
+    "Persistent Tor state, network enablement, real provider compatibility and tool proxy",
+    "Global shutdown, power loss, OOM, blocked I/O, physical KVM/hardware and independent privileged-boundary review"
+  ]
+}

@@ -19,6 +19,8 @@ struct Status {
     laboratory_emulation: bool,
     recovery_required: bool,
     api_key_present: Option<bool>,
+    gateway_state: Option<String>,
+    gateway_vm_state: Option<String>,
 }
 
 fn main() {
@@ -141,6 +143,15 @@ fn run(preview: bool) -> Result<()> {
                     "non configurata"
                 }
             ));
+            if let Some(gateway) = &status.gateway_state {
+                view.push_str(
+                    if gateway == "active" && status.gateway_vm_state.as_deref() == Some("active") {
+                        " Gateway pronto; rete non ancora abilitata.\r\n"
+                    } else {
+                        " Gateway non attivo.\r\n"
+                    },
+                );
+            }
             view.push_str(&format!(
                 " {ACTION}{}\r\n [I] Creazioni interrotte ({}) / sessioni  [B] Blocca{RESET}\r\n",
                 if incomplete {
@@ -315,6 +326,9 @@ fn run(preview: bool) -> Result<()> {
                 "password_too_short" => "Usa almeno 16 byte per la nuova password.",
                 "invalid_api_key" => {
                     "API key non valida: usa da 16 a 1024 caratteri ASCII senza spazi."
+                }
+                "gateway_start_failed" => {
+                    "Gateway non disponibile. Il generale resta aperto: puoi bloccarlo e riprovare."
                 }
                 "insufficient_space" => {
                     "Spazio insufficiente. Controlla le creazioni interrotte prima di riprovare."

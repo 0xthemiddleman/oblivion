@@ -28,6 +28,7 @@ struct Config {
     pbkdf_memory_kib: u32,
     manager_uid: u32,
     vm: Option<crate::vm::Config>,
+    gateway: Option<crate::vm::Config>,
 }
 
 #[derive(Serialize)]
@@ -46,6 +47,8 @@ struct Status {
     laboratory_emulation: bool,
     recovery_required: bool,
     api_key_present: Option<bool>,
+    gateway_state: Option<String>,
+    gateway_vm_state: Option<String>,
 }
 
 pub fn main() -> Result<()> {
@@ -57,6 +60,15 @@ pub fn main() -> Result<()> {
         return crate::ipc::serve(Path::new(&args[1]), config.manager_uid);
     }
     let op = args[2].as_str();
+    if args.len() == 3 && op == "gateway-host-run" {
+        require(!recovery_required()?, "recovery_required")?;
+        require(mount_mode()? != MountMode::Closed, "general_not_open")?;
+        let gateway = config
+            .gateway
+            .as_ref()
+            .ok_or(Error("gateway_not_configured"))?;
+        return crate::gateway::serve(gateway, read_api_key()?);
+    }
     require(
         args.len()
             == if matches!(op, "open" | "enter" | "discard-session-pending") {
@@ -122,8 +134,10 @@ pub fn main() -> Result<()> {
                 args[3]
             )))
         }
-        "unlock" => config.unlock(&password(false)?, false),
-        "unlock-ephemeral" => config.unlock(&password(false)?, true),
+        "unlock" | "unlock-ephemeral" => {
+            config.unlock(&password(false)?, op == "unlock-ephemeral")?;
+            config.start_gateway()
+        }
         "create" => config.create(&password(true)?),
         "set-api-key" | "clear-api-key" => {
             require(
@@ -134,11 +148,18 @@ pub fn main() -> Result<()> {
                 !mapping_open("oblivion-session")? && crate::vm::stopped()?,
                 "session_must_be_closed",
             )?;
-            update_api_key(if op == "set-api-key" {
+            let secret = if op == "set-api-key" {
                 Some(password(false)?)
             } else {
                 None
-            })
+            };
+            // Never retain a running VM with the previous credential after a
+            // profile change, including a failed replacement on a full disk.
+            if config.gateway.is_some() {
+                crate::gateway::stop()?;
+            }
+            update_api_key(secret)?;
+            config.start_gateway()
         }
         "open" => config.open(&args[3], &password(false)?),
         "enter" => {
@@ -163,6 +184,11 @@ pub fn main() -> Result<()> {
             close_session()
         }
         "lock" | "recover" => {
+            // Remove gateway memory and every delegated connection before the
+            // session/general mappings can be reported locked.
+            if config.gateway.is_some() {
+                crate::gateway::stop()?;
+            }
             if config.vm.is_some() {
                 crate::vm::stop(false)?;
             }
@@ -210,6 +236,16 @@ pub fn main() -> Result<()> {
                 },
                 laboratory_emulation: cfg!(feature = "lab-emulation"),
                 recovery_required: recovery_required()?,
+                gateway_state: if config.gateway.is_some() {
+                    Some(crate::gateway::state()?)
+                } else {
+                    None
+                },
+                gateway_vm_state: if config.gateway.is_some() {
+                    Some(crate::vm::state_role(crate::vm::Role::Gateway)?)
+                } else {
+                    None
+                },
                 api_key_present: if mode == MountMode::Closed {
                     None
                 } else {
@@ -227,6 +263,13 @@ pub fn main() -> Result<()> {
 }
 
 impl Config {
+    fn start_gateway(&self) -> Result<()> {
+        if self.gateway.is_some() && api_key_present()? {
+            crate::gateway::start()?;
+        }
+        Ok(())
+    }
+
     fn read(path: &Path) -> Result<Self> {
         let file = trusted_file(path)?;
         require(
@@ -432,6 +475,20 @@ fn api_key_present() -> Result<bool> {
             Ok(true)
         }
     }
+}
+
+fn read_api_key() -> Result<Zeroizing<Vec<u8>>> {
+    require(api_key_present()?, "api_key_missing")?;
+    let mut key = Zeroizing::new(Vec::new());
+    trusted_file(&Path::new(PROFILE).join("abliteration.key"))?
+        .take(1025)
+        .read_to_end(&mut key)
+        .map_err(|_| Error("profile_unavailable"))?;
+    require(
+        (16..=1024).contains(&key.len()) && key.iter().all(u8::is_ascii_graphic),
+        "invalid_api_key",
+    )?;
+    Ok(key)
 }
 
 fn update_api_key(secret: Option<Zeroizing<Vec<u8>>>) -> Result<()> {

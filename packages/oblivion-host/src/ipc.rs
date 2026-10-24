@@ -66,17 +66,7 @@ pub fn serve(config: &Path, uid: u32) -> Result<()> {
             "socket_owner_failed",
         )?;
     }
-    if let Some(path) = std::env::var_os("NOTIFY_SOCKET") {
-        let address = if let Some(name) = path.as_bytes().strip_prefix(b"@") {
-            SocketAddr::from_abstract_name(name)
-        } else {
-            SocketAddr::from_pathname(path)
-        }
-        .map_err(|_| Error("notify_address_failed"))?;
-        UnixDatagram::unbound()
-            .and_then(|socket| socket.send_to_addr(b"READY=1", &address))
-            .map_err(|_| Error("notify_failed"))?;
-    }
+    notify_ready()?;
     for stream in listener.incoming() {
         let Ok(mut stream) = stream else { continue };
         let response = match handle(&mut stream, config, uid) {
@@ -266,4 +256,19 @@ fn send_console(stream: &UnixStream, console: &UnixStream) -> Result<()> {
             "console_transfer_failed",
         )
     }
+}
+
+pub fn notify_ready() -> Result<()> {
+    if let Some(path) = std::env::var_os("NOTIFY_SOCKET") {
+        let address = if let Some(name) = path.as_bytes().strip_prefix(b"@") {
+            SocketAddr::from_abstract_name(name)
+        } else {
+            SocketAddr::from_pathname(path)
+        }
+        .map_err(|_| Error("notify_address_failed"))?;
+        UnixDatagram::unbound()
+            .and_then(|socket| socket.send_to_addr(b"READY=1", &address))
+            .map_err(|_| Error("notify_failed"))?;
+    }
+    Ok(())
 }

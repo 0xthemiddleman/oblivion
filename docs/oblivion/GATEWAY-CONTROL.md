@@ -2,8 +2,9 @@
 
 Il binario Linux `oblivion-gateway-control` avvia e revoca il broker API nella
 VM gateway. Sostituisce il launcher Python del precedente laboratorio. Il
-controller LUKS non lo usa ancora: la consegna della credenziale dal generale,
-il lifecycle della VM gateway e l'adapter OpenCode sono il prossimo collegamento.
+[servizio host](HOST-GATEWAY.md) ora lo collega al generale LUKS e gestisce la
+VM gateway. Token della sessione, rete della chat e adapter OpenCode rimangono
+il prossimo collegamento.
 
 ## Confini
 

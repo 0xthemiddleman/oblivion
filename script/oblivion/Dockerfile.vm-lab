@@ -59,6 +59,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin 
     && groupadd --gid 1000 oblivion-manager \
     && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /run/oblivion-manager --shell /usr/sbin/nologin oblivion-manager \
     && groupadd --gid 1100 oblivion-vm && useradd --uid 1100 --gid 1100 --no-create-home --shell /usr/sbin/nologin oblivion-vm \
+    && groupadd --gid 1101 oblivion-gateway-vm && useradd --uid 1101 --gid 1101 --no-create-home --shell /usr/sbin/nologin oblivion-gateway-vm \
     && passwd -l root
 COPY --from=compiler /tmp/oblivion-storage /usr/bin/oblivion-storage
 COPY --from=compiler /build/target/release/oblivion-storage /usr/bin/oblivion-storage-lab
