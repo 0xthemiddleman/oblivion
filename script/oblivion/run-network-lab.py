@@ -35,12 +35,14 @@ class VM:
         self.output = output
         self.messages = queue.Queue()
         self.sequence = 0
-        network = ["-netdev", f"stream,id=inside,server={'on' if role == 'gateway' else 'off'},addr.type=unix,addr.path={wire}" + (",reconnect-ms=0" if role == "chat" else ""),
-            "-device", "virtio-net-pci,netdev=inside,mac=52:54:00:6f:00:" + ("01" if role == "gateway" else "03"),
+        # Stream reconnection is disabled by default in QEMU 8.2 and 10.x.
+        # Direct kernel boot needs no PXE ROM (absent on minimal CI runners).
+        network = ["-netdev", f"stream,id=inside,server={'on' if role == 'gateway' else 'off'},addr.type=unix,addr.path={wire}",
+            "-device", "virtio-net-pci,romfile=,netdev=inside,mac=52:54:00:6f:00:" + ("01" if role == "gateway" else "03"),
             "-object", f"filter-dump,id=inside-capture,netdev=inside,file={output / (role + '-inside.pcap')}"]
         if role == "gateway":
             network += ["-netdev", f"user,id=outside,ipv6=off,restrict={'off' if online else 'on'}",
-                "-device", "virtio-net-pci,netdev=outside,mac=52:54:00:6f:00:02",
+                "-device", "virtio-net-pci,romfile=,netdev=outside,mac=52:54:00:6f:00:02",
                 "-object", f"filter-dump,id=outside-capture,netdev=outside,file={output / 'gateway-outside.pcap'}",
                 "-device", "virtio-serial-pci",
                 "-chardev", f"socket,id=control,path={wire.parent / 'control.sock'},server=on,wait=off",
