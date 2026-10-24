@@ -187,6 +187,13 @@ Prima dello sblocco generale non si caricano credenziali né si avviano servizi 
 
 **Un solo servizio per copiare file, nessuna cartella condivisa**
 
+Il [motore di copia iniziale](FILE-COPY.md) è ora implementato in
+`packages/oblivion-transfer`: offerta limitata, selezione di file/cartelle,
+stream con hash e ricezione in una transazione privata nuova. Rifiuta link,
+percorsi esterni e sovrascritture; le prove usano filesystem e socket reali.
+È un componente: VM di importazione, porte locali, autorizzazioni e manager
+non sono ancora collegati. I flussi seguenti restano il risultato da ottenere.
+
 Proponiamo nella UI fidata le operazioni Importa, Esporta e Copia in un'altra sessione. Invia con OnionShare e Ricevi con OnionShare sono operazioni distinte, avviate dall'utente e inizialmente disponibili solo in modalità Tor; un SOCKS generico non sostituisce i servizi onion. Sono funzioni dell'ambiente Oblivion; gli strumenti dell'agente restano quelli di OpenCode.
 
 Il controllore assegna una capacità monouso con sorgente, destinazione, limiti e scadenza. Un protocollo ristretto trasporta nomi relativi, dimensioni e byte su un canale locale, per esempio virtio-serial o vsock; il trasporto definitivo richiede una prova. Il ricevitore sceglie la directory di destinazione e impedisce sovrascritture arbitrarie. Non si passano comandi shell, percorsi host liberamente scelti o handle dell'intero vault. Una capacità viene revocata su annullamento, blocco e cambio sessione.

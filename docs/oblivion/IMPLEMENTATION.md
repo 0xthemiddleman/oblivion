@@ -7,6 +7,12 @@ Lo sviluppo procede sul Mac ARM disponibile: Docker per build e prove del binari
 Debian/HVF e guest TCG per il laboratorio VM. L'hardware x86/KVM è un gate di
 rilascio, non un blocco allo sviluppo sul Mac.
 
+Il lavoro sui documenti parte dal [motore di copia](FILE-COPY.md), con file
+selezionati, quote, hash, percorsi risolti da descrittori e ricezione privata.
+Il componente non apre device o reti e non monta filesystem. La selezione e
+conferma nel manager, il servizio isolato, le porte delle VM e la copia USB
+completa restano da implementare: i test del core non sostituiscono quei gate.
+
 Ultima verifica locale: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
 passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,
 webfetch/shell reali, cattura esterna e due chat effimere con stream revocati.

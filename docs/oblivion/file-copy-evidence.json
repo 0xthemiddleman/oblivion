@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-24",
+  "status": "component-verified-not-integrated",
+  "implementation_commit": "d5af708c1064b8d835f3b86e9ef83dcaaaabf15c",
+  "scope": "Selected files and directories copied through the real Rust engine, private filesystem transactions and a Unix stream. No USB device, VM transfer channel or manager integration exercised.",
+  "verification": {
+    "macos_arm64": {
+      "tests_passed": 12,
+      "clippy": "passed",
+      "rustc": "rustc 1.92.0 (ded5c06cf 2025-12-08)"
+    },
+    "canonical_repository_check": {
+      "tasks_passed": 34,
+      "cached_tasks": 34
+    },
+    "workflow_yaml": "parsed; ARM64 and x86-64 copy-engine jobs configured, not yet executed in CI",
+    "debian_arm64": {
+      "tests_passed": 12,
+      "rustc": "rustc 1.85.1 (4eb161250 2025-03-15) (built from a source tarball)",
+      "environment": "Docker Desktop on macOS ARM64",
+      "sources_sha256": "2b5861128102a09556aa9f85b42ca14fceb518f2cfa7066eb34b21e4a18a10db",
+      "tests_network": "disabled by Docker RUN --network=none"
+    },
+    "debian_amd64": {
+      "tests_passed": 12,
+      "rustc": "rustc 1.85.1 (4eb161250 2025-03-15) (built from a source tarball)",
+      "environment": "Docker Desktop on macOS ARM64 with x86 emulation",
+      "sources_sha256": "2b5861128102a09556aa9f85b42ca14fceb518f2cfa7066eb34b21e4a18a10db",
+      "tests_network": "disabled by Docker RUN --network=none"
+    }
+  },
+  "covered": [
+    "Selective directory tree copy, Unicode names, empty files/directories and payload larger than the 64 KiB buffer.",
+    "Actual Unix socket transfer and matching receiver receipt after syncing the private transaction.",
+    "Per-file SHA-256, manifest digest, size and entry limits, byte-count overflow and bounded headers.",
+    "Malformed version/header, unknown fields and entry types, duplicate/conflicting paths and absent parents.",
+    "Absolute paths, traversal, control/bidi characters, symlinks, hard links, FIFO and sockets rejected.",
+    "Existing transaction or symlink destination never reused or overwritten.",
+    "Opened source remains pinned when its pathname is replaced; changed source data aborts.",
+    "Corruption, truncation, invalid final marker and real connection cancellation remove partial transactions.",
+    "Receiver requires a private owned root; file/directory output modes verified."
+  ],
+  "limits": [
+    "No authorization/capability issuer, expiry, transport deadlines or controller integration yet; these are mandatory caller responsibilities.",
+    "No real USB or inter-VM copy, device passthrough, import/export UI or chat delivery.",
+    "No ENOSPC, physical-memory OOM, power-loss or crash-recovery proof for the copy service yet.",
+    "The library does not enforce LUKS/tmpfs placement, mount flags or VM isolation; integration must supply them.",
+    "Tests use synthetic files in local temporary directories and disposable Docker layers; they do not prove absence of traces on the live USB.",
+    "Files are complete only under the receiver-private transaction; explicit release to the chat is still required."
+  ],
+  "initial_build_failure": {
+    "artifact": "linux-build.log",
+    "reason": "cargo fetch ran before an implicit library target existed in the Docker layer. Adding an explicit [lib] path fixed packaging; subsequent locked builds passed."
+  },
+  "retained_files": [
+    {
+      "path": "artifacts/oblivion-transfer/mac-tests.log",
+      "sha256": "e1f17a2c7492dfe71af572a17314a013054f060e7d6bd7431eccef32f26329e1"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/mac-clippy.log",
+      "sha256": "7bea06d2c09dfd2e4ad627f9c14cf1df19ce49df1e35a68d08c090365e4c917c"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/check.log",
+      "sha256": "4aa4a4ba7667986e3f657dedb35fd382435dcbfcf85d027825290dd9e4754c80"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-build.log",
+      "sha256": "bcde2d5841086754b98dd10d051143c58f7dfa9d542377ac81057b953438c99a"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-build-02.log",
+      "sha256": "c263005e875cd3a51ecb69bb75deb0fd9d74bcdf625712578aa71e22852a5243"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-x64-build.log",
+      "sha256": "02806c25c1652555047ab61d720fa70d408b1da5cfe80857efa658ea7e5d70c8"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-arm64/tests.log",
+      "sha256": "3076d875006824a9c279949a7847b914b80d104522d1fab1f33ea5824f59bb4f"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-arm64/sources.sha256",
+      "sha256": "2b5861128102a09556aa9f85b42ca14fceb518f2cfa7066eb34b21e4a18a10db"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-arm64/rustc.txt",
+      "sha256": "6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-arm64/SHA256SUMS",
+      "sha256": "3fc11af6a950a16ad8a7a86f38a6dec6ab58c8b2d71b367dd255a4097d420f65"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-amd64/tests.log",
+      "sha256": "b01ba503f0f20eb66f1a02396241e212f58688448fb88b95d98cf74222d798a1"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-amd64/sources.sha256",
+      "sha256": "2b5861128102a09556aa9f85b42ca14fceb518f2cfa7066eb34b21e4a18a10db"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-amd64/rustc.txt",
+      "sha256": "6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88"
+    },
+    {
+      "path": "artifacts/oblivion-transfer/linux-amd64/SHA256SUMS",
+      "sha256": "c497c5a95de00e5380740adfcbec5d71532d5a6f6fc69e8ec770c7f841a7773c"
+    }
+  ]
+}
