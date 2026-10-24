@@ -13,15 +13,19 @@ fn guest_session_requests_are_typed_hints_and_pasted_attention_is_data() {
     assert_eq!(guest.callbacks_mut().take_request(), Some(Action::New));
     assert_eq!(guest.callbacks_mut().take_request(), None);
     let mut input = Input::default();
-    let pasted = b"\x1b[200~paste\x1dcontent\x1b[201~";
+    let pasted = b"\x1b[200~paste\x1d\x1econtent\x1b[201~";
     let mut forwarded = Vec::new();
     for byte in pasted {
         let (output, attention) = input.decode(&[*byte], Instant::now());
         assert!(!attention);
+        assert!(!input.take_documents());
         forwarded.extend(output);
     }
     assert_eq!(forwarded, pasted);
     assert!(input.decode(b"\x1d", Instant::now()).1);
+    assert_eq!(input.decode(b"\x1e", Instant::now()), (Vec::new(), false));
+    assert!(input.take_documents());
+    assert!(!input.take_documents());
 }
 
 #[test]

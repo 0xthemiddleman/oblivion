@@ -5,6 +5,8 @@ mod ipc;
 #[cfg(target_os = "linux")]
 mod storage;
 #[cfg(target_os = "linux")]
+mod transfer_host;
+#[cfg(target_os = "linux")]
 mod vm;
 
 #[cfg(target_os = "linux")]

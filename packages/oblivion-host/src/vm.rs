@@ -1,5 +1,5 @@
 use crate::storage::{Error, Result, require};
-use oblivion_host::channel::Channel;
+use oblivion_host::channel::{self, Channel};
 use oblivion_transport::policy::Tools;
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -15,11 +15,14 @@ use std::time::{Duration, Instant};
 const DEVICE: &str = "/dev/mapper/oblivion-session";
 pub const VM_UID: u32 = 1100;
 pub const GATEWAY_UID: u32 = 1101;
+pub const IMPORT_UID: u32 = 1102;
+pub const IMPORT_DEVICE: &str = "/dev/mapper/oblivion-import";
 
 #[derive(Clone, Copy)]
 pub enum Role {
     Session,
     Gateway,
+    Import,
 }
 
 impl Role {
@@ -27,6 +30,7 @@ impl Role {
         match self {
             Self::Session => "oblivion-session",
             Self::Gateway => "oblivion-gateway-vm",
+            Self::Import => "oblivion-import-vm",
         }
     }
 
@@ -34,6 +38,7 @@ impl Role {
         match self {
             Self::Session => VM_UID,
             Self::Gateway => GATEWAY_UID,
+            Self::Import => IMPORT_UID,
         }
     }
 
@@ -189,7 +194,7 @@ impl Config {
             "PrivateDevices=yes".to_owned(),
             format!(
                 "PrivateNetwork={}",
-                if matches!(role, Role::Session) {
+                if !matches!(role, Role::Gateway) {
                     "yes"
                 } else {
                     "no"
@@ -197,7 +202,7 @@ impl Config {
             ),
             format!(
                 "RestrictAddressFamilies={}",
-                if matches!(role, Role::Session) {
+                if !matches!(role, Role::Gateway) {
                     "AF_UNIX"
                 } else {
                     "AF_UNIX AF_INET"
@@ -250,6 +255,13 @@ impl Config {
             // VM, so Before=owner/controller would deadlock their stop jobs.
             args.push("--property=BindsTo=oblivion-gateway-host.service".to_owned());
         }
+        if matches!(role, Role::Import) {
+            args.extend([
+                "--property=BindsTo=oblivion-transfer-host.service".to_owned(),
+                format!("--property=BindReadOnlyPaths={IMPORT_DEVICE}:/dev/oblivion-import"),
+                format!("--property=DeviceAllow={IMPORT_DEVICE} r"),
+            ]);
+        }
         if network {
             args.push("--property=BindReadOnlyPaths=/run/oblivion-gateway-vm/inside.sock:/run/oblivion-session/network.sock".to_owned());
         }
@@ -297,10 +309,29 @@ impl Config {
         ]);
         if matches!(role, Role::Session) {
             args.extend([
+                "-device".to_owned(),
+                "virtio-serial-pci,id=oblivion-serial".to_owned(),
                 "-drive".to_owned(),
                 "file=/dev/oblivion-session,format=raw,if=none,id=vault,cache=none".to_owned(),
                 "-device".to_owned(),
                 "virtio-blk-pci,drive=vault,serial=oblivion-vault".to_owned(),
+            ]);
+        }
+        if matches!(role, Role::Import) {
+            args.extend([
+                "-S".to_owned(),
+                "-device".to_owned(),
+                "virtio-serial-pci".to_owned(),
+                "-drive".to_owned(),
+                "file=/dev/oblivion-import,format=raw,if=none,id=source,readonly=on,cache=none"
+                    .to_owned(),
+                "-device".to_owned(),
+                "virtio-blk-pci,drive=source,serial=oblivion-import".to_owned(),
+                "-chardev".to_owned(),
+                "socket,id=copy,path=/run/oblivion-import-vm/copy.sock,server=on,wait=off"
+                    .to_owned(),
+                "-device".to_owned(),
+                "virtserialport,chardev=copy,name=oblivion.import".to_owned(),
             ]);
         }
         if matches!(role, Role::Gateway) {
@@ -332,7 +363,7 @@ impl Config {
         }
         if network {
             args.extend([
-                "-S".to_owned(), "-device".to_owned(), "virtio-serial-pci".to_owned(),
+                "-S".to_owned(),
                 "-chardev".to_owned(), "socket,id=token,path=/run/oblivion-session/token.sock,server=on,wait=off".to_owned(),
                 "-device".to_owned(), "virtserialport,chardev=token,name=oblivion.session".to_owned(),
                 "-netdev".to_owned(), "stream,id=inside,server=off,addr.type=unix,addr.path=/run/oblivion-session/network.sock,reconnect-ms=0".to_owned(),
@@ -439,9 +470,96 @@ pub fn resume_gateway() -> Result<()> {
     Ok(())
 }
 
+pub fn resume_import() -> Result<()> {
+    qmp(Role::Import, "cont")?;
+    Ok(())
+}
+
+/// A fresh channel per transfer. Connect its host side before hotplugging the
+/// guest port so the guest's readiness marker cannot be discarded by QEMU.
+pub fn copy_port(id: &str) -> Result<UnixStream> {
+    require(
+        id.len() == 32
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "invalid_transfer_id",
+    )?;
+    let name = format!("copy-{id}");
+    let path = format!("/run/oblivion-session/{name}.sock");
+    qmp_arguments(
+        Role::Session,
+        "chardev-add",
+        json!({"id":name,"backend":{"type":"socket","data":{"addr":{"type":"unix","data":{"path":path}},"server":true,"wait":false}}}),
+    )?;
+    let stream = UnixStream::connect(&path).map_err(|_| Error("transfer_port_unavailable"))?;
+    crate::gateway::peer(&stream, VM_UID)?;
+    qmp_arguments(
+        Role::Session,
+        "device_add",
+        json!({"driver":"virtserialport","id":name,"chardev":name,"bus":"oblivion-serial.0","name":format!("oblivion.copy.{id}")}),
+    )?;
+    Ok(stream)
+}
+
+pub fn remove_copy_port(id: &str) -> Result<()> {
+    require(
+        id.len() == 32
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+        "invalid_transfer_id",
+    )?;
+    if stopped()? {
+        return Ok(());
+    }
+    let name = format!("copy-{id}");
+    // Query first: startup may have failed before creating either frontend or
+    // backend. Never interpret an arbitrary QMP failure as successful cleanup.
+    let devices = qmp(Role::Session, "query-chardev")?;
+    let exists = devices
+        .get("return")
+        .and_then(Value::as_array)
+        .ok_or(Error("invalid_vm_response"))?
+        .iter()
+        .any(|entry| entry.get("label").and_then(Value::as_str) == Some(&name));
+    if !exists {
+        return Ok(());
+    }
+    // An absent frontend is harmless; chardev-remove is the authoritative check
+    // that no device still owns the backend after a partial startup.
+    let _ = qmp_arguments(Role::Session, "device_del", json!({"id":name}));
+    // device_del acknowledges the request before the guest has finished
+    // unplugging its port. QEMU rejects chardev-remove while it is still in use.
+    // The real manager cancellation test exercises this asynchronous interval.
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        match qmp_arguments(Role::Session, "chardev-remove", json!({"id":name})) {
+            Ok(_) => break,
+            Err(Error("vm_control_rejected")) if Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(25));
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    let path = format!("/run/oblivion-session/{name}.sock");
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(_) => Err(Error("transfer_port_cleanup_failed")),
+    }
+}
+
 fn qmp(role: Role, operation: &str) -> Result<Value> {
-    let stream = UnixStream::connect(format!("{}/qmp.sock", role.runtime()))
-        .map_err(|_| Error("vm_control_unavailable"))?;
+    qmp_arguments(role, operation, json!({}))
+}
+
+fn qmp_arguments(role: Role, operation: &str, arguments: Value) -> Result<Value> {
+    let stream = channel::connect(
+        &PathBuf::from(format!("{}/qmp.sock", role.runtime())),
+        Duration::from_secs(5),
+    )
+    .map_err(|_| Error("vm_control_unavailable"))?;
     let mut reader = BufReader::new(Channel::new(&stream, Duration::from_secs(5)));
     require(
         read_qmp(&mut reader)?.get("QMP").is_some(),
@@ -450,7 +568,7 @@ fn qmp(role: Role, operation: &str) -> Result<Value> {
     for command in ["qmp_capabilities", operation] {
         reader
             .get_mut()
-            .write_all(format!("{}\n", json!({"execute": command})).as_bytes())
+            .write_all(format!("{}\n", json!({"execute": command, "arguments": if command == operation { arguments.clone() } else { json!({}) }})).as_bytes())
             .map_err(|_| Error("vm_control_failed"))?;
         loop {
             let response = read_qmp(&mut reader)?;

@@ -52,6 +52,17 @@ pub fn send(channel: &mut Channel, root: &Path) -> io::Result<()> {
 
 /// The destination root is chosen locally, never from the peer's request.
 pub fn accept(channel: &mut Channel, root: &Path) -> io::Result<()> {
+    accept_into(channel, root, None)
+}
+
+/// Import mode is selected only by the local trusted launcher. The manager's
+/// approval explicitly covers copying and making the selected files usable by
+/// the chat; the peer cannot supply the publication root or filesystem paths.
+pub fn import(channel: &mut Channel, root: &Path, published: &Path) -> io::Result<()> {
+    accept_into(channel, root, Some(published))
+}
+
+fn accept_into(channel: &mut Channel, root: &Path, published: Option<&Path>) -> io::Result<()> {
     let request: ReceiveRequest = read_message(channel, 1024)?;
     validate_id(&request.approval.id)?;
     let manifest = Manifest::read(channel, request.limits)?;
@@ -61,6 +72,10 @@ pub fn accept(channel: &mut Channel, root: &Path) -> io::Result<()> {
     )?;
     channel.write_all(b"receive\n")?;
     let receipt = receive(channel, &manifest, root, &request.approval.id)?;
+    if let Some(published) = published {
+        channel.check()?;
+        crate::publish(root, published, &receipt.id, &manifest)?;
+    }
     write_message(channel, &receipt)
 }
 

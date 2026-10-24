@@ -1,6 +1,6 @@
 mod support;
 
-use oblivion_transfer::{Entry, Limits, Manifest, Selection, receive};
+use oblivion_transfer::{Entry, Limits, Manifest, Selection, publish, receive};
 use std::fs;
 use std::io::{Cursor, Read, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
@@ -412,4 +412,58 @@ fn recursive_source_limits_apply_before_reading_large_files() {
     let selection = Selection::prepare(&source.0, &["dir/a".into()], LIMITS).unwrap();
     assert_eq!(selection.manifest().entries().len(), 2);
     assert_eq!(selection.manifest().bytes(), 9);
+}
+
+#[test]
+fn verified_copy_is_published_once_with_chat_group_access() {
+    let source = Tree::new();
+    let inbox = Tree::new();
+    let published = Tree::new();
+    fs::create_dir(source.0.join("docs")).unwrap();
+    fs::write(source.0.join("docs/note.txt"), b"document").unwrap();
+    let (manifest, bytes) = encode(&source, &["docs"]);
+    receive(&mut Cursor::new(bytes), &manifest, &inbox.0, ID).unwrap();
+    assert_eq!(fs::read_dir(&published.0).unwrap().count(), 0);
+    publish(&inbox.0, &published.0, ID, &manifest).unwrap();
+    assert_eq!(fs::read_dir(&inbox.0).unwrap().count(), 0);
+    let path = published.0.join(ID).join("files/docs/note.txt");
+    assert_eq!(fs::read(&path).unwrap(), b"document");
+    assert_eq!(fs::metadata(&path).unwrap().mode() & 0o777, 0o660);
+    assert_eq!(
+        fs::metadata(path.parent().unwrap()).unwrap().mode() & 0o777,
+        0o770
+    );
+    assert_eq!(
+        fs::metadata(published.0.join(ID)).unwrap().mode() & 0o777,
+        0o770
+    );
+    let (_, bytes) = encode(&source, &["docs"]);
+    receive(&mut Cursor::new(bytes), &manifest, &inbox.0, ID).unwrap();
+    fs::write(&path, b"chat edit").unwrap();
+    assert!(publish(&inbox.0, &published.0, ID, &manifest).is_err());
+    assert_eq!(fs::read(&path).unwrap(), b"chat edit");
+}
+
+#[test]
+fn publication_rejects_chat_writable_parent_and_symlink_substitution() {
+    let source = Tree::new();
+    let inbox = Tree::new();
+    let published = Tree::new();
+    fs::write(source.0.join("note"), b"document").unwrap();
+    let (manifest, bytes) = encode(&source, &["note"]);
+    receive(&mut Cursor::new(bytes), &manifest, &inbox.0, ID).unwrap();
+    fs::set_permissions(&published.0, fs::Permissions::from_mode(0o770)).unwrap();
+    assert!(publish(&inbox.0, &published.0, ID, &manifest).is_err());
+    assert!(!published.0.join(ID).exists());
+    fs::set_permissions(&published.0, fs::Permissions::from_mode(0o750)).unwrap();
+    let path = inbox.0.join(ID).join("files/note");
+    fs::remove_file(&path).unwrap();
+    symlink(source.0.join("note"), &path).unwrap();
+    assert!(publish(&inbox.0, &published.0, ID, &manifest).is_err());
+    assert_eq!(
+        fs::metadata(published.0.join(ID)).unwrap().mode() & 0o777,
+        0o700
+    );
+    assert!(!published.0.join(ID).join("files").exists());
+    assert_eq!(fs::read(source.0.join("note")).unwrap(), b"document");
 }

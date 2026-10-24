@@ -1,6 +1,7 @@
 use oblivion_host::control::{self, Result};
 use oblivion_host::terminal::{self, ACTION, BRAND, CLEAR, FEEDBACK, LOGO, RESET, Terminal};
 use oblivion_host::{egress, keys, network};
+mod transfer_menu;
 use oblivion_transport::policy::{Action, Rule};
 use oblivion_transport::{Authentication, Metadata, Transport};
 use serde::Deserialize;
@@ -28,6 +29,7 @@ struct Status {
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
+    transfers_configured: bool,
 }
 
 fn main() {
@@ -114,6 +116,9 @@ fn run(preview: bool) -> Result<()> {
             } else {
                 " SESSIONE ANCORA APERTA\r\n\r\n [Invio] Console   [C] Chiudi e blocca\r\n [F] Chiusura forzata\r\n"
             });
+            if status.transfers_configured {
+                view.push_str(" [D] Documenti: importa da USB\r\n");
+            }
         } else if status.general_readonly {
             view.push_str(&format!(" Avvio effimero - profilo in sola lettura\r\n Sessioni solo in RAM: {} MiB ciascuna.\r\n La chiusura distrugge conversazione e documenti.\r\n\r\n [N/Invio] Nuova sessione effimera\r\n [G] Scegli chiave API  [R] Rete  [W] Regole web  [B] Blocca\r\n", status.session_bytes / 1048576));
         } else {
@@ -275,6 +280,10 @@ fn run(preview: bool) -> Result<()> {
                 return Ok(());
             }
             if status.recovery_required || status.session_open {
+                if !status.recovery_required && status.transfers_configured && key == b'd' {
+                    transfer_menu::run(&mut terminal)?;
+                    return Ok(());
+                }
                 if !status.recovery_required && matches!(key, b'\r' | b'\n') {
                     requested_new = enter_console(&mut terminal)?;
                 }
@@ -450,6 +459,7 @@ fn run(preview: bool) -> Result<()> {
                 "invalid_destination" | "invalid_destination_port" | "invalid_destination_pattern" | "reserved_destination" => "Destinazione non valida: usa un dominio pubblico (anche *.example.com), un IP pubblico e una porta da 1 a 65535.",
                 "too_many_network_rules" => "Sono ammesse al massimo 128 regole web.",
                 "network_rule_missing" => "La regola non esiste più. Riapri il menu delle regole web.",
+                "transfer_outcome_unknown" => "Importazione interrotta senza conferma finale. Una copia già completata può essere presente nei documenti della sessione.",
                 "session_must_be_closed" => "Chiudi la sessione prima di cambiare chiave o percorso di rete.",
                 "session_channel_failed" | "invalid_session_ready" => "La sessione non ha completato l'avvio protetto. Chiudila prima di riprovare.",
                 "insufficient_space" if status.general_readonly => {
@@ -504,7 +514,11 @@ fn busy(terminal: &mut Terminal, message: &str) -> Result<()> {
 }
 
 fn enter_console(terminal: &mut Terminal) -> Result<bool> {
-    let result = terminal::bridge(terminal, control::console()?);
+    let result = terminal::bridge(terminal, control::console()?, |terminal| {
+        transfer_menu::run(terminal)?;
+        let status: Status = serde_json::from_str(&control::request("status", None, &[])?)?;
+        Ok(status.session_open)
+    });
     busy(terminal, "Chiusura della sessione")?;
     control::request("close", None, &[])?;
     Ok(result? == terminal::Action::New)

@@ -33,12 +33,21 @@ for binary in /host/usr/bin/qemu-system-* /host/usr/lib/*/qemu/*.so; do
         (cd /host && cp -L --parents ".$library" /host/usr/lib/oblivion/vm/qemu-root/)
     done
 done
-for directory in dev proc sys run/oblivion-session run/oblivion-gateway-vm tmp; do mkdir -p "/host/usr/lib/oblivion/vm/qemu-root/$directory"; done
+for directory in dev proc sys run/oblivion-session run/oblivion-gateway-vm run/oblivion-import-vm tmp; do mkdir -p "/host/usr/lib/oblivion/vm/qemu-root/$directory"; done
 # Mount targets must exist before packing the immutable hypervisor root.
 touch /host/usr/lib/oblivion/vm/qemu-root/kernel /host/usr/lib/oblivion/vm/qemu-root/initrd /host/usr/lib/oblivion/vm/qemu-root/root.squashfs
 rm -rf /guest/boot /guest/var/cache/apt /guest/var/lib/apt/lists /host/var/cache/apt /host/var/lib/apt/lists
 mkdir -p /guest/boot
 mksquashfs /guest /host/usr/lib/oblivion/vm/guest.squashfs -noappend -comp zstd -processors 2 -quiet
+mksquashfs /import /host/usr/lib/oblivion/vm/import.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*'
+if [ -f /host/usr/lib/oblivion/vm/import-lab ]; then
+    touch /out/import-lab
+    mkdir -p /fixture/documenti/vuota
+    printf OBLIVION_USB_SELECTED_CANARY_82f1 > /fixture/documenti/note.txt
+    printf OBLIVION_USB_UNSELECTED_CANARY_29a1 > /fixture/unselected.txt
+    truncate -s 32M /out/import-source.raw
+    mkfs.ext4 -q -m 0 -d /fixture /out/import-source.raw
+fi
 mksquashfs /host /out/host.squashfs -noappend -comp zstd -processors 2 -quiet
 cd /sources
 find packages script -type f -print0 | sort -z | xargs -0 sha256sum > /out/sources.sha256
@@ -47,3 +56,5 @@ sha256sum kernel initrd host.squashfs host-packages.tsv guest-packages.tsv sourc
 if [ -f opencode.sha256 ]; then sha256sum opencode.sha256 opencode-build.json >> SHA256SUMS; fi
 if [ -f manager.sha256 ]; then sha256sum manager.sha256 >> SHA256SUMS; fi
 if [ -f tui-lab ]; then sha256sum tui-lab >> SHA256SUMS; fi
+
+if [ -f import-lab ]; then sha256sum import-lab import-source.raw >> SHA256SUMS; fi

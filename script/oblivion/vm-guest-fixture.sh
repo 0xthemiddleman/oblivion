@@ -1,6 +1,7 @@
 #!/bin/sh
 # Laboratory console only. Optional chat probe executes the actual CLI, not the TUI.
 set -eu
+trap '[ "$?" = 0 ] || printf "OBLIVION_GUEST_PROBE_FAILED\n"' EXIT
 printf 'OBLIVION_GUEST_READY\n'
 while IFS= read -r command; do
     case "$command" in
@@ -48,6 +49,30 @@ while IFS= read -r command; do
             [ ! -e /var/tmp/session-temporary ]
             [ ! -e /tmp/detached-worker ]
             printf 'OBLIVION_A_RESTORED\n'
+            ;;
+        imports-empty)
+            [ -z "$(ls -A /vault/imports)" ]
+            [ ! -r /vault/.oblivion-inbox ]
+            printf 'OBLIVION_IMPORTS_EMPTY\n'
+            ;;
+        imports-check)
+            set -- /vault/imports/*
+            [ "$#" = 1 ]
+            [ "$(cat "$1/files/documenti/note.txt")" = OBLIVION_USB_SELECTED_CANARY_82f1 ]
+            [ -d "$1/files/documenti/vuota" ]
+            [ ! -e "$1/files/unselected.txt" ]
+            [ ! -r /vault/.oblivion-inbox ]
+            if touch /vault/imports/chat-created 2>/dev/null; then exit 1; fi
+            printf OBLIVION_USB_EDIT_CANARY_1b72 > "$1/files/documenti/note.txt"
+            sync
+            printf 'OBLIVION_IMPORT_VERIFIED\n'
+            ;;
+        imports-resumed)
+            set -- /vault/imports/*
+            [ "$#" = 1 ]
+            [ "$(cat "$1/files/documenti/note.txt")" = OBLIVION_USB_EDIT_CANARY_1b72 ]
+            [ ! -r /vault/.oblivion-inbox ]
+            printf 'OBLIVION_IMPORT_RESUMED\n'
             ;;
         chat-a|chat-b|chat-resume)
             python3 /usr/libexec/oblivion-chat-probe "$command"

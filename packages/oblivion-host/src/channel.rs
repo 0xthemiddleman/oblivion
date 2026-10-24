@@ -2,6 +2,42 @@ use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::time::{Duration, Instant};
 
+/// QMP can stop accepting while its VM is suspended. A read deadline cannot
+/// bound connect() itself once that Unix listener's backlog is full.
+#[cfg(target_os = "linux")]
+pub fn connect(path: &std::path::Path, budget: Duration) -> io::Result<UnixStream> {
+    use std::os::fd::{AsRawFd, FromRawFd};
+    let bytes = path.as_os_str().as_encoded_bytes();
+    let mut address: libc::sockaddr_un = unsafe { std::mem::zeroed() };
+    if bytes.is_empty() || bytes.len() >= address.sun_path.len() || bytes.contains(&0) {
+        return Err(io::ErrorKind::InvalidInput.into());
+    }
+    address.sun_family = libc::AF_UNIX as _;
+    for (target, byte) in address.sun_path.iter_mut().zip(bytes) {
+        *target = *byte as _;
+    }
+    let fd = unsafe { libc::socket(libc::AF_UNIX, libc::SOCK_STREAM | libc::SOCK_CLOEXEC, 0) };
+    if fd < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let stream = unsafe { UnixStream::from_raw_fd(fd) };
+    // Linux applies SO_SNDTIMEO to connect as well as writes. On timeout the
+    // unfinished socket is dropped; it is never handed to a QMP exchange.
+    stream.set_write_timeout(Some(budget))?;
+    if unsafe {
+        libc::connect(
+            stream.as_raw_fd(),
+            (&address as *const libc::sockaddr_un).cast(),
+            size_of::<libc::sockaddr_un>() as _,
+        )
+    } != 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    stream.set_write_timeout(None)?;
+    Ok(stream)
+}
+
 /// One deadline for a complete exchange, including fragmented reads and writes.
 /// A new exchange must construct a new Channel, never derive its budget from
 /// the socket timeout left by the previous operation.

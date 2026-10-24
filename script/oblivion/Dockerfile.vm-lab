@@ -17,14 +17,16 @@ FROM rust-toolchain AS compiler
 WORKDIR /build
 COPY packages/oblivion-tor-state/ /oblivion-tor-state/
 COPY packages/oblivion-transport/ /oblivion-transport/
+COPY packages/oblivion-transfer/ /oblivion-transfer/
 COPY packages/oblivion-host/ ./
 RUN cargo test --locked && cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
     && cargo build --locked --release --features lab-emulation --bin oblivion-storage
-RUN mkdir /bundle && cp /tmp/oblivion-storage /bundle/oblivion-storage \
+RUN cd /oblivion-transfer && cargo test --locked && cargo build --locked --release --bin oblivion-copy
+RUN mkdir /bundle && cp /oblivion-transfer/target/release/oblivion-copy /bundle/ && cp /tmp/oblivion-storage /bundle/oblivion-storage \
     && cp target/release/oblivion-storage /bundle/oblivion-storage-lab \
     && cp target/release/oblivion-control target/release/oblivion-manager /bundle/ \
     && cp host/*.service /bundle/ \
-    && find Cargo.toml Cargo.lock src tests host ../oblivion-tor-state/Cargo.toml ../oblivion-tor-state/src ../oblivion-transport/Cargo.toml ../oblivion-transport/src -type f -print0 | sort -z | xargs -0 sha256sum > /bundle/sources.sha256 \
+    && find Cargo.toml Cargo.lock src tests host ../oblivion-transfer/Cargo.toml ../oblivion-transfer/Cargo.lock ../oblivion-transfer/src ../oblivion-tor-state/Cargo.toml ../oblivion-tor-state/src ../oblivion-transport/Cargo.toml ../oblivion-transport/src -type f -print0 | sort -z | xargs -0 sha256sum > /bundle/sources.sha256 \
     && cd /bundle && sha256sum oblivion-* sources.sha256 > SHA256SUMS
 
 # Small development bundle, overlaid only in the disposable laboratory's RAM.
@@ -60,10 +62,21 @@ COPY --from=transfer-pack /out/ /
 
 FROM os AS guest
 RUN groupadd --gid 1000 oblivion && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /vault/home --shell /bin/sh oblivion \
-    && passwd -l root && mkdir -p /vault /usr/libexec
+    && useradd --uid 1001 --gid 1000 --no-create-home --shell /usr/sbin/nologin oblivion-import
+RUN passwd -l root && mkdir -p /vault /usr/libexec
+COPY --from=compiler /bundle/oblivion-copy /usr/bin/oblivion-copy
 COPY packages/oblivion-host/guest/ /usr/lib/oblivion/guest/
 COPY script/oblivion/vm-guest-fixture.sh /usr/libexec/oblivion
 RUN sh /usr/lib/oblivion/guest/install.sh
+
+FROM os AS import-guest
+COPY --from=compiler /bundle/oblivion-copy /usr/bin/oblivion-copy
+COPY packages/oblivion-host/import/ /usr/lib/oblivion/import/
+RUN mkdir /source && passwd -l root && chmod 0755 /usr/lib/oblivion/import/*.sh \
+    && cp /usr/lib/oblivion/import/oblivion-import-source.service /etc/systemd/system/ \
+    && mkdir -p /etc/modules-load.d /etc/udev/rules.d \
+    && printf 'virtio_console\nvfat\nexfat\n' > /etc/modules-load.d/oblivion-import.conf \
+    && printf '%s\n' 'SUBSYSTEM=="virtio-ports", ATTR{name}=="oblivion.import", OWNER="root", GROUP="root", MODE="0600", TAG+="systemd", ENV{SYSTEMD_WANTS}="oblivion-import-source.service"' > /etc/udev/rules.d/71-oblivion-import.rules
 
 FROM guest AS opencode-guest
 ARG TARGETARCH
@@ -111,13 +124,14 @@ FROM ${GUEST} AS selected-guest
 
 FROM os AS host
 ARG TARGETARCH
-RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin python3 \
+RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin dmsetup python3 \
     $(if [ "$TARGETARCH" = arm64 ]; then printf qemu-system-arm; else printf qemu-system-x86; fi) \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 1000 oblivion-manager \
     && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /run/oblivion-manager --shell /usr/sbin/nologin oblivion-manager \
     && groupadd --gid 1100 oblivion-vm && useradd --uid 1100 --gid 1100 --no-create-home --shell /usr/sbin/nologin oblivion-vm \
     && groupadd --gid 1101 oblivion-gateway-vm && useradd --uid 1101 --gid 1101 --no-create-home --shell /usr/sbin/nologin oblivion-gateway-vm \
+    && groupadd --gid 1102 oblivion-import-vm && useradd --uid 1102 --gid 1102 --no-create-home --shell /usr/sbin/nologin oblivion-import-vm \
     && passwd -l root
 COPY --from=compiler /tmp/oblivion-storage /usr/bin/oblivion-storage
 COPY --from=compiler /build/target/release/oblivion-storage /usr/bin/oblivion-storage-lab
@@ -130,6 +144,10 @@ RUN sh /tmp/setup && rm /tmp/setup
 FROM host AS manager-host
 COPY script/oblivion/vm-manager-test.py /usr/libexec/oblivion-vm-test
 RUN touch /usr/lib/oblivion/vm/manager-lab
+
+FROM manager-host AS import-host
+COPY script/oblivion/vm-import-test.py /usr/libexec/oblivion-vm-test
+RUN touch /usr/lib/oblivion/vm/import-lab
 
 FROM manager-host AS tui-host
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pyte python3-pil fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
@@ -145,12 +163,15 @@ COPY script/oblivion/vm-stream-key.pem /usr/lib/oblivion-stream-fixture/key.pem
 FROM ${HOST} AS selected-host
 
 FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS pack
-RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools e2fsprogs && rm -rf /var/lib/apt/lists/*
 COPY --from=selected-guest / /guest/
 COPY --from=selected-host / /host/
+COPY --from=import-guest / /import/
+COPY --from=compiler /bundle/oblivion-transfer-host.service /host/etc/systemd/system/oblivion-transfer-host.service
 COPY packages/oblivion-host/ /sources/packages/oblivion-host/
 COPY packages/oblivion-tor-state/ /sources/packages/oblivion-tor-state/
 COPY packages/oblivion-transport/ /sources/packages/oblivion-transport/
+COPY packages/oblivion-transfer/ /sources/packages/oblivion-transfer/
 COPY script/oblivion/ /sources/script/oblivion/
 COPY script/oblivion/vm-lab-pack.sh /pack
 RUN sh /pack

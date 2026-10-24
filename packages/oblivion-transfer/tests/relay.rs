@@ -52,6 +52,10 @@ struct Relay {
 
 impl Relay {
     fn start() -> Self {
+        Self::permitted(None)
+    }
+
+    fn permitted(permit: Option<relay::Permit>) -> Self {
         let (source, from) = UnixStream::pair().unwrap();
         let (destination, to) = UnixStream::pair().unwrap();
         let (control, controller) = UnixStream::pair().unwrap();
@@ -64,12 +68,13 @@ impl Relay {
             control: channel(control),
             owners: vec![source_owner, destination_owner],
             worker: Some(std::thread::spawn(move || {
-                relay::run(
+                relay::run_permitted(
                     file(from),
                     file(to),
                     file(controller),
                     vec![from_owner.into(), to_owner.into()],
                     Duration::from_secs(5),
+                    permit,
                 )
             })),
         }
@@ -258,4 +263,26 @@ fn forged_receipt_is_not_forwarded_to_source_or_controller() {
     assert_eq!(relay.finish().unwrap_err().to_string(), "invalid_receipt");
     assert_eq!(relay.source.read(&mut [0]).unwrap(), 0);
     assert_eq!(relay.control.read(&mut [0]).unwrap(), 0);
+}
+
+#[test]
+fn root_permit_rejects_changed_id_and_increased_limits_before_forwarding() {
+    for change in 0..3 {
+        let mut relay = Relay::permitted(Some(relay::Permit {
+            id: ID.into(),
+            limits: LIMITS,
+        }));
+        let mut offer = request();
+        match change {
+            0 => offer.id = "a".repeat(32),
+            1 => offer.limits.bytes += 1,
+            _ => offer.limits.entries += 1,
+        }
+        write_message(&mut relay.control, &offer).unwrap();
+        assert!(relay.worker.take().unwrap().join().unwrap().is_err());
+        let mut bytes = Vec::new();
+        relay.source.read_to_end(&mut bytes).unwrap();
+        relay.destination.read_to_end(&mut bytes).unwrap();
+        assert!(bytes.is_empty());
+    }
 }

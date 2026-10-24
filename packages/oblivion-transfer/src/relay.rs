@@ -1,6 +1,6 @@
 use crate::channel::Channel;
 use crate::endpoint::{Approval, OfferRequest, ReceiveRequest, read_message, write_message};
-use crate::{END, Entry, Manifest, Receipt, copy_hash, require, validate_id};
+use crate::{END, Entry, Limits, Manifest, Receipt, copy_hash, require, validate_id};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::os::fd::OwnedFd;
@@ -16,6 +16,24 @@ pub fn run(
     owners: Vec<OwnedFd>,
     budget: Duration,
 ) -> io::Result<()> {
+    run_permitted(source, destination, control, owners, budget, None)
+}
+
+pub struct Permit {
+    pub id: String,
+    pub limits: Limits,
+}
+
+/// The controller supplies the fresh operation ID and ceiling independently of
+/// the manager's requested selection. They cannot be widened on the channel.
+pub fn run_permitted(
+    source: File,
+    destination: File,
+    control: File,
+    owners: Vec<OwnedFd>,
+    budget: Duration,
+    permit: Option<Permit>,
+) -> io::Result<()> {
     let deadline = Instant::now()
         .checked_add(budget)
         .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidInput))?;
@@ -30,7 +48,7 @@ pub fn run(
         destination.watch(owner.try_clone()?);
         control.watch(owner);
     }
-    let result = exchange(&mut source, &mut destination, &mut control);
+    let result = exchange(&mut source, &mut destination, &mut control, permit);
     // Release both VM ports before returning a receipt or closing the control
     // connection. The controller must still reap this worker before teardown.
     drop(source);
@@ -42,9 +60,18 @@ fn exchange(
     source: &mut Channel,
     destination: &mut Channel,
     control: &mut Channel,
+    permit: Option<Permit>,
 ) -> io::Result<Receipt> {
     let request: OfferRequest = read_message(control, 64 * 1024)?;
     validate_id(&request.id)?;
+    if let Some(permit) = permit {
+        require(
+            request.id == permit.id
+                && request.limits.bytes <= permit.limits.bytes
+                && request.limits.entries <= permit.limits.entries,
+            "transfer_not_permitted",
+        )?;
+    }
     write_message(source, &request)?;
     let manifest = Manifest::read(source, request.limits)?;
     manifest.write(control)?;

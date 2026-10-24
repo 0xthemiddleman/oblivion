@@ -3,7 +3,7 @@ use std::ffi::{CStr, CString};
 use std::fs::{File, OpenOptions};
 use std::io;
 use std::os::fd::{AsRawFd, FromRawFd, IntoRawFd};
-use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 
 /// All peer paths are resolved one component at a time from pinned descriptors.
@@ -31,6 +31,19 @@ impl Directory {
             metadata.uid() == unsafe { libc::geteuid() } && metadata.mode() & 0o077 == 0,
             "unsafe_receive_root",
         )
+    }
+
+    pub fn require_controlled(&self) -> io::Result<()> {
+        let metadata = self.0.metadata()?;
+        require(
+            metadata.uid() == unsafe { libc::geteuid() } && metadata.mode() & 0o022 == 0,
+            "unsafe_publish_root",
+        )
+    }
+
+    pub fn mode(&self, mode: u32) -> io::Result<()> {
+        self.0
+            .set_permissions(std::fs::Permissions::from_mode(mode))
     }
 
     pub fn clone(&self) -> io::Result<Self> {
@@ -101,13 +114,17 @@ impl Directory {
     }
 
     pub fn rename(&self, from: &str, to: &str) -> io::Result<()> {
+        self.move_into(from, self, to)
+    }
+
+    pub fn move_into(&self, from: &str, destination: &Self, to: &str) -> io::Result<()> {
         let from = component(from)?;
         let to = component(to)?;
         if unsafe {
             libc::renameat(
                 self.0.as_raw_fd(),
                 from.as_ptr(),
-                self.0.as_raw_fd(),
+                destination.0.as_raw_fd(),
                 to.as_ptr(),
             )
         } != 0

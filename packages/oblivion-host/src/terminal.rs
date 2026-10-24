@@ -251,7 +251,7 @@ pub fn parser(rows: u16, cols: u16) -> vt100::Parser<Replies> {
 pub fn render_guest(screen: &vt100::Screen) -> String {
     use std::fmt::Write;
     let mut out = String::from(CLEAR);
-    out.push_str(&format!("{BRAND} OBLIVION | SESSIONE APERTA{RESET}\x1b[2;1H{ACTION} Ctrl+] chiude e torna al manager{RESET}"));
+    out.push_str(&format!("{BRAND} OBLIVION | SESSIONE APERTA{RESET}\x1b[2;1H{ACTION} Ctrl+] chiude | Ctrl+^ documenti{RESET}"));
     let (rows, cols) = screen.size();
     for row in 0..rows.get() {
         let _ = write!(out, "\x1b[{};1H", row + 4);
@@ -366,9 +366,13 @@ pub struct Input {
     pending: Vec<u8>,
     paste: bool,
     since: Option<Instant>,
+    documents: bool,
 }
 
 impl Input {
+    pub fn take_documents(&mut self) -> bool {
+        std::mem::take(&mut self.documents)
+    }
     // The reserved key is never recognized inside a bracketed paste. Prefixes
     // can be split across PTY reads; their bounded state belongs to this bridge.
     pub fn decode(&mut self, bytes: &[u8], now: Instant) -> (Vec<u8>, bool) {
@@ -385,6 +389,12 @@ impl Input {
             self.since = None;
         }
         for byte in bytes.iter().copied() {
+            if byte == 30 && !self.paste {
+                self.pending.clear();
+                self.since = None;
+                self.documents = true;
+                return (Vec::new(), false);
+            }
             if byte == 29 && !self.paste {
                 self.pending.clear();
                 self.since = None;
@@ -409,14 +419,22 @@ impl Input {
     }
 }
 
-pub fn bridge(terminal: &mut Terminal, stream: UnixStream) -> Result<Action> {
+pub fn bridge(
+    terminal: &mut Terminal,
+    stream: UnixStream,
+    documents: impl FnMut(&mut Terminal) -> Result<bool>,
+) -> Result<Action> {
     terminal.write("\x1b[?2004h")?;
-    let result = bridge_inner(terminal, stream);
+    let result = bridge_inner(terminal, stream, documents);
     terminal.write("\x1b[?2004l")?;
     result
 }
 
-fn bridge_inner(terminal: &mut Terminal, mut stream: UnixStream) -> Result<Action> {
+fn bridge_inner(
+    terminal: &mut Terminal,
+    mut stream: UnixStream,
+    mut documents: impl FnMut(&mut Terminal) -> Result<bool>,
+) -> Result<Action> {
     stream.set_nonblocking(true)?;
     let (rows, cols) = terminal.size();
     let mut parser = parser(rows - 3, cols);
@@ -429,6 +447,17 @@ fn bridge_inner(terminal: &mut Terminal, mut stream: UnixStream) -> Result<Actio
         if attention {
             terminal.flush_input();
             return Ok(Action::Sessions);
+        }
+        if keyboard.take_documents() {
+            terminal.flush_input();
+            terminal.write("\x1b[?2004l")?;
+            if !documents(terminal)? {
+                return Ok(Action::Close);
+            }
+            terminal.flush_input();
+            terminal.write("\x1b[?2004h")?;
+            terminal.write(&render_guest(parser.screen()))?;
+            continue;
         }
         if !input.is_empty() {
             stream.write_all(&input)?;

@@ -137,6 +137,44 @@ core dumps are disabled. Closing waits for the guest to power off; a timeout
 returns an error and leaves the volume interlocked, never reporting a false lock.
 Forced close is a separate explicit request. No memory snapshots are made.
 
+## Document import
+
+The optional `import` image configuration enables USB import in the trusted
+manager. `Ctrl+^` opens its document menu while keeping the same chat console
+and VM; `Ctrl+]` continues to close the session. Neither action is recognized
+inside bracketed paste. The chat's existing components are unchanged.
+
+The root controller lists unmounted USB leaf block devices, excluding the
+filesystem holding the general image. It creates a readonly device-mapper
+mapping for the selected source and starts `oblivion-import-vm` (UID/GID 1102)
+without a network interface or shared filesystem. Only that VM mounts and
+parses the external filesystem. Initial readers support ext4 without journal
+replay, FAT and exFAT. The lab-only binary also accepts a synthetic virtio disk
+with the fixed serial `oblivion-import`; production does not accept that fixture.
+
+The user supplies one relative file or directory path, reviews its manifest
+and explicitly approves import into the chat. A root-owned worker binds a
+fresh operation ID, a maximum of 256 MiB/1024 entries and a five-minute budget
+to private virtio ports and both QEMU process lifetimes. The manager receives
+metadata and a receipt, never document payloads. Each copy uses a new guest
+port, with no reusable receiver connection across operations.
+
+The recipient runs as UID 1001, GID 1000, separately from the chat. It receives
+into `/vault/.oblivion-inbox` (0700), verifies all bytes, then publishes one
+fresh directory under `/vault/imports/<id>/files`. The chat group can edit the
+published files but cannot access the inbox or replace top-level import IDs.
+Both directories are on the same session filesystem; a cross-device rename
+fails without a fallback. The same paths are RAM-backed in ephemeral sessions.
+
+`oblivion-transfer-host.service` owns the relay and cleanup. Cancel, close,
+lock and recovery stop it, reap the import VM, remove the temporary guest port
+and remove the readonly mapping before closing the session. Cleanup failure
+is an error, not a locked state. A lost final receipt can leave a complete copy
+already published; interrupted publication can leave a private reserved ID.
+There is no automatic retry, overwrite or claim of transactional rollback.
+Export, physical USB removal/I/O fault tests, orphan reconciliation, A→B and
+OnionShare remain separate roadmap work.
+
 ## Verification and remaining work
 
 See [storage laboratory](../../docs/oblivion/STORAGE-LAB.md) and

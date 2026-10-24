@@ -14,13 +14,15 @@ fn main() {
 fn execute() -> Result<(), Box<dyn std::error::Error>> {
     runtime::harden()?;
     let args: Vec<String> = std::env::args().skip(1).collect();
-    if args.len() != 3
-        || !matches!(args[0].as_str(), "send" | "receive")
+    let import = args.first().is_some_and(|role| role == "import");
+    if args.len() != if import { 4 } else { 3 }
+        || !matches!(args[0].as_str(), "send" | "receive" | "import")
         || !Path::new(&args[1]).is_absolute()
+        || (import && !Path::new(&args[2]).is_absolute())
     {
         return Err("invalid_arguments".into());
     }
-    let budget: u64 = args[2].parse()?;
+    let budget: u64 = args.last().ok_or("invalid_arguments")?.parse()?;
     if !(1..=3_600_000).contains(&budget) {
         return Err("invalid_deadline".into());
     }
@@ -32,6 +34,9 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     }
     if args[0] == "receive" {
         endpoint::accept(&mut channel, Path::new(&args[1]))?;
+    }
+    if import {
+        endpoint::import(&mut channel, Path::new(&args[1]), Path::new(&args[2]))?;
     }
     Ok(())
 }

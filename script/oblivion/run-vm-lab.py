@@ -65,6 +65,8 @@ parser.add_argument("--accelerator", choices=["hvf", "kvm", "tcg"], default="hvf
     help="Explicit laboratory backend: ARM Mac HVF, Linux KVM or Linux software emulation")
 parser.add_argument("--refresh-tui-test", action="store_true",
     help="Load the current synthetic TUI test into the lab initramfs, without rebuilding Debian")
+parser.add_argument("--refresh-import-test", action="store_true",
+    help="Load the current synthetic manager import test into the lab initramfs")
 parser.add_argument("--services-bundle", type=Path,
     help="Load compiled host binaries, service units and the crash fixture into laboratory RAM")
 parser.add_argument("--gateway-bundle", type=Path,
@@ -139,11 +141,11 @@ initrd = image / "initrd"
 fixture = None
 bundle_manifest = None
 bundle = args.services_bundle or args.gateway_bundle
-fixture_name = "vm-tor-state-test.py" if args.tor_state else "vm-session-network-test.py" if session_image else "vm-gateway-host-test.py" if gateway_image else "vm-gateway-test.py" if args.gateway_bundle else "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
-if sum(bool(option) for option in (args.refresh_tui_test, args.services_bundle, args.gateway_bundle)) > 1:
+fixture_name = "vm-import-test.py" if args.refresh_import_test else "vm-tor-state-test.py" if args.tor_state else "vm-session-network-test.py" if session_image else "vm-gateway-host-test.py" if gateway_image else "vm-gateway-test.py" if args.gateway_bundle else "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
+if sum(bool(option) for option in (args.refresh_tui_test, args.refresh_import_test, args.services_bundle, args.gateway_bundle)) > 1:
     raise SystemExit("Choose one laboratory fixture override.")
-if args.refresh_tui_test or bundle:
-    if not (image / "tui-lab").exists():
+if args.refresh_tui_test or args.refresh_import_test or bundle:
+    if not (image / ("import-lab" if args.refresh_import_test else "tui-lab")).exists():
         raise SystemExit("The fixture override requires a tui-host laboratory image.")
     fixture = Path(__file__).with_name(fixture_name).read_bytes()
     if bundle:
@@ -227,6 +229,8 @@ disk = None if args.gateway_bundle else output / "data.raw"
 if disk:
     with disk.open("xb") as stream:
         stream.truncate(1024 * 1024 * 1024)
+import_source = image / "import-source.raw" if (image / "import-lab").exists() else None
+import_digest = hashlib.sha256(import_source.read_bytes()).hexdigest() if import_source else None
 started = time.monotonic()
 with (output / "serial.log").open("xb") as log:
     command = [
@@ -242,6 +246,9 @@ with (output / "serial.log").open("xb") as log:
         "-drive", f"file={disk},format=raw,if=none,id=data,cache=none",
         "-device", "virtio-blk-pci,drive=data",
     ] if disk else []) + ([
+        "-drive", f"file={import_source},format=raw,if=none,id=import-source,cache=none",
+        "-device", "virtio-blk-pci,drive=import-source,serial=oblivion-import",
+    ] if import_source else []) + ([
         "-drive", f"file={gateway_image / 'gateway.squashfs'},format=raw,if=none,id=gateway-image,readonly=on",
         "-device", "virtio-blk-pci,drive=gateway-image,serial=oblivion-gw-image",
     ] if gateway_image else []) + ([
@@ -260,7 +267,7 @@ with (output / "serial.log").open("xb") as log:
         command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
         timeout=1200 if args.stream else 900)
 serial = (output / "serial.log").read_text(errors="replace")
-fixture_prefix = "OBLIVION_TOR_STATE_FIXTURE_SHA256 " if args.tor_state else "OBLIVION_SESSION_NETWORK_FIXTURE_SHA256 " if session_image else "OBLIVION_GATEWAY_HOST_FIXTURE_SHA256 " if gateway_image else "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
+fixture_prefix = "OBLIVION_IMPORT_FIXTURE_SHA256 " if args.refresh_import_test else "OBLIVION_TOR_STATE_FIXTURE_SHA256 " if args.tor_state else "OBLIVION_SESSION_NETWORK_FIXTURE_SHA256 " if session_image else "OBLIVION_GATEWAY_HOST_FIXTURE_SHA256 " if gateway_image else "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
 fixture_verified = fixture is None or (fixture_prefix + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
 bundle_prefix = "OBLIVION_GATEWAY_BUNDLE_SHA256 " if args.gateway_bundle else "OBLIVION_HOST_BUNDLE_SHA256 "
 bundle_verified = bundle_manifest is None or (bundle_prefix + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
@@ -271,6 +278,9 @@ markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVIO
            b"OBLIVION_API_KEY_CANARY_5c91", b"OBLIVION_API_NEXT_CANARY_86ab", b"OBLIVION_API_RAM_CANARY_a13e",
            b"OBLIVION_PROXY_USER_CANARY_31d2", b"OBLIVION_PROXY_PASSWORD_CANARY_72a4",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
+if import_source:
+    assert hashlib.sha256(import_source.read_bytes()).hexdigest() == import_digest, "Import source changed"
+    markers.extend([b"OBLIVION_USB_SELECTED_CANARY_82f1", b"OBLIVION_USB_EDIT_CANARY_1b72", b"OBLIVION_USB_UNSELECTED_CANARY_29a1"])
 if args.stream:
     markers.extend([b"OBLIVION_STREAM_REQUEST", b"Synthetic open stream"])
     markers.extend([b"OBLIVION_WEB_TOOLS_REQUEST", b"OBLIVION_WEB_TOOLS_VERIFIED", b"OBLIVION_WEB_HTTP", b"OBLIVION_WEB_HTTPS"])
@@ -312,6 +322,7 @@ if args.stream_socks:
 summary = {
     "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
     "workload": "selective Tor state persistence and bootstrap" if args.tor_state else "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
+    "import_source_sha256": import_digest,
     "outer_accelerator": args.accelerator, "host_system": platform.system(), "architecture": args.architecture,
     "inner_accelerator": None if args.gateway_bundle else "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,

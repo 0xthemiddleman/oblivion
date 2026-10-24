@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{self, Read, Seek, Write};
-use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
 
 const MAGIC: &[u8; 8] = b"OBLVCP01";
@@ -247,6 +247,68 @@ fn validate_id(id: &str) -> io::Result<()> {
                 .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
         "invalid_transfer_id",
     )
+}
+
+/// Explicit local release after receive has verified and synced the whole
+/// transaction. The service owns both roots; the chat shares its primary group
+/// but cannot traverse the private inbox or modify the publication root.
+pub fn publish(root: &Path, target: &Path, id: &str, manifest: &Manifest) -> io::Result<()> {
+    validate_id(id)?;
+    let root = Directory::open(root)?;
+    root.require_private()?;
+    let transaction = root.directory(id)?;
+    transaction.require_private()?;
+    let files = transaction.directory("files")?;
+    files.require_private()?;
+    let target = Directory::open(target)?;
+    target.require_controlled()?;
+    // Reserve the name while inaccessible to the chat. No existing publication
+    // is ever replaced, even if it is empty or only partially prepared.
+    let reserved = target.create_directory(id)?;
+    for entry in manifest.entries() {
+        let mut components = entry.path().split('/').peekable();
+        let mut parent = files.clone()?;
+        while let Some(name) = components.next() {
+            if components.peek().is_some() {
+                parent = parent.directory(name)?;
+                continue;
+            }
+            let file = parent.source(name)?;
+            let metadata = file.metadata()?;
+            require(
+                metadata.uid() == unsafe { libc::geteuid() }
+                    && metadata.gid() == unsafe { libc::getegid() },
+                "invalid_publication_owner",
+            )?;
+            require(
+                match entry {
+                    Entry::Directory { .. } => metadata.is_dir(),
+                    Entry::File { size, .. } => {
+                        metadata.is_file() && metadata.nlink() == 1 && metadata.len() == *size
+                    }
+                },
+                "invalid_publication_entry",
+            )?;
+            file.set_permissions(std::fs::Permissions::from_mode(if metadata.is_dir() {
+                0o770
+            } else {
+                0o660
+            }))?;
+            file.sync_all()?;
+        }
+    }
+    files.mode(0o770)?;
+    files.sync()?;
+    // Both roots must be in the same session filesystem. EXDEV fails; there is
+    // deliberately no plaintext staging or host-filesystem fallback.
+    transaction.move_into("files", &reserved, "files")?;
+    reserved.sync()?;
+    transaction.sync()?;
+    reserved.mode(0o770)?;
+    reserved.sync()?;
+    target.sync()?;
+    root.remove_directory(id)?;
+    root.sync()
 }
 
 fn receive_transaction(

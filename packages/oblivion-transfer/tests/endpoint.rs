@@ -29,11 +29,17 @@ struct Endpoint {
 
 impl Endpoint {
     fn start(role: &str, root: &Tree, budget: u64) -> Self {
+        Self::spawn(role, root, None, budget)
+    }
+
+    fn spawn(role: &str, root: &Tree, published: Option<&Tree>, budget: u64) -> Self {
         let (stream, peer) = UnixStream::pair().unwrap();
         let fd = peer.as_raw_fd();
         let mut command = Command::new(env!("CARGO_BIN_EXE_oblivion-copy"));
         command
-            .args([role, root.0.to_str().unwrap(), &budget.to_string()])
+            .args([role, root.0.to_str().unwrap()])
+            .args(published.map(|tree| &tree.0))
+            .arg(budget.to_string())
             .env_clear()
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -289,4 +295,54 @@ fn oversized_control_frames_and_unknown_fields_fail_without_path_disclosure() {
     sender.finish(false);
     assert!(bytes.is_empty());
     assert_eq!(fs::read_dir(&target.0).unwrap().count(), 0);
+}
+
+#[test]
+fn compiled_import_endpoint_publishes_only_complete_verified_files() {
+    let source = Tree::new();
+    fs::write(source.0.join(NAME), CONTENT).unwrap();
+    for corrupt in [false, true] {
+        let inbox = Tree::new();
+        let published = Tree::new();
+        let mut selection = Selection::prepare(&source.0, &[NAME.into()], LIMITS).unwrap();
+        let mut receiver = Endpoint::spawn("import", &inbox, Some(&published), 5000);
+        write_message(
+            &mut receiver.channel,
+            &ReceiveRequest {
+                approval: approval(selection.manifest()),
+                limits: LIMITS,
+            },
+        )
+        .unwrap();
+        selection.manifest().write(&mut receiver.channel).unwrap();
+        let mut ready = [0; 8];
+        receiver.channel.read_exact(&mut ready).unwrap();
+        assert_eq!(&ready, b"receive\n");
+        assert_eq!(fs::read_dir(&published.0).unwrap().count(), 0);
+        let mut data = Vec::new();
+        selection.send_data(&mut data).unwrap();
+        if corrupt {
+            data[0] ^= 1;
+        }
+        receiver.channel.write_all(&data).unwrap();
+        if corrupt {
+            let mut bytes = Vec::new();
+            // Linux resets a Unix socket closed with the unread END marker;
+            // both reset and EOF mean refusal, with no success receipt.
+            if let Err(error) = receiver.channel.read_to_end(&mut bytes) {
+                assert_eq!(error.kind(), std::io::ErrorKind::ConnectionReset);
+            }
+            assert!(bytes.is_empty());
+            assert_eq!(fs::read_dir(&published.0).unwrap().count(), 0);
+        } else {
+            let receipt: Receipt = read_message(&mut receiver.channel, 1024).unwrap();
+            assert_eq!(receipt.manifest_sha256, selection.manifest().sha256());
+            assert_eq!(
+                fs::read(published.0.join(ID).join("files").join(NAME)).unwrap(),
+                CONTENT
+            );
+            assert_eq!(fs::read_dir(&inbox.0).unwrap().count(), 0);
+        }
+        receiver.finish(!corrupt);
+    }
 }

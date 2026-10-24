@@ -1,4 +1,4 @@
-use oblivion_host::{egress, keys, network};
+use oblivion_host::{egress, keys, network, transfers};
 use oblivion_transport::policy::{Policy, Session, Tools};
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
@@ -32,6 +32,7 @@ struct Config {
     manager_uid: u32,
     vm: Option<crate::vm::Config>,
     gateway: Option<crate::vm::Config>,
+    import: Option<crate::vm::Config>,
     #[serde(default)]
     gateway_network: bool,
 }
@@ -58,6 +59,7 @@ struct Status {
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
+    transfers_configured: bool,
 }
 
 pub fn main() -> Result<()> {
@@ -69,6 +71,24 @@ pub fn main() -> Result<()> {
         return crate::ipc::serve(Path::new(&args[1]), config.manager_uid);
     }
     let op = args[2].as_str();
+    // The worker's stop hook runs while the controller may hold storage.lock
+    // waiting for systemd stop. It must not reacquire that lock and deadlock.
+    if args.len() == 3 && op == "transfer-cleanup" {
+        return crate::transfer_host::cleanup();
+    }
+    if args.len() == 3 && op == "transfer-host-run" {
+        require(
+            !recovery_required()? && mapping_open("oblivion-session")? && !crate::vm::stopped()?,
+            "session_not_open",
+        )?;
+        return crate::transfer_host::serve(
+            config
+                .import
+                .as_ref()
+                .ok_or(Error("transfers_not_configured"))?,
+            config.manager_uid,
+        );
+    }
     if args.len() == 3 && op == "gateway-host-run" {
         require(!recovery_required()?, "recovery_required")?;
         require(mount_mode()? != MountMode::Closed, "general_not_open")?;
@@ -229,6 +249,51 @@ pub fn main() -> Result<()> {
                 serde_json::from_slice(&bytes).map_err(|_| Error("invalid_network_command"))?;
             config.change_network_policy(command)
         }
+        "transfers" => {
+            let mut bytes = Vec::new();
+            std::io::stdin()
+                .take(4097)
+                .read_to_end(&mut bytes)
+                .map_err(|_| Error("transfer_request_failed"))?;
+            require(bytes.len() <= 4096, "transfer_request_too_large")?;
+            let command: transfers::Command =
+                serde_json::from_slice(&bytes).map_err(|_| Error("invalid_transfer_request"))?;
+            if !matches!(command, transfers::Command::Cancel) {
+                require(
+                    !recovery_required()?
+                        && mapping_open("oblivion-session")?
+                        && !crate::vm::stopped()?,
+                    "session_not_open",
+                )?;
+            }
+            match command {
+                transfers::Command::List => {
+                    let status = crate::transfer_host::status(
+                        config.import.is_some(),
+                        &config.general_image,
+                    )?;
+                    println!(
+                        "{}",
+                        serde_json::to_string(&status).map_err(|_| Error("encode_failed"))?
+                    );
+                    Ok(())
+                }
+                transfers::Command::Import { source } => {
+                    config
+                        .import
+                        .as_ref()
+                        .ok_or(Error("transfers_not_configured"))?
+                        .validate()?;
+                    let started = crate::transfer_host::start(&source, &config.general_image)?;
+                    println!(
+                        "{}",
+                        serde_json::to_string(&started).map_err(|_| Error("encode_failed"))?
+                    );
+                    Ok(())
+                }
+                transfers::Command::Cancel => crate::transfer_host::stop(),
+            }
+        }
         "open" => config.open(&args[3], &password(false)?),
         "enter" | "enter-ephemeral" => {
             let vm = config.vm.as_ref().ok_or(Error("vm_not_configured"))?;
@@ -272,6 +337,18 @@ pub fn main() -> Result<()> {
             result
         }
         "close" | "leave" | "force-leave" => {
+            if config.import.is_some() || crate::transfer_host::prepared()? {
+                match crate::transfer_host::stop() {
+                    Err(_) if op == "force-leave" => {
+                        // An unresponsive destination cannot acknowledge port
+                        // removal. Only the explicit forced-close action may
+                        // destroy it, then require cleanup again before LUKS.
+                        crate::vm::stop(true)?;
+                        crate::transfer_host::stop()?;
+                    }
+                    result => result?,
+                }
+            }
             if config.gateway.is_some() {
                 crate::gateway::revoke()?;
             }
@@ -281,6 +358,9 @@ pub fn main() -> Result<()> {
             close_session()
         }
         "lock" | "recover" => {
+            if config.import.is_some() || crate::transfer_host::prepared()? {
+                crate::transfer_host::stop()?;
+            }
             // Remove gateway memory and every delegated connection before the
             // session/general mappings can be reported locked.
             if config.gateway.is_some() {
@@ -341,6 +421,7 @@ pub fn main() -> Result<()> {
                     None
                 },
                 laboratory_emulation: cfg!(feature = "lab-emulation"),
+                transfers_configured: config.import.is_some(),
                 gateway_network: config.gateway_network,
                 recovery_required: recovery_required()?,
                 gateway_state: if config.gateway.is_some() {
@@ -1345,7 +1426,7 @@ fn runtime() -> Result<()> {
     Ok(())
 }
 
-fn trusted_file(path: &Path) -> Result<File> {
+pub(crate) fn trusted_file(path: &Path) -> Result<File> {
     let file = OpenOptions::new()
         .read(true)
         .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
@@ -1516,7 +1597,7 @@ fn validate_id(id: &str) -> Result<()> {
     )
 }
 
-fn random_id() -> Result<String> {
+pub(crate) fn random_id() -> Result<String> {
     let mut bytes = [0u8; 16];
     File::open("/dev/urandom")
         .and_then(|mut file| file.read_exact(&mut bytes))

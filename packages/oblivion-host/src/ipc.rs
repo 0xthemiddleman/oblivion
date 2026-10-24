@@ -36,6 +36,7 @@ enum Operation {
     ApiKeys,
     Egress,
     NetworkPolicy,
+    Transfers,
 }
 
 #[derive(Deserialize)]
@@ -131,7 +132,10 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         request.secret_len
             <= if matches!(
                 request.operation,
-                Operation::ApiKeys | Operation::Egress | Operation::NetworkPolicy
+                Operation::ApiKeys
+                    | Operation::Egress
+                    | Operation::NetworkPolicy
+                    | Operation::Transfers
             ) {
                 4096
             } else {
@@ -166,6 +170,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
             | Operation::ApiKeys
             | Operation::Egress
             | Operation::NetworkPolicy
+            | Operation::Transfers
     );
     require(
         needs_secret == (request.secret_len > 0),
@@ -205,6 +210,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         Operation::ApiKeys => "api-keys",
         Operation::Egress => "egress",
         Operation::NetworkPolicy => "network-policy",
+        Operation::Transfers => "transfers",
         Operation::Console => unreachable!(),
     };
     let mut command =

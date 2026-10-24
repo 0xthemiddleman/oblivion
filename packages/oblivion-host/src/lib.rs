@@ -4,3 +4,4 @@ pub mod egress;
 pub mod keys;
 pub mod network;
 pub mod terminal;
+pub mod transfers;

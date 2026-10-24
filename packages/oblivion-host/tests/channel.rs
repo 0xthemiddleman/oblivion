@@ -106,3 +106,31 @@ fn expired_exchange_does_not_consume_buffered_bytes_and_eof_stays_distinct() {
         ErrorKind::UnexpectedEof
     );
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn full_unix_listener_backlog_expires_before_a_protocol_exchange() {
+    use std::os::fd::AsRawFd;
+    use std::os::unix::net::UnixListener;
+    let path = std::env::temp_dir().join(format!("oblivion-connect-{}.sock", std::process::id()));
+    let listener = UnixListener::bind(&path).unwrap();
+    assert_eq!(unsafe { libc::listen(listener.as_raw_fd(), 0) }, 0);
+    let first = UnixStream::connect(&path).unwrap();
+    let error = oblivion_host::channel::connect(&path, Duration::from_millis(25)).unwrap_err();
+    assert!(matches!(
+        error.raw_os_error(),
+        Some(libc::EAGAIN) | Some(libc::EINPROGRESS)
+    ));
+    drop(listener.accept().unwrap());
+    drop(first);
+    let mut next = oblivion_host::channel::connect(&path, Duration::from_secs(5)).unwrap();
+    let (peer, _) = listener.accept().unwrap();
+    next.write_all(b"ready").unwrap();
+    let mut bytes = [0; 5];
+    Channel::new(&peer, Duration::from_secs(5))
+        .read_exact(&mut bytes)
+        .unwrap();
+    assert_eq!(&bytes, b"ready");
+    drop((next, peer, listener));
+    std::fs::remove_file(path).unwrap();
+}
