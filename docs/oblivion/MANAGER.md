@@ -79,6 +79,11 @@ Linux; i colori RGB del guest vengono convertiti alla palette.
 
 ## TUI di conversazione e richieste al manager
 
+La chat mantiene i componenti, la grafica e le interazioni upstream di OpenCode;
+sono ammessi rimozioni mirate, branding leggero e collegamenti al manager,
+senza redesign del prompt, dei messaggi o delle viste dei tool. Il manager
+host resta separato e ospita le schermate amministrative.
+
 Il profilo compilato limita palette, scorciatoie e slash command alle azioni di
 conversazione, modelli Abliteration, strumenti e navigazione dei messaggi. Le
 schede sono spente; plugin TUI esterni, editor esterno, clipboard condivisa,
@@ -194,8 +199,8 @@ Linux del laboratorio. Tutte le credenziali e i dati di prova sono sintetici.
 
 ## Lavoro ancora necessario
 
-- Completare identità e terminologia della TUI, comportamento conversazionale
-  degli agenti, percorso dei file e inventario dei comandi residui.
+- Completare branding leggero e terminologia mirata, percorso dei file e
+  inventario dei comandi residui, conservando grafica e componenti della chat upstream.
 - Completare input incollato e multilinea, ridimensionamento, ripristino del
   rendering dopo riconnessione e verifica visiva sulla console Linux fisica.
 - Integrare le unità di sistema nella live e completare guasti I/O/pubblicazione,

@@ -6,7 +6,11 @@
 
 Il manager fidato gira sulla live e controlla volumi, impostazioni, rete e lifecycle. La TUI di conversazione gira nella VM della sessione aperta, insieme al server OpenCode e ai tool. L'aspetto e i comandi devono essere coerenti, così l'utente percepisce un solo prodotto nel terminale. I processi e gli archivi rimangono separati.
 
-L'interfaccia Oblivion sostituisce quella di un coding agent generalista. Si conservano motore di conversazione, streaming, adapter Abliteration e strumenti upstream; si semplificano navigazione, menu, palette e impostazioni. Togliere comandi dalla UI e disabilitare le capacità non previste nel profilo runtime sono attività distinte: nascondere un comando non impedisce da solo un'operazione via API o shell.
+La chat conserva la grafica, i componenti di produzione e le interazioni consolidate della TUI di OpenCode. Si riducono navigazione, menu, palette e impostazioni togliendo ciò che non serve; il branding rimane leggero. Motore di conversazione, streaming, adapter Abliteration e strumenti upstream restano quelli esistenti. Togliere comandi dalla UI e disabilitare le capacità non previste nel profilo runtime sono attività distinte: nascondere un comando non impedisce da solo un'operazione via API o shell.
+
+**Vincolo confermato: nessun redesign della chat.** Si riusano prompt/input multilinea, messaggi e Markdown, streaming, scroll, viste dei tool e dialoghi di autorizzazione già presenti. Non si ricostruiscono componenti equivalenti e non si cambia il layout per ottenere un'identità visiva nuova. Sono ammessi nome/logo Oblivion, testi mirati, branding discreto tramite i token del tema, rimozioni e collegamenti al manager. Le correzioni necessarie a privacy e lifecycle non devono trasformarsi in una riscrittura del rendering. Il logo ASCII viola e la sua eventuale animazione appartengono all'avvio e al manager fidato; non impongono un nuovo stile alla chat.
+
+Il manager host rimane un'interfaccia separata per volumi, chiavi, rete e trasferimenti. Le nuove schermate amministrative si realizzano lì, mantenendo nel guest i componenti di chat upstream.
 
 Il frontend del manager usa un utente limitato. Le operazioni privilegiate appartengono al controller con API ristrette. Password del generale e delle sessioni si inseriscono nella UI fidata, prima di entrare nella TUI del guest. Il guest non legge password né chiavi API reali.
 
@@ -127,7 +131,7 @@ Non sono ancora dichiarati dimensione dell'immagine, consumo RAM o tempo di boot
 
 1. Prototipo del rendering console con logo, sblocco simulato e manager su dati sintetici; ogni simulazione deve essere indicata come tale e non chiedere password reali.
 2. Collegamento del manager al controller LUKS/VM e verifica delle transizioni reali, incluso errore di chiusura. La UI dei segreti resta esterna al guest.
-3. Profilo TUI Oblivion: palette ridotta, niente schede di chat indipendenti, comandi di sessione collegati al controller e funzioni runtime non previste disabilitate.
+3. Profilo TUI Oblivion: componenti e grafica chat upstream conservati, branding leggero, palette ridotta, niente schede di chat indipendenti, comandi di sessione collegati al controller e funzioni runtime non previste disabilitate.
 4. Immagine Debian riproducibile con i pacchetti distinti per ambiente; prove di boot e della TUI su hardware reale, oltre alle prove nella VM di sviluppo.
 
 Il motore di inferenza e gli strumenti non vengono riscritti per ottenere questo flusso. L'implementazione si concentra sul manager, sull'integrazione del controller, sulla superficie della TUI e sul profilo di distribuzione.

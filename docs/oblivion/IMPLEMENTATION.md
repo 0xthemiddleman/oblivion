@@ -11,6 +11,10 @@ Nuovi requisiti: [chiavi multiple e SOCKS5 globale](KEYS-AND-EGRESS.md), con
 Tor predefinito e nessun fallback. La loro implementazione viene prima del
 proxy dei tool: il codice attuale usa ancora una sola chiave e Tor online.
 
+Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
+OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;
+le nuove schermate amministrative rimangono nel manager host separato.
+
 | Area                     | Stato ed evidenza                                                                                                                                                             | Gate ancora aperto                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Audit iniziale v2        | Inventario, revisione e prove sintetiche in [fase 0](phase-0/AUDIT.md)                                                                                                        | TUI completa e Abliteration/Tor reali                                                 |
@@ -31,7 +35,7 @@ con la sua VM, far lavorare OpenCode su documenti e temporanei, chiudere tutto,
 aprire B senza i dati di A, riaprire A e riprendere la stessa conversazione senza
 i temporanei. Il provider rimane una fixture locale al guest. Mancano ancora
 integrazione dei servizi nell'immagine live, guasti I/O, power loss e shutdown,
-provider remoto reale e collaudo del prodotto su KVM. Il laboratorio separato ha ora una prova Tor reale, senza richieste ad Abliteration. Il laboratorio usa una console a dimensioni fisse; la TUI è ancora un primo adattamento, con parti della terminologia e del comportamento degli agenti upstream da rifinire.
+provider remoto reale e collaudo del prodotto su KVM. Il laboratorio separato ha ora una prova Tor reale, senza richieste ad Abliteration. Il laboratorio usa una console a dimensioni fisse; restano da rifinire testi, comandi residui e integrazione con il manager, preservando grafica e componenti della chat upstream.
 
 Il controller LUKS ora avvia il gateway dal profilo salvato, con UID host
 1101 separato dalla chat, e ne verifica la fine prima del blocco. Le
