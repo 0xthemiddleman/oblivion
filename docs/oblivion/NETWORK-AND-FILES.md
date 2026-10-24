@@ -79,18 +79,20 @@ Passano nove test dedicati sul Mac e in Debian ARM/x86, insieme ai 19 test host
 precedenti; passa anche Clippy sul Mac. La [CI del motore puro](network-policy-ci-evidence.json)
 supera tutti i 25 job. La funzione non esegue DNS né apre socket.
 
-Il successivo collegamento al [connettore](EGRESS-CONNECTOR.md) è scritto e
-attende collaudo: un ruolo `oblivion-tools`, abilitato soltanto da configurazione
+Il successivo collegamento al [connettore](EGRESS-CONNECTOR.md) supera i test
+di componente in Debian ARM64: un ruolo `oblivion-tools`, abilitato soltanto da configurazione
 privata esplicita, verifica sessione, destinazione e porta prima di contattare
 il trasporto. `ask` e `deny` chiudono la richiesta; soltanto `allow` inoltra.
 La configurazione privata è limitata a 128 KiB e la policy a 128 regole.
 Il supervisore corrente omette questa configurazione: il canale non è ancora
 disponibile al guest. Il modulo `oblivion-gateway::tools` implementa ora il
-proxy HTTP/CONNECT come componente, ancora da compilare e collaudare: Basic
+proxy HTTP/CONNECT come componente, compilato e verificato in Debian ARM64: Basic
 con token locale, verifica dell'authority e dell'header Host, rimozione degli
 header riservati al proxy, streaming senza file intermedi e revoca anche dei
-tunnel già passati a CONNECT. Otto nuovi test usano socket reali e un
-connettore sintetico. Il binario del servizio, il suo avvio nel supervisore,
+tunnel già passati a CONNECT. Otto nuovi test passano con socket reali e un
+connettore sintetico; le [evidenze](tools-proxy-component-evidence.json) riportano
+anche il precedente errore di import corretto e le verifiche VM ancora pendenti.
+Il binario del servizio, il suo avvio nel supervisore,
 il firewall e la compatibilità di Bun/webfetch non sono ancora collegati.
 Persistenza nel generale, IPC host, conferme, scadenze e revoca dei singoli
 permessi restano da implementare.

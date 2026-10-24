@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "562625f3a9559a24039a0c7d983e7d3d4ebcf34b",
+  "status": "component-tests-passed-vm-checks-pending",
+  "scope": "Policy-aware private connector plus HTTP/CONNECT tools proxy library. Actual TCP sockets and synthetic local peers in a Debian ARM64 Docker build with network=none; no production tools service or guest integration yet.",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40105476000",
+    "run_id": 40105476000,
+    "debian_build_job": 120906193275,
+    "debian_build_conclusion": "success",
+    "repository_job": 120906193450,
+    "repository_conclusion": "success",
+    "overall": "in_progress_at_recording"
+  },
+  "verification": {
+    "gateway_library_tests_passed": 28,
+    "gateway_library_tests_ignored": 2,
+    "tools_proxy_tests_passed": [
+      "tools::tests::a_denied_connect_never_upgrades_or_retries",
+      "tools::tests::authorities_are_canonical_and_host_agrees_with_the_requested_target",
+      "tools::tests::connect_preserves_buffered_bytes_and_revoke_joins_the_upgraded_tunnel",
+      "tools::tests::hop_headers_and_proxy_credentials_do_not_cross_either_direction",
+      "tools::tests::http_forwards_the_body_and_redirect_without_proxy_credentials_or_automatic_follow",
+      "tools::tests::invalid_authentication_and_targets_never_contact_the_connector",
+      "tools::tests::private_configuration_cannot_select_an_external_connector",
+      "tools::tests::revoke_closes_an_http_body_still_streaming_from_the_connector"
+    ],
+    "new_connector_tests_passed": 5,
+    "host_policy_tests_passed": 9,
+    "prior_host_tests_passed": 19,
+    "canonical_check_tasks": 34,
+    "official_typescript_tasks": 34,
+    "activation_tests_compiled": 8,
+    "activation_tests_executed_in_this_build": false
+  },
+  "source_sha256": {
+    "packages/oblivion-gateway/src/tools.rs": "ce09d782ec92df99cd1accf0ab4c252a5113a0c8d0304f62377998d650757b80",
+    "packages/oblivion-gateway/src/tools/tests.rs": "c35bbe4eff016399f098f626f273560798e38db309395c3450a9a041ea6ff20c",
+    "packages/oblivion-gateway/src/egress.rs": "5298511fb91b49756ee9f994bed9bbefa3bbba109514bc4952a3050d7021a30a",
+    "packages/oblivion-gateway/src/egress/tests.rs": "69b97dcbec003d2aeebca4755ed5c764066654901e22739d4c27e97fd3497ab3",
+    "packages/oblivion-gateway/src/egress_main.rs": "34b588f73369e772cdf7d27a934f09ed4ccf767f75ef9e587118550d60b55e2c",
+    "packages/oblivion-gateway/tests/activation.rs": "d213e112d33a5d5317009b2f8c53dbde7801b5f56b115520fa9b7fc7cde885e4",
+    "packages/oblivion-gateway/src/dns.rs": "4cf7ae59994badcdbb0dbc5509e83b20571fde8cc8d34c094604870309e697da",
+    "packages/oblivion-gateway/Cargo.lock": "33d9420af67f87572f141ab7dce2ae7b865c4de498110bc4e0a3dc70c48fa65d",
+    "packages/oblivion-transport/src/policy.rs": "8420f8ee027a8538994b3201758f45c175078f6336abfa7a2a71f233cb3755df"
+  },
+  "retained_evidence": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-562625f/linux-job.log",
+      "sha256": "9a27af5fa32715e3b85a7334631e38d6a7854d034254454898fb03d60e0ec4d5"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-562625f/repository-job.log",
+      "sha256": "b33251f70028c0e8f917bab5ba68760ea70f7a13d14bba16778363d03e376be4"
+    }
+  ],
+  "previous_attempt": {
+    "source_commit": "3d545afe948c38b3ad84adeb47458f17128e57ff",
+    "run_id": 40105234674,
+    "build_job": 120905445062,
+    "build_conclusion": "failure",
+    "error": "Rust E0432: hyper::uri is not exported; corrected to hyper::http::uri. No gateway tests ran in that attempt. The remaining run was superseded by the fixed commit.",
+    "log": "artifacts/oblivion-linux-ci/run-3d545af/linux-job.log"
+  },
+  "limits": [
+    "No complete tools path through the actual session VM, gateway supervisor and firewall has been tested.",
+    "The HTTP proxy is a library component; its service executable and supervisor activation are not yet implemented.",
+    "CONNECT is opaque: these tests do not demonstrate TLS validation by Bun or application-origin/content restrictions inside an allowed tunnel.",
+    "The tools HTTP tests use a synthetic connector; connector policy tests separately use a synthetic external SOCKS peer. An integrated tools chain remains required.",
+    "Tor-specific tools circuit isolation, external proxy DNS behavior and real-provider compatibility are not proven.",
+    "Saved policies, trusted user approvals, permission expiry and per-permission tunnel revocation remain to be implemented; ask currently fails closed.",
+    "The two ignored adapter cases and eight private-process activation tests are scheduled in a swap-free VM; not counted as passing until that job completes.",
+    "All tests use synthetic data. No local Mac gateway build was attempted because of insufficient disk space."
+  ]
+}

@@ -27,7 +27,8 @@ della destinazione precedono qualsiasi connessione al proxy. IP diretti, altre
 destinazioni, altre porte, BIND e UDP ASSOCIATE vengono rifiutati. Questo
 listener non è un SOCKS generale da esporre alla VM della chat.
 
-È ora scritto, ma ancora da collaudare, il canale `oblivion-tools`. La
+È ora verificato nei [test di componente Debian ARM64](tools-proxy-component-evidence.json)
+il canale `oblivion-tools`. La
 configurazione privata opzionale `tools` contiene l'identità della sessione e
 la policy versionata; in sua assenza il ruolo viene rifiutato già durante
 l'autenticazione. Le regole si applicano prima del contatto con il proxy:
@@ -40,17 +41,19 @@ Tor riceve username distinti per API e tool e il token per apertura; un
 SOCKS esterno riceve soltanto le proprie credenziali configurate. Questa
 distinzione non prova l'isolamento effettivo dei circuiti Tor. Il supervisore
 corrente non invia `tools` e il firewall non apre un nuovo ingresso. Il
-componente HTTP/CONNECT è ora scritto con otto test dedicati, ancora da
-eseguire; manca l'integrazione del suo servizio con il guest. Questa aggiunta
+componente HTTP/CONNECT supera otto test dedicati; manca l'integrazione del
+suo servizio con il guest. Questa aggiunta
 non completa il SOCKS globale.
 Le nuove prove di componente usano socket reali per autorizzazione, indirizzi,
-separazione delle credenziali e revoca; i risultati precedenti non le coprono.
+separazione delle credenziali e revoca. Passano tutti i 28 test di libreria;
+i risultati precedenti non coprono questa aggiunta.
 Oltre agli otto test HTTP/CONNECT, sono aggiunti cinque test del connettore
 e due di attivazione del processo: un
 profilo privato con 128 regole oltre il precedente limite di 4 KiB e il rifiuto
 di frame oltre 128 KiB. La CI ARM ora esegue anche il laboratorio gateway
 senza swap e le due prove dell'adapter compilato, oltre a costruire i binari.
-Questa estensione della CI attende il primo risultato.
+Le otto prove di attivazione sono compilate; l'esecuzione di questa estensione
+della CI nelle VM è ancora in corso.
 
 Il tipo condiviso `oblivion-transport::Transport` distingue:
 

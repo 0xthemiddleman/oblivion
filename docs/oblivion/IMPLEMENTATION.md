@@ -49,9 +49,11 @@ destinazioni, wildcard delimitate, porte e ambiti e applica precedenza
 questo nucleo dal proxy dei tool, dalle conferme e dalla persistenza ancora
 da collegare. La [CI successiva](network-policy-ci-evidence.json) copre il
 motore puro e ripete il ciclo SOCKS completo: tutti i 25 job passano.
-Il connettore ha ora un canale tool con policy esplicita, ancora da collaudare;
-il supervisore non lo abilita. È scritto anche il proxy HTTP/CONNECT come
-componente, con otto test ancora da eseguire; servizio, firewall, policy del
+Il connettore ha ora un canale tool con policy esplicita; il supervisore non
+lo abilita. Il proxy HTTP/CONNECT supera otto test come componente in Debian
+ARM64. Passano tutti i 28 test di libreria gateway e i controlli canonici del
+repository; le [evidenze](tools-proxy-component-evidence.json) distinguono questa
+verifica dalla CI nelle VM ancora in corso. Servizio, firewall, policy del
 manager e client Bun restano da integrare.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.

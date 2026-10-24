@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.40 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.41 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -62,9 +62,11 @@ IP, porte e ambiti, con nove test passati sul Mac e in Debian ARM/x86:
 divieti prioritari e destinazioni sconosciute senza autorizzazione implicita.
 La [CI successiva](docs/oblivion/network-policy-ci-evidence.json) supera tutti
 i 25 job, ripetendo anche i 18 controlli SOCKS. È ora scritto il collegamento
-delle regole al connettore dei tool, ancora da collaudare e non attivato dal
-supervisore: `ask` rimane bloccato. Il proxy HTTP/CONNECT è scritto come
-componente con otto test ancora da eseguire; servizio, firewall, client Bun,
+delle regole al connettore dei tool, non attivato dal supervisore: `ask` rimane
+bloccato. Il proxy HTTP/CONNECT supera otto test in Debian ARM64; passano tutti
+i 28 test di libreria del gateway e i controlli del repository, come documentato
+nelle [evidenze di componente](docs/oblivion/tools-proxy-component-evidence.json).
+La CI delle VM rimane in corso. Servizio, firewall, client Bun,
 integrazione nel manager, persistenza, conferme e scadenze rimangono da completare.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
