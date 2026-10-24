@@ -49,6 +49,30 @@ FROM opencode-guest AS tui-guest
 COPY script/oblivion/vm-tui-guest.py /usr/libexec/oblivion
 RUN chmod 0755 /usr/libexec/oblivion
 
+FROM opencode-guest AS conversation-guest
+COPY packages/oblivion-host/guest/conversation.sh /usr/libexec/oblivion
+RUN chmod 0755 /usr/libexec/oblivion
+
+# Same network setup and compiled OpenCode, with an unprivileged console probe
+# instead of the interactive entrypoint. No synthetic provider in this guest.
+FROM conversation-guest AS session-network-guest
+COPY script/oblivion/vm-session-network-guest.py /usr/libexec/oblivion
+RUN chmod 0755 /usr/libexec/oblivion
+
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS session-network-pack
+RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
+COPY packages/oblivion-host/guest/ /sources/guest/
+COPY script/oblivion/vm-session-network-guest.py /sources/lab/
+RUN --mount=type=bind,from=session-network-guest,source=/,target=/guest,ro \
+    mkdir /out && cp /guest/boot/vmlinuz-* /out/kernel && cp /guest/boot/initrd.img-* /out/initrd \
+    && mksquashfs /guest /out/session.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
+    && cd /sources && find . -type f -print0 | sort -z | xargs -0 sha256sum > /out/sources.sha256 \
+    && sha256sum /guest/usr/bin/oblivion > /out/opencode.sha256 \
+    && cd /out && sha256sum * > SHA256SUMS
+
+FROM scratch AS session-network-artifacts
+COPY --from=session-network-pack /out/ /
+
 FROM ${GUEST} AS selected-guest
 
 FROM os AS host

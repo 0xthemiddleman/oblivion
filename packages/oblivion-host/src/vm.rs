@@ -2,7 +2,7 @@ use crate::storage::{Error, Result, require};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fs::{self, OpenOptions};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
 use std::os::unix::net::UnixStream;
@@ -116,11 +116,40 @@ impl Config {
         Ok(())
     }
 
-    pub fn start(&self) -> Result<()> {
-        self.start_role(Role::Session)
+    pub fn start(&self, token: Option<&str>) -> Result<()> {
+        self.launch(Role::Session, token.is_some())?;
+        if let Some(token) = token {
+            let mut channel = UnixStream::connect("/run/oblivion-session/token.sock")
+                .map_err(|_| Error("session_channel_unavailable"))?;
+            crate::gateway::peer(&channel, VM_UID)?;
+            channel
+                .set_read_timeout(Some(Duration::from_secs(60)))
+                .and_then(|()| channel.set_write_timeout(Some(Duration::from_secs(5))))
+                .map_err(|_| Error("session_channel_failed"))?;
+            qmp(Role::Session, "cont")?;
+            let mut ready = [0u8; 6];
+            // Virtio serial can discard bytes before the guest opens its port.
+            // Wait for that opening before sending the one-session token.
+            channel
+                .read_exact(&mut ready)
+                .map_err(|_| Error("session_channel_failed"))?;
+            require(&ready == b"token\n", "invalid_session_ready")?;
+            channel
+                .write_all(token.as_bytes())
+                .map_err(|_| Error("session_channel_failed"))?;
+            channel
+                .read_exact(&mut ready)
+                .map_err(|_| Error("session_channel_failed"))?;
+            require(&ready == b"ready\n", "invalid_session_ready")?;
+        }
+        Ok(())
     }
 
     pub fn start_role(&self, role: Role) -> Result<()> {
+        self.launch(role, false)
+    }
+
+    fn launch(&self, role: Role, network: bool) -> Result<()> {
         require(stopped_role(role)?, "vm_already_running")?;
         if matches!(role, Role::Session) {
             let device = fs::metadata(DEVICE).map_err(|_| Error("session_device_missing"))?;
@@ -221,6 +250,9 @@ impl Config {
             // VM, so Before=owner/controller would deadlock their stop jobs.
             args.push("--property=BindsTo=oblivion-gateway-host.service".to_owned());
         }
+        if network {
+            args.push("--property=BindReadOnlyPaths=/run/oblivion-gateway-vm/inside.sock:/run/oblivion-session/network.sock".to_owned());
+        }
         if matches!(self.accelerator, Accelerator::Kvm) {
             args.extend([
                 "--property=BindPaths=/dev/kvm".to_owned(),
@@ -257,7 +289,7 @@ impl Config {
             "-qmp".to_owned(), format!("unix:{}/qmp.sock,server=on,wait=off", role.runtime()),
             "-serial".to_owned(), if matches!(role, Role::Session) { format!("unix:{}/console.sock,server=on,wait=off", role.runtime()) } else { "null".to_owned() },
             "-kernel".to_owned(), "/kernel".to_owned(), "-initrd".to_owned(), "/initrd".to_owned(),
-            "-append".to_owned(), format!("root=/dev/vda ro rootfstype=squashfs console={console} quiet loglevel=0 systemd.show_status=false panic=-1"),
+            "-append".to_owned(), format!("root=/dev/vda ro rootfstype=squashfs console={console} quiet loglevel=0 systemd.show_status=false panic=-1{}", if network { " oblivion.network=1" } else { "" }),
             "-drive".to_owned(), "file=/root.squashfs,format=raw,if=none,id=root,readonly=on".to_owned(),
             "-device".to_owned(), "virtio-blk-pci,drive=root,serial=oblivion-root".to_owned(),
         ]);
@@ -294,6 +326,15 @@ impl Config {
                 "user,id=outside,ipv6=off".to_owned(),
                 "-device".to_owned(),
                 "virtio-net-pci,netdev=outside,mac=52:54:00:6f:00:02,romfile=".to_owned(),
+            ]);
+        }
+        if network {
+            args.extend([
+                "-S".to_owned(), "-device".to_owned(), "virtio-serial-pci".to_owned(),
+                "-chardev".to_owned(), "socket,id=token,path=/run/oblivion-session/token.sock,server=on,wait=off".to_owned(),
+                "-device".to_owned(), "virtserialport,chardev=token,name=oblivion.session".to_owned(),
+                "-netdev".to_owned(), "stream,id=inside,server=off,addr.type=unix,addr.path=/run/oblivion-session/network.sock,reconnect-ms=0".to_owned(),
+                "-device".to_owned(), "virtio-net-pci,netdev=inside,mac=52:54:00:6f:00:03,romfile=".to_owned(),
             ]);
         }
         execute("/usr/bin/systemd-run", &args)?;

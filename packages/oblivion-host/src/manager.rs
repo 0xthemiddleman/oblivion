@@ -330,6 +330,8 @@ fn run(preview: bool) -> Result<()> {
                 "gateway_start_failed" => {
                     "Gateway non disponibile. Il generale resta aperto: puoi bloccarlo e riprovare."
                 }
+                "gateway_unavailable" => "Gateway non attivo. Blocca il generale e sbloccalo prima di aprire una sessione.",
+                "session_channel_failed" | "invalid_session_ready" => "La sessione non ha completato l'avvio protetto. Chiudila prima di riprovare.",
                 "insufficient_space" => {
                     "Spazio insufficiente. Controlla le creazioni interrotte prima di riprovare."
                 }

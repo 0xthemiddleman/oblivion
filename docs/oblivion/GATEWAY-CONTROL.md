@@ -3,8 +3,9 @@
 Il binario Linux `oblivion-gateway-control` avvia e revoca il broker API nella
 VM gateway. Sostituisce il launcher Python del precedente laboratorio. Il
 [servizio host](HOST-GATEWAY.md) ora lo collega al generale LUKS e gestisce la
-VM gateway. Token della sessione, rete della chat e adapter OpenCode rimangono
-il prossimo collegamento.
+VM gateway. Il [collegamento della sessione](SESSION-NETWORK.md) ora assegna
+un token locale e collega la chat al broker; Tor resta disabilitato in questa
+integrazione.
 
 ## Confini
 

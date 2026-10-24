@@ -6,17 +6,18 @@ ARM senza swap, avviato dal Mac con HVF. Il [laboratorio di rete](NETWORK-LAB.md
 ora esegue il broker nella VM gateway e verifica firewall e Tor reale. Il
 [supervisore Rust](GATEWAY-CONTROL.md) lo avvia e revoca tramite il controllo
 virtio privato dell’host, senza usare il launcher Python della fixture. La VM
-avviata dal controller mantiene `-nic none`; proxy dei tool, stato Tor e
-integrazione nel ciclo delle sessioni restano da realizzare.
+avviata dal controller ora usa la [rete privata della sessione](SESSION-NETWORK.md),
+con token nuovo a ogni apertura e revoca prima della chiusura. Proxy dei tool,
+stato Tor e attivazione del provider rimangono da realizzare.
 
 Il binario `oblivion-api` gestisce una sola autorizzazione, senza poterla
-riassegnare a un'altra sessione. Il controller gli consegnerà la chiave reale;
-OpenCode riceverà soltanto un token locale revocabile. Il broker non monta il
+riassegnare a un'altra sessione. Il supervisore gli consegna la chiave reale;
+OpenCode riceve soltanto un token locale revocabile. Il broker non monta il
 profilo generale o i vault e non aggiunge dipendenze HTTP/TLS al controller LUKS.
 Il [salvataggio della credenziale](CREDENTIALS.md) nel generale cifrato è ora
 implementato nella TUI fidata. Il [servizio host](HOST-GATEWAY.md) ora consegna
-la chiave al supervisore e gestisce la VM gateway insieme al generale. Restano
-da collegare l’autorizzazione del broker e il token della singola sessione.
+la chiave al supervisore e gestisce la VM gateway insieme al generale. Il
+controller ora autorizza il broker e consegna il token alla singola sessione.
 
 ## Superficie ammessa
 
@@ -44,10 +45,12 @@ Fonti verificate il 24 ottobre 2026: [ricerca](https://docs.abliteration.ai/capa
 
 L'adapter upstream rimane quello OpenAI-compatible già usato da Abliteration.
 Lo schema del broker deriva da `packages/ai/src/protocols/openai-chat.ts`.
-Le prove del componente costruiscono richieste di quel formato; **non eseguono
-ancora OpenCode attraverso il broker**. Reasoning strutturato, cache control e
+Le prove iniziali del componente costruiscono richieste di quel formato. La
+[suite della sessione](SESSION-NETWORK.md) ora avvia anche il vero OpenCode
+attraverso il broker, verificando autenticazione e ammissione del payload con
+Tor disabilitato; non verifica ancora una risposta del provider. Reasoning strutturato, cache control e
 altre estensioni non incluse vengono rifiutati: la compatibilità completa, inclusi
-titoli e compaction, deve essere verificata collegando il vero adapter.
+titoli e compaction, rimane da verificare con risposte complete e streaming.
 
 ## Attivazione e chiusura
 
@@ -59,12 +62,13 @@ Il processo non accetta argomenti. Riceve due descrittori già aperti:
   apre autonomamente una porta di ascolto.
 
 La riga iniziale è limitata a 8 KiB e cinque secondi. Il token deve essere una
-stringa esadecimale di 64 caratteri; il controller dovrà generarlo con 32 byte
+stringa esadecimale di 64 caratteri; il controller lo genera con 32 byte
 casuali da CSPRNG a ogni apertura, senza riuso. Il broker restituisce
 `{"ready":true}` sul canale privato. EOF, errore o qualunque byte successivo su
 quel canale revocano l'autorizzazione. Anche SIGTERM/SIGINT chiudono il servizio.
-Il controller dovrà attendere l'uscita del processo prima di completare la
-chiusura della sessione; questa dipendenza non è ancora integrata.
+Il supervisore attende l'uscita del processo prima di confermare la revoca al
+controller; la chiusura del volume dipende ora da questa conferma o dalla
+distruzione verificata della VM gateway.
 La revoca non può richiamare byte già consegnati alla rete o dati già ricevuti
 dal provider.
 
@@ -80,8 +84,8 @@ non installa logger, non emette access log e usa messaggi di errore fissi.
 I buffer di ingresso delle credenziali sono azzerati al rilascio; non viene
 promesso l'azzeramento di tutte le copie interne delle librerie HTTP/TLS o della
 RAM. L'assenza di swap e dump e il confinamento del processo restano necessari.
-Sono ancora da aggiungere il servizio confinato nel gateway e il tracing completo
-delle scritture delle dipendenze.
+Il servizio confinato è implementato nel [supervisore](GATEWAY-CONTROL.md);
+il tracing completo delle scritture delle dipendenze rimane aperto.
 
 I limiti attuali sono 64 connessioni HTTP, quattro richieste attive, 16 MiB per
 richiesta, 64 MiB per risposta, 4.096 messaggi e 256 tool/call per array. Gli
@@ -133,11 +137,10 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
 
 ## Prossimi gate
 
-1. Portare il collegamento e il firewall verificati nel [laboratorio](NETWORK-LAB.md)
-   nel controller reale, completare il servizio confinato del broker e la
-   persistenza dello stato Tor; verificare indirizzi interni e rebinding via Tor.
-2. Attivazione/revoca collegata al controller reale e al blocco generale;
-   integrazione del token e del base URL nell'istanza OpenCode.
+1. Persistenza dello stato Tor e abilitazione della rete nel ciclo reale;
+   verificare indirizzi interni e rebinding via Tor.
+2. Estendere la revoca nel controller reale a stream attivi, crash spontaneo
+   della VM, shutdown globale e guasti I/O.
 3. Proxy dei tool con allow/deny/ask, quote e revoca dei tunnel; nessun traffico
    o DNS prima dell'autorizzazione.
 4. Adapter reale, catture PCAP/tracing e guasti end-to-end, inclusi risposta

@@ -25,7 +25,19 @@ parser.add_argument("--gateway-bundle", type=Path,
     help="Run gateway component tests in a swap-free Debian VM with loopback only")
 parser.add_argument("--gateway-image", type=Path,
     help="With --services-bundle, exercise the real host owner and a nested gateway VM")
+parser.add_argument("--session-image", type=Path,
+    help="With --gateway-image, exercise a networked session and grant rotation")
 args = parser.parse_args()
+if args.session_image and not args.gateway_image:
+    parser.error("--session-image requires --gateway-image")
+session_image = args.session_image.resolve() if args.session_image else None
+session_manifest = None
+if session_image:
+    session_manifest = (session_image / "SHA256SUMS").read_text()
+    for line in session_manifest.splitlines():
+        digest, name = line.split()
+        if Path(name).name != name or hashlib.sha256((session_image / name).read_bytes()).hexdigest() != digest:
+            raise SystemExit("Session image integrity check failed")
 if args.gateway_image and not args.services_bundle:
     parser.error("--gateway-image requires --services-bundle")
 gateway_image = args.gateway_image.resolve() if args.gateway_image else None
@@ -47,7 +59,7 @@ initrd = image / "initrd"
 fixture = None
 bundle_manifest = None
 bundle = args.services_bundle or args.gateway_bundle
-fixture_name = "vm-gateway-host-test.py" if gateway_image else "vm-gateway-test.py" if args.gateway_bundle else "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
+fixture_name = "vm-session-network-test.py" if session_image else "vm-gateway-host-test.py" if gateway_image else "vm-gateway-test.py" if args.gateway_bundle else "vm-services-test.py" if args.services_bundle else "vm-tui-test.py"
 if sum(bool(option) for option in (args.refresh_tui_test, args.services_bundle, args.gateway_bundle)) > 1:
     raise SystemExit("Choose one laboratory fixture override.")
 if args.refresh_tui_test or bundle:
@@ -93,16 +105,18 @@ if args.refresh_tui_test or bundle:
                 bundle_hook += ('for binary in oblivion-storage oblivion-storage-lab oblivion-control oblivion-manager; do\n'
                     ' mount --bind "/run/oblivion-lab-bundle/$binary" "${rootmnt:-/root}/usr/bin/$binary"\n'
                     'done\n')
-        if gateway_image:
-            (root / "scripts/gateway-image").mkdir()
+        for role, source in [("gateway", gateway_image), ("session", session_image)]:
+            if not source:
+                continue
+            (root / ("scripts/" + role + "-image")).mkdir()
             for name in ["kernel", "initrd"]:
-                shutil.copy2(gateway_image / name, root / "scripts/gateway-image" / name)
-            metadata = {name: {"sha256": hashlib.sha256((gateway_image / name).read_bytes()).hexdigest(),
-                "bytes": (gateway_image / name).stat().st_size} for name in ["kernel", "initrd", "gateway.squashfs"]}
-            (root / "scripts/gateway-image/manifest.json").write_text(json.dumps(metadata))
-            bundle_hook += ('mkdir /run/oblivion-gateway-image\n'
-                'mount -t tmpfs -o mode=0755,nodev,nosuid,size=256m tmpfs /run/oblivion-gateway-image\n'
-                'cp -a /scripts/gateway-image/. /run/oblivion-gateway-image/\n')
+                shutil.copy2(source / name, root / ("scripts/" + role + "-image") / name)
+            metadata = {name: {"sha256": hashlib.sha256((source / name).read_bytes()).hexdigest(),
+                "bytes": (source / name).stat().st_size} for name in ["kernel", "initrd", role + ".squashfs"]}
+            (root / ("scripts/" + role + "-image/manifest.json")).write_text(json.dumps(metadata))
+            bundle_hook += (f'mkdir /run/oblivion-{role}-image\n'
+                f'mount -t tmpfs -o mode=0755,nodev,nosuid,size=512m tmpfs /run/oblivion-{role}-image\n'
+                f'cp -a /scripts/{role}-image/. /run/oblivion-{role}-image/\n')
         hook = root / "scripts/init-bottom/zz-oblivion-lab-fixture"
         hook.write_text('#!/bin/sh\nset -eu\ncase "${1:-}" in prereqs) exit 0;; esac\n'
             'mount --bind /scripts/oblivion-lab-test.py "${rootmnt:-/root}/usr/libexec/oblivion-vm-test"\n' + bundle_hook)
@@ -134,9 +148,12 @@ with (output / "serial.log").open("xb") as log:
     ] if disk else []) + ([
         "-drive", f"file={gateway_image / 'gateway.squashfs'},format=raw,if=none,id=gateway-image,readonly=on",
         "-device", "virtio-blk-pci,drive=gateway-image,serial=oblivion-gw-image",
-    ] if gateway_image else []), stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+    ] if gateway_image else []) + ([
+        "-drive", f"file={session_image / 'session.squashfs'},format=raw,if=none,id=session-image,readonly=on",
+        "-device", "virtio-blk-pci,drive=session-image,serial=oblivion-ss-image",
+    ] if session_image else []), stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
 serial = (output / "serial.log").read_text(errors="replace")
-fixture_prefix = "OBLIVION_GATEWAY_HOST_FIXTURE_SHA256 " if gateway_image else "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
+fixture_prefix = "OBLIVION_SESSION_NETWORK_FIXTURE_SHA256 " if session_image else "OBLIVION_GATEWAY_HOST_FIXTURE_SHA256 " if gateway_image else "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
 fixture_verified = fixture is None or (fixture_prefix + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()
 bundle_prefix = "OBLIVION_GATEWAY_BUNDLE_SHA256 " if args.gateway_bundle else "OBLIVION_HOST_BUNDLE_SHA256 "
 bundle_verified = bundle_manifest is None or (bundle_prefix + hashlib.sha256(bundle_manifest.encode()).hexdigest()) in serial.splitlines()
@@ -164,7 +181,7 @@ if disk:
             overlap = chunk[-128:]
 summary = {
     "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
-    "workload": "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
+    "workload": "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
     "outer_accelerator": "hvf", "inner_accelerator": None if args.gateway_bundle else "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
     "checks": [line.strip() for line in serial.splitlines() if line.startswith("PASS:")],
@@ -178,6 +195,7 @@ summary = {
     "runtime_gateway_bundle": {"manifest": bundle_manifest, "sources": (bundle / "sources.sha256").read_text(), "verified_in_guest": bundle_verified} if args.gateway_bundle else None,
     "fixture_verified": fixture_verified,
     "gateway_image_manifest": gateway_manifest,
+    "session_image_manifest": session_manifest,
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 print(json.dumps(summary, indent=2))

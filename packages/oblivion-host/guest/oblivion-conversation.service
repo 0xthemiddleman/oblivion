@@ -1,7 +1,7 @@
 [Unit]
 Description=Oblivion session conversation
-Requires=oblivion-vault.service
-After=oblivion-vault.service
+Requires=oblivion-vault.service oblivion-session-network.service
+After=oblivion-vault.service oblivion-session-network.service
 
 [Service]
 Type=simple

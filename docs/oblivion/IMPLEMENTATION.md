@@ -15,8 +15,8 @@ rilascio, non un blocco allo sviluppo sul Mac.
 | VM della sessione        | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md); recupero dopo crash manager/controller e VM non responsiva    | KVM/hardware x86, OOM, shutdown completo e power loss                                 |
 | Console e manager        | [Prototipo Rust](MANAGER.md): password nascoste, IPC, console filtrata, TUI interattiva e stato di recupero persistente fra riavvii dei servizi                      | Paste esteso/resize, guasti I/O e console fisica                                      |
 | Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest | Altri download/plugin, credenziale esterna e rifinitura della TUI                     |
-| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata                                               | Rete/token della sessione, adapter, stato Tor, proxy e provider reale                         |
-| Credenziale API          | [Gestione nella TUI fidata](CREDENTIALS.md), file root 0600 nel generale, aggiornamento atomico e blocchi readonly/recupero/sessione aperta                          | Attivazione del broker per la sessione e provider reale                                     |
+| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata                                               | Stato Tor, streaming/provider reale, proxy e crash VM                         |
+| Credenziale API          | [Gestione nella TUI fidata](CREDENTIALS.md), file root 0600 nel generale, aggiornamento atomico e blocchi readonly/recupero/sessione aperta                          | Provider reale e configurazione Wi-Fi                                     |
 | Documenti                | Flussi concordati                                                                                                                                                    | USB, copie A→B, OnionShare, quote e annullamento                                      |
 | Effimero                 | Solo sblocco RO del profilo implementato                                                                                                                             | Guest RAM completo e zero scritture end-to-end                                        |
 | Live USB                 | Debian minimale scelta                                                                                                                                               | Immagine x86, provisioning, boot fisico, firmware e periferiche                       |
@@ -32,6 +32,7 @@ rete integrata nelle sessioni e collaudo del prodotto su KVM. Il laboratorio sep
 Il controller LUKS ora avvia il gateway dal profilo salvato, con UID host
 1101 separato dalla chat, e ne verifica la fine prima del blocco. Le
 [evidenze della gestione host](host-gateway-evidence.json) coprono credenziali,
-crash e riuso readonly del profilo. La rete della chat e il token del broker
-restano da collegare; Tor continua a partire disabilitato. Lint e i 34 task di
+crash e riuso readonly del profilo. La [rete della sessione](SESSION-NETWORK.md)
+collega NIC, token locale e revoca al ciclo del volume; Tor continua a partire
+disabilitato e il collaudo del provider reale resta aperto. Lint e i 34 task di
 typecheck passano nell’ambiente Debian/Bun fissato dal repository.

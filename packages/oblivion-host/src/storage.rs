@@ -166,20 +166,30 @@ pub fn main() -> Result<()> {
             let vm = config.vm.as_ref().ok_or(Error("vm_not_configured"))?;
             vm.validate()?;
             require(crate::vm::stopped()?, "vm_already_running")?;
+            if config.gateway.is_some() {
+                require(crate::gateway::state()? == "active", "gateway_unavailable")?;
+            }
             config.open(&args[3], &password(false)?)?;
             // Failed startup keeps the vault interlocked until explicit leave/lock.
-            vm.start()
-        }
-        "close" => close_session(),
-        "leave" => {
-            if config.vm.is_some() {
-                crate::vm::stop(false)?;
+            let result = (|| {
+                let token = if config.gateway.is_some() {
+                    Some(crate::gateway::grant()?)
+                } else {
+                    None
+                };
+                vm.start(token.as_deref().map(String::as_str))
+            })();
+            if result.is_err() && config.gateway.is_some() {
+                crate::gateway::revoke()?;
             }
-            close_session()
+            result
         }
-        "force-leave" => {
-            if config.vm.is_some() {
-                crate::vm::stop(true)?;
+        "close" | "leave" | "force-leave" => {
+            if config.gateway.is_some() {
+                crate::gateway::revoke()?;
+            }
+            if config.vm.is_some() && op != "close" {
+                crate::vm::stop(op == "force-leave")?;
             }
             close_session()
         }

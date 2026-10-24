@@ -3,9 +3,9 @@
 24 ottobre 2026. Il gateway ha una prima immagine Debian ARM e una prova con
 **due VM indipendenti su Mac/HVF**. Il broker API di produzione gira nella VM
 gateway; il client di prova nella VM chat usa soltanto un token locale.
-La VM avviata dal controller delle sessioni mantiene ancora `-nic none`:
-il [laboratorio host](HOST-GATEWAY.md) ora collega il gateway al generale LUKS,
-ma rete della chat e adapter OpenCode rimangono da integrare.
+Il [laboratorio host](HOST-GATEWAY.md) collega il gateway al generale LUKS;
+la [suite della sessione](SESSION-NETWORK.md) collega anche NIC, token e launcher
+OpenCode. In quest’ultima integrazione Tor parte ancora disabilitato.
 Il [supervisore Rust](GATEWAY-CONTROL.md) riceve la chiave su una porta virtio
 privata e gestisce il broker. La fixture Python non riceve più la chiave e non
 avvia il processo API. L’immagine finale viene provata senza modifiche ai
@@ -118,8 +118,8 @@ termina il processo Tor con SIGKILL e verifica l'errore API senza fallback.
 
 Restano da completare:
 
-1. Collegare la rete della chat, assegnare il token locale alla sessione e
-   verificare revoca e attesa nel passaggio A→B reale.
+1. Estendere il ciclo A→B con provider attivo, stream in corso e crash spontaneo
+   della VM, oltre alle prove già presenti di token e revoca.
 2. Persistenza selettiva dello stato Tor e comportamento dell'avvio effimero.
 3. Proxy dei tool con consenti/blocca/chiedi e revoca dei tunnel.
 4. Adapter OpenCode, streaming e tool calling attraverso questo broker;

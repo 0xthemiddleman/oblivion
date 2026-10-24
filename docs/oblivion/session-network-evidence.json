@@ -1,0 +1,194 @@
+{
+  "date": "2026-10-24",
+  "scope": "Real LUKS session lifecycle, private Ethernet, fresh token delivery, broker grant/revoke and compiled OpenCode adapter admission on Mac ARM64. Synthetic credentials, Tor disabled and no provider response.",
+  "sources": {
+    "packages/oblivion-host/src/gateway.rs": "1419c689e081817b563761a6d979b73da25a428b463410bb17d294d1672eef83",
+    "packages/oblivion-host/src/vm.rs": "485fa4b2e83a4cf34297fbc9a18b89d6d8d21a4e0dd918b005eb32d883328732",
+    "packages/oblivion-host/src/storage.rs": "8242505e34d7a2a995de26c4f4f842f0318b7697488efac101d03b4117044401",
+    "packages/oblivion-host/src/manager.rs": "40b71457a749e3f12c7ff8e3b430b8406f06e669d8080d3cacf3ebc480719d15",
+    "packages/oblivion-host/guest/conversation.sh": "d4f68d67f3f95eff9a42a14c1ac01cbf1d3f7682895f9fba215b36c5ab093b56",
+    "packages/oblivion-host/guest/network.sh": "d744debcb6c6d2397652c5da325c3891d9519ee342fcb519acf08d374e19c7b7",
+    "packages/oblivion-host/guest/install.sh": "e464f4d764ac5b70bb7db73179a5ac2c52361788b57876cf03be86feab9bc5aa",
+    "packages/oblivion-host/guest/oblivion-session-network.service": "8f703fc1b02f035ba7782353837e3936217ef9fc3fa7bfcab757a21883039e6f",
+    "packages/oblivion-host/guest/oblivion-conversation.service": "c1a8aef253c6e490277587ee53e514cff3358318f70e6cad0144ebe392c6d6e2",
+    "script/oblivion/Dockerfile.vm-lab": "ab7c7c989e312484d8cd701d04852c6242746d5136b39f1499d36bdd178f31f3",
+    "script/oblivion/run-vm-lab.py": "95e5c251cd0602fca0f07fb04c62400a1292426559bc0a7f3d574ce21b504313",
+    "script/oblivion/vm-session-network-test.py": "54ccf8abc602007cd23833a94c6aec9c5b9d9be3cfdd1e93e36b5842ce74e0dc",
+    "script/oblivion/vm-session-network-guest.py": "5ef92fbb6b0db37c55161db9b6cec309bc05553c9e21239683dec12ccbea2257",
+    "script/oblivion/vm-gateway-host-test.py": "b1a74d4d271c9639838a0eeaef5a6ab0385afa9b87ecec88264a70aba127bf2e",
+    "script/oblivion/vm-services-test.py": "f07bdb7238234a48964fc3a3391f82811ac8a4f7fa6ee91febd96211e5c0d965"
+  },
+  "environment": {
+    "outer_accelerator": "hvf",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "outer_network": "none",
+    "gateway_tor_network": "disabled",
+    "base_image_manifest_sha256": "60745c1fb4fa9f27174a4d22c7bbf36eaef87cbd56e8044fbf99bd5a24eabff2",
+    "gateway_image_manifest": "cd22a7975cdb4213e3973203130f6ac3d1561f0e1784c99d46cbb9a4bfffed8e  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\n93d32328d3f7bddac65d06ccdad2efb35a250a4aee6be47b7f9b5224a14abde8  gateway.squashfs\n11718c4d2d3692d85004c19531afd89ebc360936c6e31105061e5039fa99c607  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nccb33b5e735d7f4d6a656d4ed1495cdb7ca831a6de175d7bc2a9ee9dba62cf6b  lab-packages.tsv\n0fdd30ca0092551da9a491801b34956938104ea9e417a546b554ee14d85d98a5  laboratory.squashfs\nadbdf9d8a5bd9d95513433a9efbefeacfcedd2f55ce5289b54761f7031c27bd5  sources.sha256\n",
+    "session_image_manifest": "08974d527d08bbdd4e3b702f2ebf64d10746d3915583306181c1d305e2d97aaf  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n862617b569bc0a3034c4e83ccd35e1a92e0e011fe680ee14a822dfc93c3dd1ef  opencode.sha256\n0a222942c2ee0a90d0d8477f21f8a851cd9648e4da6ba0e83ca55aff752ff539  session.squashfs\n342463c83e8664881000074297bbfc2cbcb27f56a2ba3d799857fcaceafaf5b1  sources.sha256\n",
+    "session_image_sources": "d4f68d67f3f95eff9a42a14c1ac01cbf1d3f7682895f9fba215b36c5ab093b56  ./guest/conversation.sh\ne464f4d764ac5b70bb7db73179a5ac2c52361788b57876cf03be86feab9bc5aa  ./guest/install.sh\nd744debcb6c6d2397652c5da325c3891d9519ee342fcb519acf08d374e19c7b7  ./guest/network.sh\nc1a8aef253c6e490277587ee53e514cff3358318f70e6cad0144ebe392c6d6e2  ./guest/oblivion-conversation.service\n8f703fc1b02f035ba7782353837e3936217ef9fc3fa7bfcab757a21883039e6f  ./guest/oblivion-session-network.service\n0e7d92bf6f2abafc4c00978558973102dfb0e1868ff644d64e9b34fc12196c52  ./guest/oblivion-vault.service\ne48a7666d23bdfffd4ea7fe21550afd862b901e85d2c0499f3ef6ad1457dc33c  ./guest/prepare.sh\n5ef92fbb6b0db37c55161db9b6cec309bc05553c9e21239683dec12ccbea2257  ./lab/vm-session-network-guest.py\n",
+    "host_bundle_manifest": "ea2cafabedb0bef3f49bf4c06f2535993e8b692b9fc2d8a0ca805f990c225d66  oblivion-control\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  oblivion-controller.service\n64e97f9ae51ae7fd61466335dee0f4c60586a1d24ea11425a8958f985cbfa67b  oblivion-gateway-host.service\n858a44e4d004f91bd57cfb97ee2f833816f73794da866871fc33a17eb419bc16  oblivion-manager\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  oblivion-recover.service\nca24d124415dfe5cd4963ed6ace11bed728976b241446fd76c78995c833d708b  oblivion-storage\n6774bb4e081d11d22422a374129043d565b086e50c1fc29eff43ce92aa987552  oblivion-storage-lab\n8c9ec28e18a38adc5eb8da8758447396781710356b74a48dec52c0d0c616d90d  sources.sha256\n",
+    "host_bundle_sources": "49097522336dc37a308a33f45c295b37c7ca1455625680c462b1b14c65bb9916  Cargo.lock\n9bcca247036e12020bcd751369da184a605f8894ff5f627f7040138b42f0c01d  Cargo.toml\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  host/oblivion-controller.service\n64e97f9ae51ae7fd61466335dee0f4c60586a1d24ea11425a8958f985cbfa67b  host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  host/oblivion-recover.service\n2f4d99b7904f01ec0a8f4fb2616f017c7d91e0cfb16677d4b7617bf95471a98e  src/client.rs\nc93e5eae70ae5e999ff2d885910ad22d565f0494705f432223e000617d08a0ed  src/control.rs\n1419c689e081817b563761a6d979b73da25a428b463410bb17d294d1672eef83  src/gateway.rs\n7da8a099dd5fd947be5f17b7baa96523fda9c9b3a321a166d5e9e793aca57605  src/ipc.rs\na68fc4a96fdb02e9540208c80612033491253ed3a1fe72e29cf8a8b93040be86  src/lib.rs\n34cc8ccd56ae14c58cb304c909c0df425cdd8d40c7c727ec77e751c2561a610f  src/main.rs\n40b71457a749e3f12c7ff8e3b430b8406f06e669d8080d3cacf3ebc480719d15  src/manager.rs\n8242505e34d7a2a995de26c4f4f842f0318b7697488efac101d03b4117044401  src/storage.rs\nbf147d38b44c179516573fc63be01767687ee077baa1bff94871d151b18f06ed  src/terminal.rs\n485fa4b2e83a4cf34297fbc9a18b89d6d8d21a4e0dd918b005eb32d883328732  src/vm.rs\n96a3afeb5b1bcaecde1922a63bcf050b3f13f6e7c484fb39369e1526c5e066a9  tests/console.rs\n",
+    "host_bundle_manifest_sha256": "988773eecd57de4463455a69ed0084058a8541cea84947480ad80b00f6178583",
+    "lab_overrides": [
+      "Host binaries/units, account entries and public QEMU root are overlaid in RAM on the earlier immutable lab host.",
+      "Gateway root is the production image, without a synthetic provider or TLS override.",
+      "Session guest uses production token receiver/network setup and compiled OpenCode; an unprivileged Python console fixture replaces only the interactive entrypoint.",
+      "The adapter probe invokes the actual production conversation launcher with run/standalone arguments.",
+      "Host gateway stderr goes to the volatile lab journal. Production unit output remains null.",
+      "The outer lab host has no NIC. This cannot demonstrate successful Internet/Tor/provider access."
+    ]
+  },
+  "session_network": {
+    "local_artifacts": "artifacts/oblivion-session-network/run-03",
+    "passed": true,
+    "seconds": 251.56,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and cannot reach provider while Tor is disabled",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: B gets a new grant and rejects A's token; the Ethernet connection reconnects only through a newly started session VM",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ],
+    "summary_sha256": "6f91d27b5e2728d355b62596a3cf283cc867e21754085542815ff3c991a5eb00",
+    "serial_sha256": "6baac7be4f43ee8e1398303fd22106d813395f61a55b3425e0d39e492f501193",
+    "fixture": {
+      "file": "vm-session-network-test.py",
+      "sha256": "54ccf8abc602007cd23833a94c6aec9c5b9d9be3cfdd1e93e36b5842ce74e0dc"
+    },
+    "fixture_verified": true,
+    "host_bundle_verified_in_guest": true,
+    "lab_initrd_sha256": "71214c436e531dd744c521c80ff8c91bf2f9ae09204fea26cfb895cd2ce4e36a",
+    "disk_sha256": "1335dc2ebeed183fe43ba95770f652740f714eefdca3762eba7d00e00829e1b2",
+    "plaintext_markers_on_disk": []
+  },
+  "gateway_lifecycle": {
+    "local_artifacts": "artifacts/oblivion-session-network/lifecycle-01",
+    "passed": true,
+    "seconds": 199.46,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: saving the protected credential starts a distinct UID 1101 gateway VM and completes private configuration",
+      "PASS: credential replacement destroys the previous VM; removal stops both owner and VM before deleting the key[   38.087063] EXT4-fs (dm-0): unmounting filesystem 0b937ba5-fc18-4ee0-b6a9-89f818a48a1b.",
+      "PASS: failed gateway startup preserves the saved key and open-state report; explicit lock and unlock recover",
+      "PASS: a legacy guest without the token receiver fails closed; its VM stays interlocked and cannot see private control or change the key[  122.399549] EXT4-fs (dm-0): unmounting filesystem 0b937ba5-fc18-4ee0-b6a9-89f818a48a1b.",
+      "PASS: host owner death removes gateway credential memory; explicit lock then closes the general LUKS mapping",
+      "PASS: an unresponsive gateway expires the private status deadline and is killed before recovery closes storage",
+      "PASS: readonly general supplies the saved credential without modifying any byte of the encrypted profile",
+      "PASS: explicit recovery stops gateway before closing the general",
+      "PASS: controller service stop closes gateway and LUKS without a dependency deadlock or credentials in runtime files"
+    ],
+    "summary_sha256": "2684b5d1a5c82d3ea493dceb0c4a30c9baf342024402358c95d978ae0e5a021f",
+    "serial_sha256": "9ba8a96aaa91226fd95f4ae6a907bfba88e91894a7143dbf4bcb85c242bb218b",
+    "fixture": {
+      "file": "vm-gateway-host-test.py",
+      "sha256": "b1a74d4d271c9639838a0eeaef5a6ab0385afa9b87ecec88264a70aba127bf2e"
+    },
+    "fixture_verified": true,
+    "host_bundle_verified_in_guest": true,
+    "lab_initrd_sha256": "e74829dcea2c230f5327a4bd45c80cc553158a21ba761148d40b857b62d8e86c",
+    "disk_sha256": "ea691395f54f7415cfb49f170cc4d364a0628f9476c5781f05bcae55f8dca739",
+    "plaintext_markers_on_disk": []
+  },
+  "manager_storage_regression": {
+    "local_artifacts": "artifacts/oblivion-session-network/regression-01",
+    "passed": true,
+    "seconds": 194.03,
+    "checks": [
+      "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+      "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+      "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+      "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+      "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+      "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+      "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+      "PASS: profile exhaustion preserves the previous key; retry publishes a complete replacement",
+      "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+      "PASS: an open session prevents changes to the infrastructure credential",
+      "PASS: read-only profile exposes only credential presence, rejects key changes and pending deletion, and remains byte-identical",
+      "PASS: interrupted session formatting survives restart, cannot open, and is discarded only after confirmation",
+      "PASS: disk exhaustion is explicit, preserves existing archives and permits reopening after pending cleanup",
+      "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+      "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+      "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+      "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+      "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+      "PASS: synthetic passwords and API keys never appear on the managed console"
+    ],
+    "summary_sha256": "624a3663fd88e037e747c0e5782b30001b1517f1c20b8cfa59b767a11643dfb8",
+    "serial_sha256": "72fe7ae282f7976b990e4eb8a42e90995f11c0906bfd72154ba7d7fc4c222914",
+    "fixture": {
+      "file": "vm-services-test.py",
+      "sha256": "f07bdb7238234a48964fc3a3391f82811ac8a4f7fa6ee91febd96211e5c0d965"
+    },
+    "fixture_verified": true,
+    "host_bundle_verified_in_guest": true,
+    "lab_initrd_sha256": "716fe0afeaf619e81466df294fb7133b16427bf6c58b4e948567ba9b41a56a31",
+    "disk_sha256": "53b09593f530513088eb2314955c8663355d871e47a47d492541f9e0cfa24925",
+    "plaintext_markers_on_disk": []
+  },
+  "earlier_success": {
+    "local_artifacts": "artifacts/oblivion-session-network/run-02",
+    "passed": true,
+    "seconds": 113.22,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and cannot reach provider while Tor is disabled",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: B gets a new grant and rejects A's token; the Ethernet connection reconnects only through a newly started session VM",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ],
+    "summary_sha256": "ff7e574aa9cfd6f30da7a2274c450fe477bf193fa424419250bd2a639789b943",
+    "serial_sha256": "94f7c46551d5babe21fd1cae99154fbec084475e6200eed75647b0e4df4649f9",
+    "fixture": {
+      "file": "vm-session-network-test.py",
+      "sha256": "6c2a6d4ea2a6703f7b1703ee581ad5831dbfe10545c66b42295eca894e350534"
+    },
+    "fixture_verified": true,
+    "host_bundle_verified_in_guest": true,
+    "lab_initrd_sha256": "0c494168ff02c3f9495f48c03fbfa59ee98343ef7e2f736b47df3c1064300335",
+    "disk_sha256": "30f201205b8c23b78eecf19e7dd6dc0d1068ff0f59ba7a14a7de6581aaf9b73a",
+    "plaintext_markers_on_disk": []
+  },
+  "failed_attempts": [
+    {
+      "local_artifacts": "artifacts/oblivion-session-network/run-01",
+      "summary_sha256": "74fd2e9da9ed71588716c8c80f81c00b00a8e736f8ae1cd58ec0fc79b935f09c",
+      "observed_failure": "Guest startup completed, but the console probe timed out. The fixture did not wait for its READY marker.",
+      "resolution": "Wait for the guest console READY marker and retain sanitized diagnostics. Also added an explicit virtio-port-open handshake before token delivery; the first failure did not establish that token delivery was lost."
+    }
+  ],
+  "checks": {
+    "native_console_tests": 4,
+    "linux_console_tests": 4,
+    "native_clippy": "passed --all-targets --features lab-emulation -- -D warnings; Linux code compiled and exercised in Debian VM",
+    "rust_format": "passed",
+    "python_syntax": "passed",
+    "shell_syntax": "passed",
+    "host_and_guest_sources_match_tested_artifacts": true,
+    "repository_check": "lint and 34 typecheck tasks passed; all typecheck tasks were cache hits",
+    "repository_log_sha256": "c912932f9466560b4dbb7afab452a7e9583750795199f585a1e410f6c2720809",
+    "linux_build_log_sha256": "82a85b9bce6ed460b43da72082d2cb5df82ab7761bfc8111ac6ce8a70abd1fa9",
+    "guest_build_log_sha256": "4820d3cfa1ca9b6f574d0743004a50015359cefcf160af3d991e4425d567f3cd"
+  },
+  "artifact_retention": "Verified obsolete synthetic data.raw disks from run-01/run-02 and earlier host-gateway run-01 through run-07 were removed to recover Mac disk space. Their summaries, logs and recorded disk hashes remain; final passing disks are retained.",
+  "limits": [
+    "The compiled adapter test proves local-token authentication and acceptance of at least the emitted request payload; Tor-disabled provider_unavailable is the expected response. Successful streaming, tool calling, titles and compaction remain unverified through this integration.",
+    "The token is deliberately available to the session UID and its tools, in guest tmpfs and OpenCode environment. It is not the provider key. The adapter probe found no token in its output or regular vault files.",
+    "Runtime-file scans check the known test keys and tokens after closure. The outer raw-disk scan checks fixed synthetic markers, not a universal absence of sensitive data.",
+    "No packet-capture or complete syscall trace was added by this suite; the independent gateway network laboratory supplies prior firewall/Tor evidence.",
+    "VM exit is not physical erasure of all Mac RAM copies. The laboratory is not the final live image."
+  ],
+  "remaining_gates": [
+    "Selective persistent Tor state and activation, read-only/ephemeral infrastructure semantics",
+    "Successful provider streaming/tool calling and active-stream revoke across A-to-B",
+    "Tool destination policy/proxy and file transfer workflows",
+    "Spontaneous session-VM crash, adversarial fragmented guest handshake, global shutdown, OOM, I/O and power loss",
+    "KVM/hardware, full tracing and independent review of privileged boundaries"
+  ]
+}

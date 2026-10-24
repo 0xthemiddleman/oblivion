@@ -5,8 +5,8 @@ Abliteration dopo lo sblocco del volume generale, con tutte le sessioni chiuse.
 Il [collegamento dal controller LUKS](HOST-GATEWAY.md) al supervisore privato
 è implementato: con il gateway configurato, salvare la credenziale avvia una
 VM dedicata e gliela consegna. Tor resta disabilitato e non viene ancora
-autorizzato un broker per la chat. Adapter e token della sessione sono il passo
-successivo.
+abilitato l’accesso al provider. Il [token della sessione](SESSION-NETWORK.md)
+autorizza il broker locale e viene revocato alla chiusura.
 
 ## Comportamento
 

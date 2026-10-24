@@ -170,7 +170,7 @@ command("unlock", secret=GENERAL)
 ready()
 check("failed gateway startup preserves the saved key and open-state report; explicit lock and unlock recover")
 session = command("create", secret=PASSWORD)
-command("enter", session, secret=PASSWORD)
+assert command("enter", session, secret=PASSWORD, success=False) == "session_channel_failed"
 chat = int(property("oblivion-session.service", "MainPID"))
 assert "Uid:\t1100\t1100\t1100\t1100" in Path(f"/proc/{chat}/status").read_text()
 ready()
@@ -179,7 +179,7 @@ assert not Path(f"/proc/{chat}/root/run/oblivion-gateway-vm/control.sock").exist
 assert command("set-api-key", secret=NEXT, success=False) == "session_must_be_closed"
 command("force-leave")
 ready()
-check("session and gateway run with different host UIDs and roots; session cannot see private control or change the key")
+check("a legacy guest without the token receiver fails closed; its VM stays interlocked and cannot see private control or change the key")
 
 pid, owner = ready()
 os.kill(owner, signal.SIGKILL)
