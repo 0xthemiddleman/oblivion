@@ -8,7 +8,22 @@
     "run_id": 40112365110,
     "host_job": 120927166134,
     "host_conclusion": "failure",
-    "full_run_conclusion": "pending"
+    "full_run_conclusion": "failure",
+    "job_conclusions": {
+      "success": 26,
+      "failure": 1,
+      "cancelled": 2
+    },
+    "cancelled_jobs": [
+      {
+        "id": 120927251493,
+        "name": "Network socks none egress-crash"
+      },
+      {
+        "id": 120927251490,
+        "name": "Network socks none control-disconnect"
+      }
+    ]
   },
   "storage": {
     "passed": true,
