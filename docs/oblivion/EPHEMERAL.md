@@ -1,8 +1,8 @@
 # Sessioni effimere
 
 Il percorso host e il comando nel manager superano la
-[suite Linux sul Mac](ephemeral-evidence.json): **37 controlli passati** con
-device mapper, cryptsetup, systemd e TUI compilata, oltre a **29 controlli
+[suite Linux sul Mac](ram-credentials-evidence.json): **40 controlli passati** con
+device mapper, cryptsetup, systemd e TUI compilata, oltre a **31 controlli
 di rete**, inclusi gli stream effimeri. L'host Debian usa HVF;
 la VM di sessione usa TCG. Non è una verifica dell'isolamento KVM del prodotto.
 
@@ -11,7 +11,12 @@ apre il dispositivo e il filesystem in sola lettura, senza replay del journal
 in scrittura. Il manager mostra il limite in MiB e avverte che chiudere la
 sessione distrugge conversazione e documenti. **N** o Invio apre una chat nuova;
 le sessioni persistenti non sono elencate e il controller ne rifiuta l'apertura.
-Le chiavi API già salvate possono essere selezionate in RAM.
+Le chiavi API già salvate possono essere selezionate in RAM. **T** nel menu
+delle chiavi aggiunge una nuova credenziale solo in RAM, anche se il profilo
+non contiene chiavi salvate; il blocco generale e il recupero dopo crash la
+eliminano. La chiusura della sola chat la conserva fino al blocco generale.
+La [gestione delle credenziali](CREDENTIALS.md) distingue archivio temporaneo
+e salvato, senza conversione implicita fra i due.
 
 Il controller crea `/run/oblivion/ephemeral.luks`, root 0600, usando la quota
 `session_mib` già configurata. Il percorso runtime deve essere su tmpfs e lo
@@ -55,7 +60,13 @@ dal blocco generale. Controlla la rimozione del disco RAM e del loop device,
 il rifiuto del vecchio token e l'immagine generale invariata. La prova viene
 eseguita separatamente da quella TUI; non implica una conversazione Tor reale.
 
-Restano aperti credenziali nuove solo in RAM, OOM della memoria fisica,
+La prova di rete aggiunge due controlli delle nuove credenziali: avvio del
+gateway con chiave solo RAM e scelta esplicita di una nuova chiave dopo il
+blocco. Il provider TLS sintetico osserva la credenziale prevista, mentre il
+generale resta invariato. Il test dei servizi verifica anche che la stessa
+scelta rimanga temporanea quando il generale è scrivibile.
+
+Restano aperti OOM della memoria fisica,
 uso effimero con Tor reale, integrazione nel boot live e verifica dell'intera
 USB invariata. Il confronto dell'immagine LUKS generale non dimostra da solo
 che nessun altro settore del supporto sia stato modificato.

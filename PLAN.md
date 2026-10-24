@@ -1,32 +1,39 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.49 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.50 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
 
 Sono implementati il generale LUKS2 e i volumi indipendenti delle sessioni,
 il controller Linux, una VM nuova per apertura, il manager fidato e il profilo
-privacy compilato di OpenCode. Le chiavi Abliteration nominate rimangono nel
-generale: il gateway riceve solo quella selezionata e la chat un token revocabile.
+privacy compilato di OpenCode. Le chiavi Abliteration nominate possono essere
+salvate nel generale o temporanee solo in RAM: il gateway riceve solo quella
+selezionata e la chat un token revocabile.
 Tor è predefinito; un SOCKS5 esterno richiede una scelta esplicita, senza fallback.
 Si conservano grafica, componenti e interazioni della chat TUI upstream.
 
 | Parte | Evidenza disponibile | Lavoro ancora aperto |
 | --- | --- | --- |
 | Audit e profilo privacy | [Audit v2](docs/oblivion/phase-0/AUDIT.md), [profilo compilato](docs/oblivion/PRIVACY-PROFILE.md): scritture censite, log persistenti e discovery disabilitati, prove sintetiche del client | Provider reale, collaudo completo dei download e plugin residui |
-| Volumi, manager e chiavi | [37 controlli LUKS/manager](docs/oblivion/ephemeral-evidence.json): chiavi multiple, regole web, readonly, ENOSPC su disco e RAM, chat effimere e recupero | Power loss, guasti I/O, header, cambio password, USB fisica |
-| Sessioni e rete API | [29 controlli del ciclo host sul Mac](docs/oblivion/ephemeral-evidence.json): token nuovi, revoca, regole A/B, Tor↔SOCKS e stream effimeri | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale del prodotto |
-| Proxy degli strumenti | [Client compilato e cattura esterna verificati](docs/oblivion/ephemeral-evidence.json): webfetch HTTP/HTTPS, shell, redirect e destinazioni vietate; anche [quattro scenari di revoca/crash](docs/oblivion/tools-vm-evidence.json) | Isolamento Tor dei flussi tool e provider reale |
+| Volumi, manager e chiavi | [40 controlli LUKS/manager](docs/oblivion/ram-credentials-evidence.json): chiavi salvate e RAM, regole web, readonly, ENOSPC su disco e RAM, chat effimere e recupero | Power loss, guasti I/O, header, cambio password, USB fisica |
+| Sessioni e rete API | [31 controlli del ciclo host sul Mac](docs/oblivion/ram-credentials-evidence.json): token nuovi, revoca, regole A/B, Tor↔SOCKS, stream effimeri e credenziali RAM | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale del prodotto |
+| Proxy degli strumenti | [Client compilato e cattura esterna verificati](docs/oblivion/ram-credentials-evidence.json): webfetch HTTP/HTTPS, shell, redirect e destinazioni vietate; anche [quattro scenari di revoca/crash](docs/oblivion/tools-vm-evidence.json) | Isolamento Tor dei flussi tool e provider reale |
 | Regole amministrate | [Menu, persistenza e grant host verificati](docs/oblivion/host-policy-evidence.json); 13 test delle regole sul Mac e in Debian ARM/x86 | Conferme interattive, scadenze e revoca di singoli permessi |
-| Documenti, effimero e live | [Flussi concordati](docs/oblivion/NETWORK-AND-FILES.md); [effimero con TUI, gateway, crash e quota RAM verificati](docs/oblivion/EPHEMERAL.md) | Credenziali temporanee, OOM, intera USB invariata, import/export USB, copie A→B, OnionShare e immagine Debian Live |
+| Documenti, effimero e live | [Flussi concordati](docs/oblivion/NETWORK-AND-FILES.md); [effimero con TUI, gateway, crash e quota RAM verificati](docs/oblivion/EPHEMERAL.md) | OOM, intera USB invariata, import/export USB, copie A→B, OnionShare e immagine Debian Live |
 
 La [CI del commit `65112f3`](docs/oblivion/ephemeral-evidence.json) termina con
 **29 job passati**: compilazione Debian, controlli del repository,
 36 controlli del manager con LUKS e 26 del ciclo host x86. Nessuno dei 18
 marcatori sintetici cercati viene trovato sul disco del ciclo di rete.
-I successivi test della quota RAM e degli stream effimeri portano le suite
-locali rispettivamente a 37 e 29 controlli; non fanno parte di quella CI.
+I successivi test della quota RAM, degli stream effimeri e delle nuove
+credenziali temporanee portano le suite locali a 40 e 31 controlli; non fanno
+parte di quella CI. Le [evidenze delle chiavi RAM](docs/oblivion/ram-credentials-evidence.json)
+registrano separatamente build host corrente e client ARM64 riusato dalla CI `bff2090`.
+La successiva CI `51f203b` supera tutti i quattro job eseguiti, con 37 controlli
+storage e 29 di rete x86: quota RAM e stream effimeri sono quindi verificati
+anche in CI. La matrice di rete invariata è esclusa; le nuove chiavi RAM
+restano coperte dal laboratorio locale nel report separato.
 Le regole possono essere globali o per sessione, persistenti oppure temporanee
 fino al blocco generale. Senza profilo il servizio tool rimane spento;
 `ask` blocca finché non esiste una conferma fidata.
@@ -40,12 +47,12 @@ identifica un errore nella fixture: cercava `Unable to fetch`, mentre OpenCode
 restituisce `Transport error (GET ...)`. HTTP, HTTPS e shell riescono e i tre
 tool vietati risultano in errore; il peer sintetico interrompeva poi la risposta
 per l'assert sbagliato. La correzione verifica anche gli stati JSON reali dei
-tool. Il ciclo completo sul Mac supera ora 29 controlli, comprese le prove
-successive A/B e quelle effimere con gateway attivo.
-Il Mac dispone nuovamente di spazio: build Debian locale e 32 test host passano,
+tool. Il ciclo completo sul Mac supera ora 31 controlli, comprese le prove
+successive A/B, quelle effimere con gateway attivo e le credenziali RAM.
+Il Mac dispone nuovamente di spazio: build Debian locale e 34 test host passano,
 come lint, 34 task di typecheck e 34 del compilatore TypeScript ufficiale con
 Bun 1.4.4. Le prove VM sono nuovamente eseguibili anche localmente.
-La cattura esterna della prima apertura di A contiene 438 pacchetti: 436 TCP,
+La cattura esterna aggiornata della prima apertura di A contiene 442 pacchetti: 440 TCP,
 nessun UDP, IPv6 o frammento IP; il solo percorso IP osservato è il SOCKS
 configurato. Chiave API e token locale non compaiono in chiaro. La cattura è
 esclusiva del laboratorio e non copre le successive aperture effimere.
@@ -53,14 +60,21 @@ esclusiva del laboratorio e non copre le successive aperture effimere.
 Il manager aggiunge E prima dello sblocco e N per una chat effimera. Il disco
 LUKS2 temporaneo sta solo in tmpfs, con segreto casuale non salvato, stessa
 VM e stessi interlock delle sessioni persistenti; viene rimosso dopo la chiusura.
-La [suite sul Mac](docs/oblivion/ephemeral-evidence.json) supera **37 controlli
-Linux**: TUI reale, nuova chat senza dati precedenti, recupero dopo crash e
-quota tmpfs esaurita senza fallback. Nessuno dei 12 marcatori sintetici cercati
+La [suite sul Mac](docs/oblivion/ram-credentials-evidence.json) supera **40 controlli
+Linux**: TUI reale, nuova chat senza dati precedenti, recupero dopo crash,
+quota tmpfs esaurita senza fallback e chiavi temporanee. Nessuno dei 13
+marcatori sintetici cercati
 compare sul disco. La suite di rete verifica anche due aperture effimere,
 token distinti, mancata eredità dei permessi di A e revoca degli stream prima
 della rimozione dei dischi RAM, con generale invariato. Verifica dell'intera
-USB, OOM fisico, nuove credenziali solo in RAM e uso effimero con Tor reale
-restano aperti.
+USB, OOM fisico e uso effimero con Tor reale restano aperti.
+
+Il comando **T** del manager aggiunge e seleziona una nuova chiave solo in RAM,
+anche con generale in sola lettura o privo di chiavi. Il blocco e il recupero
+dopo crash eliminano archivio temporaneo e selezione dopo la chiusura del
+gateway. La scelta resta temporanea anche con generale scrivibile; nessuna
+rotazione automatica quando la chiave viene rimossa. Passano le prove con
+quota RAM esaurita e provider TLS sintetico, con generale readonly invariato.
 
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
 limiti e incidenti precedenti, incluso il guasto di riapertura della console non
@@ -215,7 +229,7 @@ Password dimenticata: nessun recupero implicito. La password generale non è una
 
 Per l'MVP, avviso di inattività e blocco globale dopo intervallo configurabile, blocco manuale sempre disponibile e sospensione/ibernazione disabilitate. «Chiudi sessione» riporta al selettore lasciando il generale sbloccato; «Blocca Oblivion» protegge anche Wi-Fi, API key e impostazioni chiudendo il generale dopo tutti i suoi utilizzatori. La chiusura del coperchio deve seguire un comportamento testato di blocco globale o spegnimento, senza assumere che equivalga a uno shutdown sicuro. Non promettere azzeramento fisico completo della RAM o resistenza a cold boot.
 
-L'avvio effimero viene selezionato prima di montare il profilo. Richiede la password generale, ma apre quel volume e il relativo dispositivo in sola lettura, senza replay del journal che scriva sul supporto. Può leggere le impostazioni già salvate, mentre sessione, nuove credenziali e modifiche restano in RAM. Nessuna apertura di sessioni persistenti in tale modalità. Il [percorso host implementato](docs/oblivion/EPHEMERAL.md) usa un file di blocchi LUKS2 esclusivamente in tmpfs e non salva un contenitore sulla USB; il collaudo Linux e le nuove credenziali temporanee restano aperti. Se il volume richiede un recupero in scrittura, non convertirlo automaticamente in scrivibile: segnalare la necessità di un avvio normale per il recupero. La prova di USB invariata riguarda l'intero avvio effimero; una chat temporanea aperta durante un avvio normale non autorizza a dichiarare che l'infrastruttura non abbia scritto nulla.
+L'avvio effimero viene selezionato prima di montare il profilo. Richiede la password generale, ma apre quel volume e il relativo dispositivo in sola lettura, senza replay del journal che scriva sul supporto. Può leggere le impostazioni già salvate, mentre sessione, nuove credenziali e modifiche restano in RAM. Nessuna apertura di sessioni persistenti in tale modalità. Il [percorso host implementato](docs/oblivion/EPHEMERAL.md) usa un file di blocchi LUKS2 esclusivamente in tmpfs e non salva un contenitore sulla USB; il collaudo Linux, il gateway sintetico e le nuove credenziali temporanee sono verificati sul Mac, mentre OOM, Tor reale e intera USB invariata restano aperti. Se il volume richiede un recupero in scrittura, non convertirlo automaticamente in scrivibile: segnalare la necessità di un avvio normale per il recupero. La prova di USB invariata riguarda l'intero avvio effimero; una chat temporanea aperta durante un avvio normale non autorizza a dichiarare che l'infrastruttura non abbia scritto nulla.
 
 **File e cartelle come contesto**
 

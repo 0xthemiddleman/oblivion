@@ -8,8 +8,9 @@ superano anche la [matrice con due VM](transport-vm-evidence.json): 12 casi
 SOCKS e 9 Tor offline. Storage e manager superano ora
 [28 controlli con LUKS in CI](host-lifecycle-ci-evidence.json), su host
 x86/KVM e sessione TCG di laboratorio. Dopo la liberazione dello spazio,
-anche Docker sul Mac è nuovamente operativo: la [suite aggiornata](ephemeral-evidence.json)
-supera 37 controlli storage e 29 del ciclo di rete, incluse le chat effimere.
+anche Docker sul Mac è nuovamente operativo: la [suite aggiornata](ram-credentials-evidence.json)
+supera 40 controlli storage e 31 del ciclo di rete, incluse le chat effimere
+e le nuove chiavi temporanee solo in RAM.
 Il [ciclo completo SOCKS](host-socks-stream-ci-evidence.json) supera inoltre
 18 controlli con client corrente, gateway e provider/proxy sintetico esterno:
 chiavi distinguibili, stream revocati, profilo ricaricato e stato Tor invariato.
@@ -41,6 +42,10 @@ il vecchio segreto si elimina solo dopo la pubblicazione durevole del nuovo
 archivio. In lettura sola viene presentato come unica chiave disponibile senza
 migrazione. Nel profilo in sola lettura si possono scegliere chiavi salvate in RAM;
 aggiunte, rinomine, rimozioni e modifica della predefinita non vengono salvate.
+**T** aggiunge invece una credenziale temporanea in una tmpfs privata: resta
+separata dall'archivio cifrato anche con generale scrivibile. Il menu consente
+di gestirla anche in readonly; il blocco generale elimina chiavi RAM e
+selezione. I dettagli e le prove sono in [CREDENTIALS.md](CREDENTIALS.md).
 
 ## Un percorso globale scelto dall'utente
 

@@ -1,14 +1,20 @@
-# Chiavi Abliteration nel generale cifrato
+# Chiavi Abliteration permanenti e temporanee
 
 Il manager fidato permette di salvare più API key nominate, scegliere una
 predefinita e selezionare quella da usare prima dell'apertura di una sessione.
 Le operazioni amministrative restano separate dalla chat: i componenti TUI
 upstream di OpenCode non cambiano.
+Il comando **T** nel menu delle chiavi o nella scelta prima dell'apertura
+aggiunge e seleziona una chiave solo in RAM, anche con generale in sola lettura.
+L'estensione supera [40 controlli del manager e 31 di rete](ram-credentials-evidence.json)
+in Debian ARM64 sul Mac, inclusi profilo readonly, esaurimento della quota RAM,
+crash e selezione osservata dal provider TLS sintetico.
 
 Il [controller LUKS](HOST-GATEWAY.md) consegna al supervisore della VM gateway
 soltanto la chiave selezionata. La chat riceve un [token locale revocabile](SESSION-NETWORK.md),
-mai le chiavi salvate. Il percorso online usa ancora Tor; il
-[SOCKS5 globale alternativo](KEYS-AND-EGRESS.md) resta da implementare.
+mai le credenziali del provider, permanenti o temporanee. Il percorso
+predefinito è Tor, con [SOCKS5 globale alternativo](KEYS-AND-EGRESS.md)
+selezionato esplicitamente.
 
 ## Comportamento
 
@@ -16,9 +22,14 @@ mai le chiavi salvate. Il percorso online usa ancora Tor; il
   J/K o frecce spostano la selezione; Invio sceglie la chiave, Esc torna indietro.
 - Nell'elenco: **A** aggiunge, **R** rinomina, **S** sostituisce il segreto,
   **D** salva la predefinita, **X** rimuove dopo una seconda X di conferma.
+- **T — Usa nuova chiave in RAM:** chiede nome e segreto nascosto e attiva
+  la nuova chiave. Le voci temporanee mostrano **[RAM]**. Rinomina, sostituzione
+  e rimozione di queste voci sono ammesse anche in readonly; non possono
+  diventare la predefinita persistente. Chiavi salvate e temporanee restano
+  selezionabili dallo stesso elenco.
 - I campi delle API key sono nascosti. Sono accettati da 16 a 1024 byte ASCII
   stampabili senza spazi. Il nome visibile è da 1 a 64 byte UTF-8, senza controlli
-  o spazi iniziali/finali; l'archivio contiene al massimo 64 chiavi.
+  o spazi iniziali/finali; ciascuno dei due archivi contiene al massimo 64 chiavi.
 - Con più chiavi il manager propone la scelta prima di aprire o creare la
   sessione. La selezione resta in RAM fino al blocco del generale; dopo uno
   sblocco si parte dalla predefinita. Non si salva un legame chat/account.
@@ -37,8 +48,9 @@ argv o ambiente. Restano compatibili `set-api-key` e `clear-api-key`.
 
 Una sessione aperta, una VM ancora attiva o il recupero richiesto impediscono
 anche via IPC la modifica e il cambio di chiave. Il profilo in sola lettura
-permette esclusivamente la selezione in RAM. Il gateway precedente viene
-fermato e distrutto prima del cambio; una scrittura fallita lo lascia fermo.
+permette la selezione e la gestione delle sole chiavi temporanee in RAM.
+Il gateway precedente viene fermato e distrutto prima del cambio di credenziale;
+un cambio fallito lo lascia fermo.
 Scegliere di nuovo la stessa chiave, con gateway già attivo, conserva il suo
 processo e il bootstrap Tor in corso. Il blocco globale verifica la fine della
 VM gateway prima di chiudere il generale.
@@ -50,7 +62,21 @@ root 0600 dentro directory 0700. Contiene versione, predefinita e voci con
 identificatore casuale, nome e segreto. Il profilo non viene montato nelle VM.
 Il file `/run/oblivion/api-key-selection`, root 0600 in RAM, contiene solo
 l'identificatore selezionato: assenza significa predefinita, file vuoto significa
-nessuna chiave. Viene eliminato al blocco e allo sblocco del generale.
+nessuna chiave. Può indicare una voce salvata oppure temporanea. Viene
+pubblicato con un file `.pending` e rename, conservando la selezione precedente
+se la RAM disponibile non basta. File finale e staging vengono eliminati al
+blocco e allo sblocco del generale.
+
+L'archivio temporaneo è `/run/oblivion/api-keys.json`, con staging `.pending`,
+entrambi root 0600 nella tmpfs privata. Usa lo stesso formato validato del
+salvato, ma i due archivi non vengono mai serializzati insieme. La predefinita
+visibile appartiene sempre all'archivio persistente; **T** sceglie esplicitamente
+la nuova voce temporanea. Il controller continua a validare l'archivio salvato:
+una chiave in RAM non nasconde un profilo corrotto. Il blocco e il recupero
+dopo crash eliminano archivio RAM, selezione e staging, dopo la chiusura del
+gateway. Una chiusura della sola chat conserva le chiavi RAM fino al blocco
+del generale. Nessuna operazione converte implicitamente una voce RAM in
+credenziale persistente.
 
 Durante lo sblocco il controller legge i dati in chiaro; i blocchi persistenti
 sul supporto sono cifrati da LUKS. I segreti e i buffer serializzati usano
@@ -74,6 +100,28 @@ Non garantisce cancellazione fisica dei vecchi blocchi della flash, già protett
 dal volume cifrato. Non modifica alcuna password LUKS.
 
 ## Verifica sul Mac
+
+La [prova delle credenziali RAM](ram-credentials-evidence.json) supera 40
+controlli storage/manager in 308,53 secondi e 31 di rete in 540,80 secondi.
+Passano 34 test host sul Mac e in Debian, Clippy sul Mac, due test della
+fixture e `bun run check` (34 task). I 13 marcatori cercati nel disco dei
+servizi e i 19 nel disco del ciclo di rete non compaiono in chiaro.
+
+Il manager reale crea, rinomina, sostituisce e rimuove chiavi temporanee;
+le prove coprono generale readonly e scrivibile, archivio RAM non leggibile
+da UID 1000, staging con symlink rifiutato, quota tmpfs esaurita senza perdere
+archivio o selezione precedente, pulizia dopo SIGKILL e blocco delle modifiche
+a chat aperta. Nel ciclo di rete, un profilo senza chiavi salvate resta senza
+gateway finché l'utente sceglie una nuova chiave RAM; il provider sintetico
+osserva quella credenziale attraverso il client compilato. Il blocco elimina
+la chiave e lo sblocco successivo richiede una nuova scelta esplicita.
+
+Il client ARM64 riusato proviene dalla CI `bff2090`; il codice OpenCode non
+è cambiato nelle successive modifiche Rust/Python. I binari host correnti
+sono ricompilati, con manifest dei sorgenti verificato nel guest. La cattura
+esterna copre la prima sessione persistente A, non gli stream effimeri.
+
+## Evidenze precedenti
 
 Le prove usano Debian ARM/HVF, un vero manager non privilegiato sotto systemd,
 controller Linux, LUKS reale e guest interni TCG. Tutte le credenziali sono

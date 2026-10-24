@@ -7,15 +7,20 @@ Lo sviluppo procede sul Mac ARM disponibile: Docker per build e prove del binari
 Debian/HVF e guest TCG per il laboratorio VM. L'hardware x86/KVM è un gate di
 rilascio, non un blocco allo sviluppo sul Mac.
 
-Ultima verifica locale: [37 controlli LUKS/manager e 29 del ciclo di rete](ephemeral-evidence.json)
+Ultima verifica locale: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
 passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,
 webfetch/shell reali, cattura esterna e due chat effimere con stream revocati.
+Le nuove chiavi temporanee sono verificate anche con generale scrivibile:
+restano in RAM, non possono diventare predefinite persistenti e scompaiono
+al blocco o al recupero dopo crash. Passano 34 test host sul Mac e in Debian
+ARM64, Clippy sul Mac e i 34 task del controllo completo del repository.
 Il generale resta invariato nel percorso effimero. Non prova l'intera USB,
 l'OOM fisico o il provider remoto reale.
 La CI `65112f3` termina inoltre con **29 job passati**, 36 controlli storage
-e 26 del ciclo di rete x86, senza i 18 marcatori cercati sul disco. I quattro
-controlli aggiunti successivamente sono coperti dalla verifica locale;
-il report distingue i commit e le due coperture.
+e 26 del ciclo di rete x86, senza i 18 marcatori cercati sul disco. La successiva
+CI `51f203b` passa tutti i quattro job eseguiti, con 37 controlli storage e 29
+di rete: quota RAM e stream effimeri sono verificati anche in CI. Le nuove
+credenziali RAM sono coperte dalla prova locale; i report distinguono le coperture.
 
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager fidato:
 archivio versionato, migrazione, scelta per apertura e nessuna rotazione
@@ -121,8 +126,9 @@ supera **37 controlli Linux** sul Mac: TUI reale, scritture, seconda chat pulita
 recupero dopo crash e quota tmpfs insufficiente senza fallback. Nessuno dei
 12 marcatori cercati compare sul disco. Passa anche la prova effimera con
 gateway attivo e SOCKS/provider sintetico: due token distinti, vecchio token
-rifiutato, stream chiusi e dischi RAM rimossi, generale invariato. Credenziali
-temporanee, Tor reale, OOM fisico e verifica dell'intera USB restano da completare.
+rifiutato, stream chiusi e dischi RAM rimossi, generale invariato. Le
+[credenziali temporanee](ram-credentials-evidence.json) sono ora verificate
+separatamente; Tor reale, OOM fisico e verifica dell'intera USB restano da completare.
 
 | Area                     | Stato ed evidenza                                                                                                                                                             | Gate ancora aperto                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |

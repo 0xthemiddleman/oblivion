@@ -146,6 +146,22 @@
     {
       "path": "artifacts/oblivion-linux-ci/run-65112f3/x64-evidence/ci/stream-results/webtools-outside.pcap",
       "sha256": "da8ad2c2aee3aa9d053d9e64e2ed2c2cbad6c7db4e7312c22b359c033d5a35af"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-51f203b/x64-evidence/ci/host-results/summary.json",
+      "sha256": "2e66e5dd27f34c7f4b55cef397183c500d57563d833726861314ecac618ecfac"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-51f203b/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "d3c4e052fcbb7c0031ac773eb01391f14233d3569cf8c5c951f38eda2fc31fd9"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-51f203b/x64-evidence/ci/tui-boot/summary.json",
+      "sha256": "7a839e118beacb597f28920c24565d813883de1a0f173b6d422717d6d8fe0bf5"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-51f203b/x64-evidence/ci/stream-results/webtools-outside.pcap",
+      "sha256": "5a72442be3cfc26083df041faaf8a8b9b276a07daa0af31cde89c4e0b04f61b4"
     }
   ],
   "network_fixture_commit": "df52c8661b13b2ca5c8141e6017b79573103b66f",
@@ -608,5 +624,37 @@
       "sha256": "da8ad2c2aee3aa9d053d9e64e2ed2c2cbad6c7db4e7312c22b359c033d5a35af"
     },
     "coverage": "Includes the initial three ephemeral storage checks and the fixed compiled tool test. The added RAM quota check and three ephemeral network checks are verified locally at the later fixture commits above, not in this CI run."
+  },
+  "ci_ephemeral_followup": {
+    "source_commit": "51f203b1b436a68ed616b40df5b20a5ed0af0cd5",
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40122963381",
+    "run_id": 40122963381,
+    "host_job": 120958883026,
+    "conclusion": "success",
+    "jobs_succeeded": 4,
+    "jobs_skipped": 1,
+    "skipped_scope": "Unchanged network matrix excluded by workflow scope filter.",
+    "architecture": "x86_64",
+    "outer_accelerator": "kvm",
+    "inner_accelerator": "tcg",
+    "storage_checks": 37,
+    "storage_seconds": 427.09,
+    "stream_checks": 29,
+    "stream_seconds": 715.61,
+    "tui_boot_seconds": 6.19,
+    "storage_plaintext_markers_on_disk": [],
+    "stream_plaintext_markers_on_disk": [],
+    "storage_scan_canaries": 12,
+    "stream_scan_canaries": 18,
+    "compiled_client_sha256": "583e160667c9716c05e17e49a76ba1a94c515c62dbeecbddce3ad7b978933771",
+    "webtools_outside_capture": {
+      "packets": 451,
+      "tcp": 449,
+      "udp": 0,
+      "ipv6": 0,
+      "ipv4_fragments": 0,
+      "sha256": "5a72442be3cfc26083df041faaf8a8b9b276a07daa0af31cde89c4e0b04f61b4"
+    },
+    "coverage": "Includes tmpfs quota exhaustion and ephemeral provider-stream lifecycle. Does not include temporary RAM API keys added by cc65d65; those are recorded separately in ram-credentials-evidence.json."
   }
 }
