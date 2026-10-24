@@ -314,9 +314,14 @@ for secret in [False, True]:
         response = bytearray()
         while time.monotonic() < deadline:
             if select.select([client], [], [], 1)[0]:
-                while chunk := client.recv(4096):
-                    response.extend(chunk)
-                    assert len(response) <= 4096
+                # The rejected request may leave unread inbound bytes. Linux
+                # can reset after delivering the controller's error response.
+                try:
+                    while chunk := client.recv(4096):
+                        response.extend(chunk)
+                        assert len(response) <= 4096
+                except ConnectionResetError:
+                    pass
                 break
             client.sendall(b"x" if secret else b" ")
             sent += 1
