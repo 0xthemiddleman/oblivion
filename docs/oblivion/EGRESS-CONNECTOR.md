@@ -40,10 +40,17 @@ tool non ampliano il ruolo API, che mantiene origine e porta fisse.
 Tor riceve username distinti per API e tool e il token per apertura; un
 SOCKS esterno riceve soltanto le proprie credenziali configurate. Questa
 distinzione non prova l'isolamento effettivo dei circuiti Tor. Il supervisore
-corrente non invia `tools` e il firewall non apre un nuovo ingresso. Il
-componente HTTP/CONNECT supera otto test dedicati; manca l'integrazione del
-suo servizio con il guest. Questa aggiunta
-non completa il SOCKS globale.
+ora accetta `tools` come campo opzionale del grant privato e avvia
+`oblivion-tools` solo se presente. Il processo usa UID 1301 e il listener
+`10.88.0.1:8112`, ammesso dal firewall solo dalla VM di chat. Riceve via FD
+privati il token locale e l'indirizzo del connettore, senza chiave API o
+credenziali SOCKS. Il connettore riceve la policy. La fine di qualsiasi processo
+del grant chiude l'intera autorizzazione. Avvio parziale, EOF, byte sul canale
+e segnali devono rimuovere listener e connessioni. Questa integrazione è
+scritta e attende verifica CI; il componente HTTP/CONNECT ha già otto test
+passati. Il controller host non invia ancora `tools`, quindi il servizio non
+si attiva nel normale ciclo delle sessioni. Questa aggiunta non completa il
+SOCKS globale.
 Le nuove prove di componente usano socket reali per autorizzazione, indirizzi,
 separazione delle credenziali e revoca. Passano tutti i 28 test di libreria;
 i risultati precedenti non coprono questa aggiunta.
@@ -52,7 +59,9 @@ e due di attivazione del processo: un
 profilo privato con 128 regole oltre il precedente limite di 4 KiB e il rifiuto
 di frame oltre 128 KiB. La CI ARM ora esegue anche il laboratorio gateway
 senza swap e le due prove dell'adapter compilato, oltre a costruire i binari.
-Le otto prove di attivazione sono compilate. La prima esecuzione CI è stata
+Le otto prove precedenti di attivazione sono compilate. Due nuove prove del
+servizio tool portano il totale previsto a dieci; attendono compilazione ed
+esecuzione insieme ai controlli di hardening del binario di produzione. La prima esecuzione CI è stata
 rifiutata prima del boot per la scelta di HVF sul runner Linux; il comando
 ora seleziona TCG esplicitamente e attende una nuova prova.
 

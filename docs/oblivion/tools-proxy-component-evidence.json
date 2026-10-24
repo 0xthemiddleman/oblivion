@@ -1,7 +1,7 @@
 {
   "date": "2026-10-24",
   "source_commit": "562625f3a9559a24039a0c7d983e7d3d4ebcf34b",
-  "status": "component-tests-passed-vm-launch-failed",
+  "status": "component-tests-passed-vm-regression-failed",
   "scope": "Policy-aware private connector plus HTTP/CONNECT tools proxy library. Actual TCP sockets and synthetic local peers in a Debian ARM64 Docker build with network=none; no production tools service or guest integration yet.",
   "ci": {
     "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40105476000",
@@ -10,10 +10,13 @@
     "debian_build_conclusion": "success",
     "repository_job": 120906193450,
     "repository_conclusion": "success",
-    "overall": "in_progress_at_recording",
+    "overall": "failure",
     "arm_component_job": 120906867269,
     "arm_component_conclusion": "failure",
-    "arm_component_error": "Runner defaulted to macOS HVF on Linux; exited before starting the component VM. Workflow fix selects aarch64 TCG explicitly; retry pending."
+    "arm_component_error": "Runner defaulted to macOS HVF on Linux; exited before starting the component VM. Workflow fix selects aarch64 TCG explicitly; retry pending.",
+    "x86_host_job": 120906731499,
+    "x86_host_conclusion": "failure",
+    "x86_host_error": "After 23 successful storage/manager checks, reopening after manager SIGKILL remained on the trusted session-open screen instead of entering the chat. Cause not established. The full SOCKS stream step did not run."
   },
   "verification": {
     "gateway_library_tests_passed": 28,
@@ -36,7 +39,10 @@
     "activation_tests_compiled": 8,
     "activation_tests_executed_in_this_build": false,
     "direct_arm_chat_boot_passed": true,
-    "direct_arm_chat_boot_seconds": 66.59
+    "direct_arm_chat_boot_seconds": 66.59,
+    "network_matrix_jobs_passed": 21,
+    "storage_checks_before_failure": 23,
+    "full_host_stream_suite_executed": false
   },
   "source_sha256": {
     "packages/oblivion-gateway/src/tools.rs": "ce09d782ec92df99cd1accf0ab4c252a5113a0c8d0304f62377998d650757b80",
@@ -61,6 +67,18 @@
     {
       "path": "artifacts/oblivion-linux-ci/run-562625f/arm-job.log",
       "sha256": "a5a7333bbd11dd5a246df95862559af3b480fe27f0b4b67f146354cd01311159"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-562625f/host-job.log",
+      "sha256": "aa41dc9c2eeaba3b3c5814421c155d47e408aa8672f556d8f480d58bccc2f375"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-562625f/x64-evidence/ci/host-results/summary.json",
+      "sha256": "e49ab2a103f917db1b3135fe4a44402016c347c759cfb89fdc121dd668602f57"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-562625f/x64-evidence/ci/host-results/serial.log",
+      "sha256": "741c2d275a884b6f25521bed22fa4043211bf63a9fd3de6a4fc7a75acf8d45e1"
     }
   ],
   "previous_attempt": {

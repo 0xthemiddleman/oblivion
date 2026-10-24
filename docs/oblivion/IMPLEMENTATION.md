@@ -49,14 +49,18 @@ destinazioni, wildcard delimitate, porte e ambiti e applica precedenza
 questo nucleo dal proxy dei tool, dalle conferme e dalla persistenza ancora
 da collegare. La [CI successiva](network-policy-ci-evidence.json) copre il
 motore puro e ripete il ciclo SOCKS completo: tutti i 25 job passano.
-Il connettore ha ora un canale tool con policy esplicita; il supervisore non
-lo abilita. Il proxy HTTP/CONNECT supera otto test come componente in Debian
-ARM64. Passano tutti i 28 test di libreria gateway e i controlli canonici del
-repository; le [evidenze](tools-proxy-component-evidence.json) distinguono questa
-verifica dalla CI nelle VM ancora in corso. Il primo avvio della VM gateway
-ARM è stato rifiutato prima del boot perché il comando sceglieva HVF su Linux;
-la correzione seleziona TCG e attende ripetizione. Servizio, firewall, policy del
-manager e client Bun restano da integrare.
+Il connettore ha un canale tool con policy esplicita. Il proxy HTTP/CONNECT
+supera otto test in Debian ARM64; passano tutti i 28 test di libreria gateway
+e i controlli del repository. Le [evidenze](tools-proxy-component-evidence.json)
+registrano anche i 21 scenari di rete passati e due fallimenti VM: comando ARM
+con acceleratore errato, corretto in TCG; riapertura della console x86 dopo
+crash del manager, da diagnosticare. La suite stream host non è partita.
+Il servizio `oblivion-tools` e il suo avvio opzionale sotto il supervisore sono
+scritti, con UID 1301 e ingresso 8112. Sono aggiunti due test di attivazione
+e controlli del binario di produzione nel guest; la compilazione ed esecuzione
+CI di questa integrazione sono ancora da verificare. Il controller host non
+invia una policy: il servizio resta spento nel normale ciclo. Policy del
+manager, conferme e compatibilità del client Bun restano da collegare.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

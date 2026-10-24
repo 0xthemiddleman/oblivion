@@ -1,5 +1,6 @@
 #![cfg(feature = "lab-emulation")]
 
+use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::json;
 use std::{
     io::{BufRead, BufReader, Read, Write},
@@ -315,4 +316,92 @@ fn egress_rejects_an_oversized_private_frame_without_logs() {
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
     assert_eq!(output.stderr, b"oblivion-egress: service_failed\n");
+}
+
+#[test]
+fn tools_private_configuration_authenticates_and_every_control_exit_revokes() {
+    for revoke in [0, 1, 2] {
+        let (mut process, mut control, address) =
+            launch_binary(env!("CARGO_BIN_EXE_oblivion-tools"));
+        let config = json!({"session_token": TOKEN, "socks": "127.0.0.1:1"});
+        writeln!(control, "{config}").unwrap();
+        let mut line = String::new();
+        BufReader::new(&mut control).read_line(&mut line).unwrap();
+        assert_eq!(line, "{\"ready\":true}\n");
+        for (token, expected) in [("invalid", "HTTP/1.1 407"), (TOKEN, "HTTP/1.1 502")] {
+            let mut client = TcpStream::connect(address).unwrap();
+            client
+                .set_read_timeout(Some(Duration::from_secs(10)))
+                .unwrap();
+            let auth = STANDARD.encode(format!("oblivion-tools:{token}"));
+            write!(client, "CONNECT example.com:443 HTTP/1.1\r\nHost: example.com:443\r\nProxy-Authorization: Basic {auth}\r\n\r\n").unwrap();
+            let mut response = String::new();
+            client.read_to_string(&mut response).unwrap();
+            assert!(response.starts_with(expected), "{response}");
+            assert!(!response.contains(TOKEN));
+        }
+        // Leave an incomplete request open: revocation must also close an
+        // accepted connection whose HTTP headers have not finished arriving.
+        let mut pending = TcpStream::connect(address).unwrap();
+        pending
+            .set_read_timeout(Some(Duration::from_secs(10)))
+            .unwrap();
+        pending
+            .write_all(b"CONNECT example.com:443 HTTP/1.1\r\n")
+            .unwrap();
+        if revoke == 1 {
+            control.write_all(b"revoke").unwrap();
+        }
+        if revoke == 2 {
+            assert_eq!(
+                unsafe { libc::kill(process.0.id() as i32, libc::SIGTERM) },
+                0
+            );
+        }
+        if revoke == 0 {
+            drop(control);
+        }
+        let output = process.finish();
+        assert!(output.status.success());
+        assert!(output.stdout.is_empty() && output.stderr.is_empty());
+        assert!(TcpStream::connect(address).is_err());
+        let closed = pending.read(&mut [0]);
+        assert!(
+            matches!(closed, Ok(0))
+                || closed.is_err_and(|error| error.kind() == std::io::ErrorKind::ConnectionReset)
+        );
+    }
+}
+
+#[test]
+fn tools_reject_invalid_credentials_frames_and_missing_descriptors_without_logs() {
+    for (field, value) in [
+        ("api_key", json!(KEY)),
+        ("session_token", json!("short")),
+        ("socks", json!("192.0.2.1:9051")),
+        ("socks", json!("127.0.0.1:0")),
+    ] {
+        let (mut process, mut control, _) = launch_binary(env!("CARGO_BIN_EXE_oblivion-tools"));
+        let mut config = json!({"session_token": TOKEN, "socks": "127.0.0.1:1"});
+        config[field] = value;
+        writeln!(control, "{config}").unwrap();
+        let output = process.finish();
+        assert_eq!(output.status.code(), Some(1));
+        assert!(output.stdout.is_empty());
+        assert_eq!(output.stderr, b"oblivion-tools: service_failed\n");
+    }
+    let (mut process, mut control, _) = launch_binary(env!("CARGO_BIN_EXE_oblivion-tools"));
+    control.write_all(&vec![b' '; 4097]).unwrap();
+    let output = process.finish();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr, b"oblivion-tools: service_failed\n");
+    let output = Command::new(env!("CARGO_BIN_EXE_oblivion-tools"))
+        .env_clear()
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr, b"oblivion-tools: service_failed\n");
 }

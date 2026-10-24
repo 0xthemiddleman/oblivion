@@ -45,6 +45,10 @@ path = "src/control.rs"
 name = "oblivion-egress"
 path = "src/egress_main.rs"
 
+[[bin]]
+name = "oblivion-tools"
+path = "src/tools_main.rs"
+
 [profile.dev]
 debug = 0
 incremental = false

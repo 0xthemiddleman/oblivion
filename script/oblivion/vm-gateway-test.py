@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 """Gateway component tests in disposable, swap-free Debian; no external NIC."""
+import base64
 import fcntl
 import hashlib
 import ipaddress
@@ -105,7 +106,11 @@ def production(drop_identity, binary="oblivion-api", proxy=None):
         check(binary + ": production binary rejects execution as root")
         return
     try:
-        config = {"api_key": KEY, "session_token": TOKEN, "socks": "127.0.0.1:1"} if binary == "oblivion-api" else {"transport": {"mode": "tor"}, "session_token": TOKEN}
+        config = {"session_token": TOKEN, "socks": "127.0.0.1:1"}
+        if binary == "oblivion-api":
+            config["api_key"] = KEY
+        if binary == "oblivion-egress":
+            config = {"transport": {"mode": "tor"}, "session_token": TOKEN}
         control.sendall((json.dumps(config) + "\n").encode())
         assert control.recv(128) == b'{"ready":true}\n'
         status = Path(f"/proc/{pid}/status").read_text()
@@ -131,6 +136,18 @@ def production(drop_identity, binary="oblivion-api", proxy=None):
                     assert response.startswith(expected)
                     assert KEY.encode() not in response
             check("production API rejects a wrong token and fails closed with SOCKS unavailable")
+        elif binary == "oblivion-tools":
+            for token, expected in [("invalid", b"HTTP/1.1 407"), (TOKEN, b"HTTP/1.1 502")]:
+                auth = base64.b64encode(("oblivion-tools:" + token).encode()).decode()
+                with socket.create_connection(address, timeout=10) as client:
+                    client.sendall(("CONNECT example.com:443 HTTP/1.1\r\nHost: example.com:443\r\n"
+                        f"Proxy-Authorization: Basic {auth}\r\n\r\n").encode())
+                    response = b""
+                    while chunk := client.recv(65536):
+                        response += chunk
+                    assert response.startswith(expected)
+                    assert TOKEN.encode() not in response
+            check("production tools proxy rejects a wrong token and fails closed with its private connector unavailable")
         else:
             with socket.create_connection(address, timeout=10) as client:
                 client.sendall(bytes([5, 1, 2]))
@@ -198,7 +215,8 @@ try:
     target.parent.mkdir(parents=True)
     target.symlink_to(BUNDLE / "oblivion-api-lab")
     (target.parent / "oblivion-egress").symlink_to(BUNDLE / "oblivion-egress-lab")
-    for executable, expected in [("gateway-tests", 28), ("activation-tests", 8)]:
+    (target.parent / "oblivion-tools").symlink_to(BUNDLE / "oblivion-tools-lab")
+    for executable, expected in [("gateway-tests", 28), ("activation-tests", 10)]:
         result = subprocess.run(["setpriv", "--reuid=1000", "--regid=1000", "--clear-groups",
             "--no-new-privs", "--", str(BUNDLE / executable)],
             capture_output=True, text=True, timeout=120, env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})
@@ -211,6 +229,8 @@ try:
     production(True)
     production(False, "oblivion-egress")
     production(True, "oblivion-egress")
+    production(False, "oblivion-tools")
+    production(True, "oblivion-tools")
     with socket.socket() as proxy:
         proxy.bind(("127.0.0.1", 9050))
         proxy.listen()

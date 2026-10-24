@@ -1,3 +1,4 @@
+use oblivion_gateway::egress::Tools;
 use oblivion_transport::Transport;
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
@@ -23,6 +24,8 @@ enum Request {
     },
     Grant {
         token: Zeroizing<String>,
+        #[serde(default)]
+        tools: Option<Tools>,
     },
     Revoke {},
     Status {},
@@ -153,7 +156,7 @@ fn serve(channel: &mut Channel, api: &mut Option<Grant>) -> io::Result<()> {
                 transport = Some(selected);
                 key = Some(api_key);
             }
-            Request::Grant { token } => {
+            Request::Grant { token, tools } => {
                 if api.is_some()
                     || token.len() != 64
                     || !token.bytes().all(|byte| byte.is_ascii_hexdigit())
@@ -169,7 +172,7 @@ fn serve(channel: &mut Channel, api: &mut Option<Grant>) -> io::Result<()> {
                 if matches!(transport, Transport::Tor {}) && tor.is_none() {
                     return Err(io::Error::other("tor_not_initialized"));
                 }
-                *api = Some(Grant::start(key, &token, transport)?);
+                *api = Some(Grant::start(key, &token, transport, tools.as_ref())?);
             }
             Request::Revoke {} | Request::Shutdown {} => {
                 if let Some(mut current) = api.take() {
@@ -195,20 +198,29 @@ fn serve(channel: &mut Channel, api: &mut Option<Grant>) -> io::Result<()> {
 struct Grant {
     api: Process,
     egress: Process,
+    tools: Option<Process>,
 }
 
 impl Grant {
-    fn start(key: &str, token: &str, transport: &Transport) -> io::Result<Self> {
+    fn start(
+        key: &str,
+        token: &str,
+        transport: &Transport,
+        tools: Option<&Tools>,
+    ) -> io::Result<Self> {
         #[derive(Serialize)]
         struct EgressCredentials<'a> {
             transport: &'a Transport,
             session_token: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            tools: Option<&'a Tools>,
         }
         let egress = Process::start(
             Role::Egress,
             Zeroizing::new(serde_json::to_vec(&EgressCredentials {
                 transport,
                 session_token: token,
+                tools,
             })?),
         )?;
         #[derive(Serialize)]
@@ -225,14 +237,32 @@ impl Grant {
                 socks: "127.0.0.1:9051",
             })?),
         )?;
-        Ok(Self { api, egress })
+        #[derive(Serialize)]
+        struct ToolsCredentials<'a> {
+            session_token: &'a str,
+            socks: &'static str,
+        }
+        let tools = tools
+            .map(|_| {
+                Process::start(
+                    Role::Tools,
+                    Zeroizing::new(serde_json::to_vec(&ToolsCredentials {
+                        session_token: token,
+                        socks: "127.0.0.1:9051",
+                    })?),
+                )
+            })
+            .transpose()?;
+        Ok(Self { api, egress, tools })
     }
 
     fn stop(&mut self) -> io::Result<()> {
-        // Try both closures even if one fails. Process::drop also prevents a
+        // Try every closure even if one fails. Process::drop also prevents a
         // startup error from leaving the other service or its sockets alive.
+        let tools = self.tools.as_mut().map(Process::stop).transpose();
         let api = self.api.stop();
         let egress = self.egress.stop();
+        tools?;
         api?;
         egress
     }
@@ -241,6 +271,7 @@ impl Grant {
 enum Role {
     Api,
     Egress,
+    Tools,
 }
 
 struct Process {
@@ -253,6 +284,7 @@ impl Process {
         let (program, uid, ip, port) = match role {
             Role::Api => ("/usr/bin/oblivion-api", 1300, [10, 88, 0, 1], 8111u16),
             Role::Egress => ("/usr/bin/oblivion-egress", 1201, [127, 0, 0, 1], 9051u16),
+            Role::Tools => ("/usr/bin/oblivion-tools", 1301, [10, 88, 0, 1], 8112u16),
         };
         let (control, inherited) = UnixStream::pair()?;
         control.set_read_timeout(Some(Duration::from_secs(5)))?;
@@ -418,7 +450,17 @@ impl Channel {
     ) -> io::Result<()> {
         loop {
             if let Some(api) = api {
-                if api.api.child.try_wait()?.is_some() || api.egress.child.try_wait()?.is_some() {
+                let tools_exited = api
+                    .tools
+                    .as_mut()
+                    .map(|tools| tools.child.try_wait())
+                    .transpose()?
+                    .flatten()
+                    .is_some();
+                if tools_exited
+                    || api.api.child.try_wait()?.is_some()
+                    || api.egress.child.try_wait()?.is_some()
+                {
                     return Err(io::Error::other("grant_process_exited"));
                 }
             }

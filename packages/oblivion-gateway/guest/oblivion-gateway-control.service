@@ -7,7 +7,7 @@ After=oblivion-gateway-network.service systemd-tmpfiles-setup.service
 Type=exec
 ExecStart=/usr/bin/oblivion-gateway-control
 # Stop infrastructure traffic and remove egress permissions even after
-# abrupt supervisor death. Both grant processes belong to this cgroup.
+# abrupt supervisor death. All grant processes belong to this cgroup.
 ExecStopPost=-/usr/bin/systemctl kill --kill-whom=all --signal=SIGKILL oblivion-tor.service
 ExecStopPost=-/usr/sbin/nft -f /etc/oblivion/firewall.nft
 # Keep the default root identity. With User=root, systemd's seccomp setup drops

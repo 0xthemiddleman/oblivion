@@ -1,6 +1,6 @@
 use oblivion_transport::Transport;
 use oblivion_transport::policy::{Action, Destination, Policy, Session};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     io,
     net::{IpAddr, Ipv4Addr, Ipv6Addr},
@@ -31,7 +31,7 @@ pub struct Credentials {
     pub tools: Option<Tools>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Tools {
     pub session: Session,

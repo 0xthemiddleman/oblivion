@@ -38,7 +38,7 @@ impl Destination {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(try_from = "String")]
 pub struct Session(String);
 

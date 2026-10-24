@@ -146,12 +146,14 @@ RUN --network=none cargo test --locked --offline --lib --features lab-emulation 
     && mkdir /gateway-bundle \
     && cp /tmp/target/debug/oblivion-api /gateway-bundle/oblivion-api-lab \
     && cp /tmp/target/debug/oblivion-egress /gateway-bundle/oblivion-egress-lab \
+    && cp /tmp/target/debug/oblivion-tools /gateway-bundle/oblivion-tools-lab \
     && cp $(find /tmp/target/debug/deps -type f -name 'oblivion_gateway-*' -executable) /gateway-bundle/gateway-tests \
     && cp $(find /tmp/target/debug/deps -type f -name 'activation-*' -executable) /gateway-bundle/activation-tests \
     && cargo build --locked --offline --bins \
     && cp /tmp/target/debug/oblivion-api /gateway-bundle/oblivion-api \
     && cp /tmp/target/debug/oblivion-gateway-control /gateway-bundle/oblivion-gateway-control \
     && cp /tmp/target/debug/oblivion-egress /gateway-bundle/oblivion-egress \
+    && cp /tmp/target/debug/oblivion-tools /gateway-bundle/oblivion-tools \
     && strip /gateway-bundle/* \
     && find Cargo.toml Cargo.lock .cargo src tests ../oblivion-tor-state/Cargo.toml ../oblivion-tor-state/src ../oblivion-transport/Cargo.toml ../oblivion-transport/src -type f -print0 | sort -z | xargs -0 sha256sum > /gateway-bundle/sources.sha256 \
     && rustc --version > /gateway-bundle/compiler.txt \
@@ -167,6 +169,7 @@ COPY packages/oblivion-gateway/guest/ /gateway-config/
 COPY --from=gateway-compiler /gateway-bundle/oblivion-api /usr/bin/oblivion-api
 COPY --from=gateway-compiler /gateway-bundle/oblivion-gateway-control /usr/bin/oblivion-gateway-control
 COPY --from=gateway-compiler /gateway-bundle/oblivion-egress /usr/bin/oblivion-egress
+COPY --from=gateway-compiler /gateway-bundle/oblivion-tools /usr/bin/oblivion-tools
 RUN sh /gateway-config/install.sh && rm -rf /gateway-config
 # BuildKit mounts its own resolver read-only during RUN; COPY replaces the
 # image's file without touching that build-time mount.
@@ -271,7 +274,7 @@ RUN --mount=type=bind,from=transport-network-lab,source=/,target=/lab,ro \
     mkdir /out && cp /lab/boot/vmlinuz-* /out/kernel && cp /lab/boot/initrd.img-* /out/initrd \
     && mksquashfs /lab /out/laboratory.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
     && cp /lab/usr/lib/oblivion-transport-fixture/trust.diff /out/trust.diff \
-    && sha256sum /lab/usr/bin/oblivion-api /lab/usr/bin/oblivion-egress /lab/usr/bin/oblivion-gateway-control > /out/binaries.sha256 \
+    && sha256sum /lab/usr/bin/oblivion-api /lab/usr/bin/oblivion-egress /lab/usr/bin/oblivion-tools /lab/usr/bin/oblivion-gateway-control > /out/binaries.sha256 \
     && cd /sources && find . -type f -print0 | sort -z | xargs -0 sha256sum > /out/sources.sha256 \
     && cp broker.sha256 /out/broker-sources.sha256 \
     && cd /out && sha256sum * > SHA256SUMS
