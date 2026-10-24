@@ -468,6 +468,61 @@ command("close")
 command("lock")
 check("normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes")
 
+tokens = [first, second, third, fourth, fifth]
+if SOCKS:
+    command("unlock", secret=GENERAL)
+    previous_gateway, _ = ready()
+    saved_transport = Path("/run/oblivion/general/profile/transport.json").read_bytes()
+    tor_state = Path("/run/oblivion/general/profile/tor-state")
+    assert tor_state.read_bytes() == b"unused-tor-state-fixture"
+    # Replace the deliberately invalid seed with the selective guard fixture
+    # already used by the Tor-state lab. A stored guard is not a bootstrap.
+    guard_id = "rsa_id=0123456789ABCDEF0123456789ABCDEF01234567"
+    tor_state.write_text("Guard in=default " + guard_id + " nickname=TestGuard sampled_on=2026-10-24T00:00:00 sampled_idx=0 sampled_by=0.4.9.14 listed=1 confirmed_on=2026-10-24T00:01:00 confirmed_idx=0\nTorVersion Tor 0.4.9.14\nLastWritten 2026-10-24 00:02:00\n")
+    command("egress", secret=b'{"action":"select","transport":{"mode":"tor"}}')
+    tor_gateway, _ = ready()
+    assert tor_gateway != previous_gateway and not Path(f"/proc/{previous_gateway}").exists()
+    assert status()["egress"]["selected"] == {"mode": "tor"} and status()["egress"]["temporary"]
+    assert Path("/run/oblivion/general/profile/transport.json").read_bytes() == saved_transport
+    assert gateway_status() == {"ok": False, "configured": True, "active": False}
+    assert command("enter", a, secret=PASSWORD, success=False) == "gateway_not_ready"
+    assert not status()["session_open"] and property("oblivion-session.service", "ActiveState") in ["inactive", "failed"]
+    assert not Path("/dev/mapper/oblivion-session").exists() and not Path("/run/oblivion-session/console.sock").exists()
+    assert stream_status()["active"] == [] and stream_status()["closed"] == [1, 2]
+    assert tor_state.stat().st_uid == 0 and tor_state.stat().st_mode & 0o777 == 0o600
+    assert "TorVersion Tor 0.4.9.14\n" in tor_state.read_text()
+    assert guard_id in tor_state.read_text()
+    assert all(line.startswith(("Guard ", "TorVersion ", "LastWritten ")) for line in tor_state.read_text().splitlines())
+    check("SOCKS-to-Tor imports its saved guard and replaces the gateway; absent bootstrap still rejects opening before any session mapping or VM, with no SOCKS fallback")
+
+    command("egress", secret=b'{"action":"saved"}')
+    restored_gateway, _ = ready()
+    assert restored_gateway != tor_gateway and not Path(f"/proc/{tor_gateway}").exists()
+    assert status()["egress"]["selected"]["mode"] == "socks5" and not status()["egress"]["temporary"]
+    assert Path("/run/oblivion/general/profile/transport.json").read_bytes() == saved_transport
+    saved_tor_state = tor_state.read_bytes()
+    assert guard_id.encode() in saved_tor_state
+    assert gateway_status() == {"ok": True, "configured": True, "active": False}
+    check("restoring the saved SOCKS profile closes the Tor gateway and completes its selective state checkpoint before replacement")
+
+    command("enter", a, secret=PASSWORD)
+    client = console()
+    transition_token = probe(client)
+    assert transition_token not in tokens
+    tokens.append(transition_token)
+    client.sendall(b"old " + fifth + b"\n")
+    receive(client, b"OBLIVION_OLD_TOKEN_DENIED")
+    client.sendall(b"stream\n")
+    receive(client, b"OBLIVION_STREAM_STARTED")
+    observed = stream_status()
+    assert observed["active"] == [3] and observed["credentials"]["3"] == "initial"
+    command("force-leave")
+    client.close()
+    stream_closed(3)
+    assert tor_state.read_bytes() == saved_tor_state and not status()["session_open"]
+    command("lock")
+    check("restored SOCKS serves a fresh-token client stream, rejects the prior token and revokes without mutating the saved Tor checkpoint")
+
 command("unlock", secret=GENERAL)
 ready()
 # A privileged client that drips a frame must not hold the gateway owner
@@ -506,7 +561,7 @@ for path in Path("/run").rglob("*"):
     with path.open("rb") as stream:
         tail = b""
         while chunk := stream.read(1024 * 1024):
-            assert not any(secret in tail + chunk for secret in [KEY, NEXT, PROXY_USER, PROXY_PASSWORD, first, second, third, fourth, fifth]), str(path)
+            assert not any(secret in tail + chunk for secret in [KEY, NEXT, PROXY_USER, PROXY_PASSWORD, *tokens]), str(path)
             tail = chunk[-128:]
 check("runtime regular files contain none of the synthetic provider keys or session tokens after closure")
 run("umount", "/data")

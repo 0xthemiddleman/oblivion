@@ -268,6 +268,8 @@ markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVIO
            b"OBLIVION_API_KEY_CANARY_5c91", b"OBLIVION_API_NEXT_CANARY_86ab",
            b"OBLIVION_PROXY_USER_CANARY_31d2", b"OBLIVION_PROXY_PASSWORD_CANARY_72a4",
            b"synthetic-general-password", b"synthetic-session-password-a", b"synthetic-session-password-b"]
+if args.stream:
+    markers.extend([b"OBLIVION_STREAM_REQUEST", b"Synthetic open stream"])
 if (image / "opencode.sha256").exists():
     markers.append(b"OBLIVION_GUEST_CHAT_CANARY_7eaf")
 if (image / "tui-lab").exists():
@@ -298,6 +300,7 @@ summary = {
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
     "checks": [line.strip() for line in serial.splitlines() if line.startswith("PASS:")],
     "guest_pass": "OBLIVION_VM_LAB_PASS" in serial, "plaintext_markers_on_disk": sorted(found),
+    "disk_scan_canaries": [marker.decode() for marker in markers],
     "disk_sha256": digest.hexdigest() if disk else None, "image_manifest": (image / "SHA256SUMS").read_text(),
     "compiled_sources": (image / "sources.sha256").read_text(),
     "opencode_sha256": adapter_digest,
