@@ -94,8 +94,11 @@ COPY --from=pack /out/ /
 FROM compiler AS gateway-compiler
 WORKDIR /gateway
 ENV CARGO_TARGET_DIR=/tmp/target
-COPY packages/oblivion-gateway/ ./
+COPY packages/oblivion-gateway/Cargo.toml packages/oblivion-gateway/Cargo.lock ./
+COPY packages/oblivion-gateway/.cargo/ .cargo/
 RUN cargo fetch --locked
+COPY packages/oblivion-gateway/src/ src/
+COPY packages/oblivion-gateway/tests/ tests/
 RUN --network=none cargo test --locked --offline --lib --features lab-emulation \
     && cargo test --locked --offline --no-run --features lab-emulation \
     && mkdir /gateway-bundle \
@@ -111,3 +114,42 @@ RUN --network=none cargo test --locked --offline --lib --features lab-emulation 
 
 FROM scratch AS gateway-artifacts
 COPY --from=gateway-compiler /gateway-bundle/ /
+
+FROM os AS gateway-system
+RUN apt-get update && apt-get install -y --no-install-recommends tor nftables iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+COPY packages/oblivion-gateway/guest/ /gateway-config/
+COPY --from=gateway-compiler /gateway-bundle/oblivion-api /usr/bin/oblivion-api
+RUN sh /gateway-config/install.sh && rm -rf /gateway-config
+# BuildKit mounts its own resolver read-only during RUN; COPY replaces the
+# image's file without touching that build-time mount.
+COPY packages/oblivion-gateway/guest/resolv.conf /etc/resolv.conf
+
+# Diagnostics exist only in this separate laboratory image.
+FROM gateway-system AS gateway-network-lab
+RUN apt-get update && apt-get install -y --no-install-recommends python3 curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY script/oblivion/vm-network-fixture.py /usr/libexec/oblivion-network-fixture
+COPY script/oblivion/vm-network-setup.sh /tmp/network-setup
+RUN sh /tmp/network-setup && rm /tmp/network-setup
+
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS gateway-network-pack
+RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
+COPY packages/oblivion-gateway/guest/ /sources/guest/
+COPY script/oblivion/vm-network-fixture.py script/oblivion/vm-network-setup.sh /sources/lab/
+COPY --from=gateway-compiler /gateway-bundle/sources.sha256 /sources/broker.sha256
+RUN --mount=type=bind,from=gateway-system,source=/,target=/gateway,ro \
+    --mount=type=bind,from=gateway-network-lab,source=/,target=/lab,ro \
+    mkdir /out \
+    && cp /gateway/boot/vmlinuz-* /out/kernel \
+    && cp /gateway/boot/initrd.img-* /out/initrd \
+    && mksquashfs /gateway /out/gateway.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
+    && mksquashfs /lab /out/laboratory.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
+    && chroot /gateway dpkg-query -W -f='${Package}\t${Version}\n' > /out/gateway-packages.tsv \
+    && chroot /lab dpkg-query -W -f='${Package}\t${Version}\n' > /out/lab-packages.tsv \
+    && cd /sources && find . -type f -print0 | sort -z | xargs -0 sha256sum > /out/sources.sha256 \
+    && cp broker.sha256 /out/broker-sources.sha256 \
+    && cd /out && sha256sum * > SHA256SUMS
+
+FROM scratch AS gateway-network-artifacts
+COPY --from=gateway-network-pack /out/ /

@@ -25,6 +25,8 @@ packages/oblivion-gateway/*
 !packages/oblivion-gateway/src/**
 !packages/oblivion-gateway/tests/
 !packages/oblivion-gateway/tests/**
+!packages/oblivion-gateway/guest/
+!packages/oblivion-gateway/guest/**
 !script/
 script/*
 !script/oblivion/

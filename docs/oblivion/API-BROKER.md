@@ -2,8 +2,9 @@
 
 24 ottobre 2026. Componente implementato in `packages/oblivion-gateway`, separato
 dal controller privilegiato. Provato nativamente sul Mac ARM e nel guest Debian
-ARM senza swap, avviato dal Mac con HVF. **Non è ancora il gateway di Oblivion**:
-la VM della chat mantiene `-nic none`; Tor, firewall fra VM, proxy dei tool e
+ARM senza swap, avviato dal Mac con HVF. Il [laboratorio di rete](NETWORK-LAB.md)
+ora esegue il broker nella VM gateway e verifica firewall e Tor reale. La VM
+avviata dal controller mantiene `-nic none`; proxy dei tool, stato Tor e
 integrazione nel ciclo delle sessioni restano da realizzare.
 
 Il binario `oblivion-api` gestisce una sola autorizzazione, senza poterla
@@ -11,7 +12,7 @@ riassegnare a un'altra sessione. Il controller gli consegnerà la chiave reale;
 OpenCode riceverà soltanto un token locale revocabile. Il broker non monta il
 profilo generale o i vault e non aggiunge dipendenze HTTP/TLS al controller LUKS.
 Questa separazione è implementata nel componente; la consegna dal profilo LUKS
-e il suo posizionamento nella futura VM gateway non sono ancora collegati.
+rimane da collegare al ciclo di vita reale del gateway.
 
 ## Superficie ammessa
 
@@ -128,9 +129,9 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
 
 ## Prossimi gate
 
-1. VM gateway e collegamento privato alla VM chat, con regole esterne al guest;
-   Tor con controlli degli indirizzi interni, isolamento dei flussi e assenza di
-   accesso guest a SOCKS/ControlPort. Il solo client SOCKS non è una sandbox.
+1. Portare il collegamento e il firewall verificati nel [laboratorio](NETWORK-LAB.md)
+   nel controller reale, completare il servizio confinato del broker e la
+   persistenza dello stato Tor; verificare indirizzi interni e rebinding via Tor.
 2. Attivazione/revoca collegata al controller reale e al blocco generale;
    integrazione del token e del base URL nell'istanza OpenCode.
 3. Proxy dei tool con allow/deny/ask, quote e revoca dei tunnel; nessun traffico

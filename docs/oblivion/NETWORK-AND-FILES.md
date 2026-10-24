@@ -1,6 +1,6 @@
 # Oblivion — studio di networking e trasferimento file
 
-24 ottobre 2026. Documento di progettazione collegato al [piano principale](../../PLAN.md). Il [primo broker API](API-BROKER.md) è implementato e provato come componente separato con traffico sintetico sul Mac e in Debian ARM. Gateway fra VM, Tor, proxy dei tool, trasferimenti e integrazione nelle sessioni restano da implementare; la VM chat non ha ancora una scheda di rete. Le proposte non autorizzano la pubblicazione di documenti, l'apertura di servizi di rete esterni o la formattazione di dispositivi.
+24 ottobre 2026. Documento di progettazione collegato al [piano principale](../../PLAN.md). Il [primo broker API](API-BROKER.md) è implementato e provato come componente separato con traffico sintetico sul Mac e in Debian ARM. Il [laboratorio Mac con due VM](NETWORK-LAB.md) ora prova firewall, Tor reale e guasti sintetici. Proxy dei tool, trasferimenti, stato Tor persistente e integrazione nelle sessioni restano da implementare; la VM avviata dal controller mantiene ancora la rete disabilitata. Le proposte non autorizzano la pubblicazione di documenti, l'apertura di servizi di rete esterni o la formattazione di dispositivi.
 
 **Vincoli già decisi**
 

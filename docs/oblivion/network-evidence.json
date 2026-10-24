@@ -1,0 +1,251 @@
+{
+  "date": "2026-10-24",
+  "scope": "two independent Debian ARM VMs under Mac HVF; production API binary, synthetic client and credentials; real Tor and HTTPS check; no OpenCode/LUKS lifecycle integration or provider requests",
+  "sources": {
+    "packages/oblivion-gateway/guest/firewall.nft": "17c1e315f5ae50b8aa53c149da2a7edaaef6001e542f9cf098dd82d30037d4c7",
+    "packages/oblivion-gateway/guest/install.sh": "c31291b56f030cc62daaa6a53ed29d98ff22228a31f8333f0d6f33ce539d1f9a",
+    "packages/oblivion-gateway/guest/network.sh": "02fe3601dd4692f6c5e5d31178e6ce4463a4edca70b2101c46a13c7f38c374b0",
+    "packages/oblivion-gateway/guest/oblivion-gateway-network.service": "f2420aaa2d444bfcd01d8c7ee2f76298de1a135bfc63341d9604fee9fc5ff456",
+    "packages/oblivion-gateway/guest/oblivion-tor.service": "091365da1d3bf1dff4cdc1dcad5daadb7f526eb01c03fd47db69308e604864db",
+    "packages/oblivion-gateway/guest/resolv.conf": "136f5b898e56a9181e324f0a58641418baa58985462065719551c04adc8441f0",
+    "packages/oblivion-gateway/guest/torrc": "0abe37d46a10919687b34721605c874d109c2dd6e70cf96318cc4d0290c4541e",
+    "script/oblivion/Dockerfile.vm-lab": "1ab0386e8b8d4d0ac25f74831b50631d3474eef04a4d4e6298d20f430ba5baa3",
+    "script/oblivion/Dockerfile.vm-lab.dockerignore": "13a5b4fa0dc27552dcde95307f5aec37f7c33976a7488caee4ec5c680e86d270",
+    "script/oblivion/run-network-lab.py": "aca092a00961bd9d06508285f26c30af16305016fe300e9b3a96b2bbfb0d4071",
+    "script/oblivion/vm-network-fixture.py": "5b782fa8d54d7ebdef404a38b22c4afba9826c9277497b93b8c616d8f15ad612",
+    "script/oblivion/vm-network-setup.sh": "00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41"
+  },
+  "host": {
+    "system": "Darwin",
+    "architecture": "arm64",
+    "qemu": "QEMU emulator version 10.2.0"
+  },
+  "image": {
+    "manifest_sha256": "18294bda8dc9cf210112faeb02602e7899fc9a58c9f4150012b6efa368f7a9db",
+    "sources_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  ./broker.sha256\n17c1e315f5ae50b8aa53c149da2a7edaaef6001e542f9cf098dd82d30037d4c7  ./guest/firewall.nft\n6084a789997f82c7b815b211dfccc844e7425551ec037d2503f4402489c03cfc  ./guest/install.sh\n67e2704f6116a1eec4d5a1238c672ee569e4edb6d43f98812db6439e3e9fc414  ./guest/network.sh\nf2420aaa2d444bfcd01d8c7ee2f76298de1a135bfc63341d9604fee9fc5ff456  ./guest/oblivion-gateway-network.service\n091365da1d3bf1dff4cdc1dcad5daadb7f526eb01c03fd47db69308e604864db  ./guest/oblivion-tor.service\n136f5b898e56a9181e324f0a58641418baa58985462065719551c04adc8441f0  ./guest/resolv.conf\n0abe37d46a10919687b34721605c874d109c2dd6e70cf96318cc4d0290c4541e  ./guest/torrc\n0e9d4a188912f8bcb49981f0b1882424c5e4d064bf95025f210d53688c1c83cf  ./lab/vm-network-fixture.py\n00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41  ./lab/vm-network-setup.sh\n",
+    "tor_package": "tor\t0.4.9.14-0+deb13u1",
+    "runtime_overlays": [
+      "current network.sh",
+      "current vm-network-fixture.py",
+      "lab-only network error console and poweroff override"
+    ],
+    "final_rebuild_verified": false,
+    "known_base_image_issue": "standalone network script references absent sysctl; corrected source invokes BusyBox and is overlaid in RAM for these tests; exported image without overlay must be rebuilt"
+  },
+  "runs": {
+    "run-09": {
+      "local_artifacts": "artifacts/oblivion-network/run-09",
+      "summary_sha256": "86b66c225a5b83eefc6bbd680991bdc6fd5f52e7dbdc164e1761c089410fa85b",
+      "console_hashes": {
+        "chat": "81a049ff7010927d4f08d1941542a784cf8f80dc1e3f25ad62084fde51885282",
+        "gateway": "c247e59ad530229e1d77b88634c026c5ec8633b59a7714aee21a278237b80ade"
+      },
+      "scope": "two independent Debian ARM VMs on Mac HVF; synthetic API credentials; no LUKS lifecycle or OpenCode integration",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; gateway Tor starts disabled",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "passed": true,
+      "image_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\nf66cc8053130ada05a14698835492a537f20d06e08ef1801a4981e60c6c4c618  gateway.squashfs\n5cff269c60b2b3ab3dfb17ad6876823606b76db4d5a850a303569354b01dc42c  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n6e05048710438d8bf12adcde6e3b34b6eaf302ba5f4f2d2b4f601b2200a82a48  lab-packages.tsv\ndef0133e189eb13bdaa650d663c9a67c8b4b78f2ca742f48a34799a397af158d  laboratory.squashfs\n19fdb5be5085300ad75ec8e193080139818ae120c205a7646b3faca974b70777  sources.sha256\n",
+      "fixture_sha256": "5b782fa8d54d7ebdef404a38b22c4afba9826c9277497b93b8c616d8f15ad612",
+      "runner_sha256": "aca092a00961bd9d06508285f26c30af16305016fe300e9b3a96b2bbfb0d4071",
+      "runtime_initrd_sha256": "1fbfaaefd4d3100e5203daea153fb102b96e4f7bee1a74978d7a935ff7f60465",
+      "runtime_network_script_sha256": "02fe3601dd4692f6c5e5d31178e6ce4463a4edca70b2101c46a13c7f38c374b0",
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "captures": {
+        "chat-inside.pcap": {
+          "packets": 83,
+          "ipv4": 64,
+          "ipv6": 13,
+          "udp": 3,
+          "tcp": 61,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 39260, 40566, 41914, 46982, 46994, 47002, 47014, 47020, 47028, 47042,
+            49716, 50156, 52570, 53682, 57436
+          ],
+          "udp_ports": [53, 443, 32802, 45620, 45928],
+          "sha256": "47a52579735f9c2e83810a3119e5b28d0906597977a2c933e887a226f98afc3c"
+        },
+        "gateway-inside.pcap": {
+          "packets": 82,
+          "ipv4": 63,
+          "ipv6": 13,
+          "udp": 3,
+          "tcp": 60,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 39260, 40566, 41914, 46982, 46994, 47002, 47014, 47020, 47028, 49716,
+            50156, 52570, 53682, 57436
+          ],
+          "udp_ports": [53, 443, 32802, 45620, 45928],
+          "sha256": "b681e5711424474e3e2628fb5a1ee2814ea81243117b5de2905ace20747fce95"
+        },
+        "before-tor-outside.pcap": {
+          "packets": 0,
+          "ipv4": 0,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 0,
+          "tcp_ports": [],
+          "udp_ports": [],
+          "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+        },
+        "gateway-outside.pcap": {
+          "packets": 0,
+          "ipv4": 0,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 0,
+          "tcp_ports": [],
+          "udp_ports": [],
+          "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+        }
+      },
+      "seconds": 11.88
+    },
+    "run-10": {
+      "local_artifacts": "artifacts/oblivion-network/run-10",
+      "summary_sha256": "b5d6d7c923827c1b9221849474d9c18b5c725cb0071dfb84dd8b83ec43b1d85e",
+      "console_hashes": {
+        "chat": "7a5ac4bc1a303a0f90a8a441e6f478b515079d89332022d9cd1b996aa8bcb728",
+        "gateway": "c7092e8813bb57822e4a5c9dfbc4e0e826e1302a37fcde155cc1ce3432c07289"
+      },
+      "scope": "two independent Debian ARM VMs on Mac HVF; synthetic API credentials; no LUKS lifecycle or OpenCode integration",
+      "online_tor_requested": true,
+      "provider_requests": false,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; gateway Tor starts disabled",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "real Tor bootstraps and Tor Project confirms an HTTPS request exits through Tor",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "passed": true,
+      "image_manifest": "75ca30a26470869100300e2b976cd5aab33758c27ba2eae742453e691e1aa942  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\nf66cc8053130ada05a14698835492a537f20d06e08ef1801a4981e60c6c4c618  gateway.squashfs\n5cff269c60b2b3ab3dfb17ad6876823606b76db4d5a850a303569354b01dc42c  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n6e05048710438d8bf12adcde6e3b34b6eaf302ba5f4f2d2b4f601b2200a82a48  lab-packages.tsv\ndef0133e189eb13bdaa650d663c9a67c8b4b78f2ca742f48a34799a397af158d  laboratory.squashfs\n19fdb5be5085300ad75ec8e193080139818ae120c205a7646b3faca974b70777  sources.sha256\n",
+      "fixture_sha256": "5b782fa8d54d7ebdef404a38b22c4afba9826c9277497b93b8c616d8f15ad612",
+      "runner_sha256": "aca092a00961bd9d06508285f26c30af16305016fe300e9b3a96b2bbfb0d4071",
+      "runtime_initrd_sha256": "67eb0a587b8ae9c3dd9ffec297ea3e291108b9262d5a530d11029242710d104d",
+      "runtime_network_script_sha256": "02fe3601dd4692f6c5e5d31178e6ce4463a4edca70b2101c46a13c7f38c374b0",
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "captures": {
+        "chat-inside.pcap": {
+          "packets": 84,
+          "ipv4": 64,
+          "ipv6": 14,
+          "udp": 3,
+          "tcp": 61,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 34786, 36930, 38736, 38746, 39004, 49438, 51482, 55358, 56620, 56622,
+            56634, 56638, 56644, 59514, 60382
+          ],
+          "udp_ports": [53, 443, 34554, 50313, 53083],
+          "sha256": "fbafc9bdfc3e8ad78c4a35336789b68675f5fec7df44de438457644af11aed48"
+        },
+        "gateway-inside.pcap": {
+          "packets": 83,
+          "ipv4": 63,
+          "ipv6": 14,
+          "udp": 3,
+          "tcp": 60,
+          "tcp_ports": [
+            22, 53, 80, 443, 8111, 9050, 9051, 34786, 36930, 38736, 38746, 39004, 49438, 51482, 55358, 56620, 56622,
+            56634, 56638, 59514, 60382
+          ],
+          "udp_ports": [53, 443, 34554, 50313, 53083],
+          "sha256": "d41d1e174924f4f33e2bd2a2399db56ada3d372614e123411092f4d97c47b68e"
+        },
+        "before-tor-outside.pcap": {
+          "packets": 0,
+          "ipv4": 0,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 0,
+          "tcp_ports": [],
+          "udp_ports": [],
+          "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+        },
+        "gateway-outside.pcap": {
+          "packets": 6349,
+          "ipv4": 6347,
+          "ipv6": 0,
+          "udp": 0,
+          "tcp": 6347,
+          "tcp_ports": [443, 51542, 52364, 57008],
+          "udp_ports": [],
+          "sha256": "b0fd2ee46fe2525ec8d8d66cb66c311c3b53e42e7cc15a27fc709cf1fe938308"
+        }
+      },
+      "seconds": 18.83
+    }
+  },
+  "checks": {
+    "python_syntax": "passed",
+    "shell_syntax": "passed",
+    "repository": "blocked: native oxlint binding for darwin-arm64 absent; dependencies installed for Linux; Docker engine stopped after ENOSPC and ordinary restart timed out"
+  },
+  "previous_attempts": [
+    {
+      "run": "run-01",
+      "result": "Mac HVF rejects Linux dump-guest-core property; use inherited RLIMIT_CORE=0 for lab"
+    },
+    {
+      "run": "run-02",
+      "result": "QEMU stream server rejects reconnect-ms; option now client-only"
+    },
+    {
+      "run": "run-03/run-04/run-05",
+      "result": "network service failed on absent standalone sysctl; interface startup did not proceed; replaced with existing BusyBox applet"
+    },
+    {
+      "run": "run-06",
+      "result": "five network checks passed; explicit systemd stop propagated through target dependencies and shut down fixture; use SIGKILL to simulate Tor process crash"
+    },
+    {
+      "run": "run-07/run-08",
+      "result": "offline nine and online ten checks passed; final runs add a complete WAN capture assertion and stale-policy-image check"
+    }
+  ],
+  "remaining_gates": [
+    "rebuild final image and rerun canonical repository check after Docker recovery",
+    "production gateway lifecycle and QEMU confinement",
+    "persistent Tor state delivery and ephemeral profile semantics",
+    "tool proxy allow/deny/ask and revocation",
+    "real OpenCode adapter and Abliteration through Tor",
+    "per-process/filesystem tracing and Tor private-address/rebinding faults",
+    "full shutdown, load and A-to-B network revocation",
+    "live image and target KVM/hardware audit"
+  ]
+}
