@@ -194,9 +194,11 @@ percorsi esterni e sovrascritture; le prove usano filesystem e socket reali.
 Gli endpoint con conferma, deadline e ricevuta sono ora provati fra VM con
 porte virtio-serial, sorgente virtuale readonly e destinazione LUKS. Il relay
 Linux lega le due porte ai processi QEMU e interrompe la copia su annullamento
-o morte della VM; la prova comprende il suo binario compilato. Il flusso
-di prodotto non è completo: controller, autorizzazioni, manager e dispositivi
-fisici non sono ancora collegati. I flussi seguenti restano il risultato da ottenere.
+o morte della VM; la prova comprende il suo binario compilato. Il controller e il manager collegano ora l’importazione alla sessione attiva:
+selezione della sorgente, percorso relativo, revisione del manifest e conferma.
+La copia verificata diventa disponibile in `/vault/imports/<id>/files`, con
+un ricevitore distinto dalla chat. Restano export, dispositivi fisici e
+recupero degli esiti incerti; i flussi seguenti descrivono l’obiettivo completo.
 
 Proponiamo nella UI fidata le operazioni Importa, Esporta e Copia in un'altra sessione. Invia con OnionShare e Ricevi con OnionShare sono operazioni distinte, avviate dall'utente e inizialmente disponibili solo in modalità Tor; un SOCKS generico non sostituisce i servizi onion. Sono funzioni dell'ambiente Oblivion; gli strumenti dell'agente restano quelli di OpenCode.
 

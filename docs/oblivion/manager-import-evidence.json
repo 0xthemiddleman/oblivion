@@ -1,0 +1,331 @@
+{
+  "date": "2026-10-25",
+  "implementation_commit": "4f75dfc3bef8498ca73c19265e743b4bc4184495",
+  "scope": "Trusted manager USB-import flow with real Debian/systemd/LUKS/QEMU, a synthetic readonly source disk and a UID 1000 shell fixture. No physical USB, production KVM guest or provider request.",
+  "components": {
+    "host_macos": {
+      "passed": 34,
+      "log": {
+        "path": "artifacts/oblivion-manager-import/host-tests.log",
+        "sha256": "50c03f91296396e15ded00bff8c1b269da83ae390b0e50763312bae26f23eec8"
+      }
+    },
+    "host_linux_arm64": {
+      "passed": 35,
+      "log": {
+        "path": "artifacts/oblivion-manager-import/image-06-build.log",
+        "sha256": "ca1ba9752fb7c11975498d57cecd8008bf216dc13bcbd5e49dfdbfe641825b03"
+      }
+    },
+    "transfer_macos": {
+      "passed": 35,
+      "log": {
+        "path": "artifacts/oblivion-manager-import/transfer-macos.log",
+        "sha256": "f258000ff4fae8ca9d914c084c6aa424466cf645b5fa83bb7944961fafb053e8"
+      }
+    },
+    "transfer_linux_arm64": {
+      "passed": 38,
+      "manifest": "9ed5bd277cd8584ed4c8924229f5851517f793a777a46ed213fa18a21cf19ebd  build.log\nd6d0685a3dcad5f85c8923677012c757081df6936e253b9361fc04fdeac4570f  oblivion-copy\n9efbbdd720b386506eac9c38278fe7126e6a0d45926be395fef8d11466d11512  oblivion-copy-relay\n6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88  rustc.txt\n64e525c9a3b4faee2c187ca337dfc12c84b3a3d18ef9abe1849cdd199b7bcd28  sources.sha256\n8aa76ca0d9f5596ac5516eed8c4bcc1d4ec2143f59b4b76561cfd8161dffe27b  tests.log\n",
+      "sources": "3bd7f90d1c20c7ca5136728a79e444547c60010e3fa6227db2a27468d6714bb6  Cargo.lock\neceb162a545ee91cb557a3097a63d1422b3ef64e7f41e2d50164ffc89026afa7  Cargo.toml\n9cd15a9086d3cf7985e1ea182c5ce157c1292d4b36935b05bcd0cbc0675c6460  src/channel.rs\na798dbaa1195e3830d369826ae8be69286560c38a5c0df2a9d30b3986556cef8  src/directory.rs\nd755d1ff3084ff483d8b72275b425c81ee534423bef16ddadee6bd66ba1d4341  src/endpoint.rs\na14f7b325080cc61c3fecf2beb4c3e378660b440f8ce6bf2651fa0167224d088  src/lib.rs\nac1e7d547c3085d1970a728787cdc3409ff01924ff69879d0d7cad464e299cf8  src/main.rs\n011e4a9208755cd121ecb236f5a3f0a3a07914e591ccbacd8559789edd072ab5  src/relay-main.rs\n7607b3fc4ede44e7563535c945556f22575d5da8cd54a7122174e8e5c0c443e7  src/relay.rs\ne135eb90b605f3d3d166b03abf4ae66d70e8f7fe6df3a62978745692a18607ba  src/runtime.rs\nb08580339fdf026398b64861806f7f108096ab3b7d8879c4e9174321bafb2060  tests/channel.rs\n919d036408773d85d44561031fe706db8d144f6000911933b96050384ebf7caf  tests/endpoint.rs\nec582f9a0144cf3ecad0987e8454923f3a6984f6fe5fae2f3c38eb2c140d872e  tests/relay.rs\n9ec10d9c13d32ab44d884d732f9a2009c38d96259e233b9550716a163d2f966f  tests/relay_process.rs\n928d8331b226650d976714c59a5a94f02df925532942fc0d7f065446075f1b54  tests/support/mod.rs\nf982a9e4824c11b4a0b213ef75ce954e49000bdf8287f7c82543aea4adf38450  tests/transfer.rs\n"
+    },
+    "transfer_linux_amd64": {
+      "passed": 38,
+      "manifest": "d6da7cd514df611f95df6d1eebdffd86037dacfec5b298940e316a0c3e35aa61  build.log\n62e90c14467a77940ad510db8e704c046e6279a6ea862cb741b5335b151f25e8  oblivion-copy\ndc3846ecf4872a26225eece69d52a30c10cad03bfb82fa31b63a3bc9e00fb52f  oblivion-copy-relay\n6661789050175828fe81cbba4e3bd5817751f51884bb3f5baaa7919bc01caa88  rustc.txt\n64e525c9a3b4faee2c187ca337dfc12c84b3a3d18ef9abe1849cdd199b7bcd28  sources.sha256\n1da3d0d42cb0dce31c96762076c76805a811c6698bc52565afe375b849557180  tests.log\n",
+      "sources": "3bd7f90d1c20c7ca5136728a79e444547c60010e3fa6227db2a27468d6714bb6  Cargo.lock\neceb162a545ee91cb557a3097a63d1422b3ef64e7f41e2d50164ffc89026afa7  Cargo.toml\n9cd15a9086d3cf7985e1ea182c5ce157c1292d4b36935b05bcd0cbc0675c6460  src/channel.rs\na798dbaa1195e3830d369826ae8be69286560c38a5c0df2a9d30b3986556cef8  src/directory.rs\nd755d1ff3084ff483d8b72275b425c81ee534423bef16ddadee6bd66ba1d4341  src/endpoint.rs\na14f7b325080cc61c3fecf2beb4c3e378660b440f8ce6bf2651fa0167224d088  src/lib.rs\nac1e7d547c3085d1970a728787cdc3409ff01924ff69879d0d7cad464e299cf8  src/main.rs\n011e4a9208755cd121ecb236f5a3f0a3a07914e591ccbacd8559789edd072ab5  src/relay-main.rs\n7607b3fc4ede44e7563535c945556f22575d5da8cd54a7122174e8e5c0c443e7  src/relay.rs\ne135eb90b605f3d3d166b03abf4ae66d70e8f7fe6df3a62978745692a18607ba  src/runtime.rs\nb08580339fdf026398b64861806f7f108096ab3b7d8879c4e9174321bafb2060  tests/channel.rs\n919d036408773d85d44561031fe706db8d144f6000911933b96050384ebf7caf  tests/endpoint.rs\nec582f9a0144cf3ecad0987e8454923f3a6984f6fe5fae2f3c38eb2c140d872e  tests/relay.rs\n9ec10d9c13d32ab44d884d732f9a2009c38d96259e233b9550716a163d2f966f  tests/relay_process.rs\n928d8331b226650d976714c59a5a94f02df925532942fc0d7f065446075f1b54  tests/support/mod.rs\nf982a9e4824c11b4a0b213ef75ce954e49000bdf8287f7c82543aea4adf38450  tests/transfer.rs\n"
+    },
+    "canonical_check": {
+      "passed_tasks": 34,
+      "log": {
+        "path": "artifacts/oblivion-manager-import/check-final.log",
+        "sha256": "1527ed34d9b1430bd34c784f12fbc55019bc32dc67100c423e5c48c14c0887e2"
+      }
+    },
+    "clippy": "Passed for host and transfer on macOS"
+  },
+  "vm": {
+    "outer_accelerator": "hvf",
+    "host_system": "Darwin",
+    "architecture": "aarch64",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "seconds": 207.65,
+    "checks": [
+      "PASS: manager opens a readonly networkless import VM without sharing a filesystem",
+      "PASS: cancelling the manifest destroys the source VM and leaves the active chat unchanged",
+      "PASS: confirmed files are verified, group-editable and visible only inside the session",
+      "PASS: source VM death invalidates approval and closes the session through the manager",
+      "PASS: imported documents and later edits survive a fresh VM and LUKS reopening",
+      "PASS: an unresponsive recipient stays interlocked until explicit forced closure reaps both VMs",
+      "PASS: blocking from the approval screen revokes the copy before both LUKS volumes close",
+      "PASS: ephemeral import and edits disappear at closure with the persistent general byte-identical",
+      "PASS: manager output contains neither document payloads nor volume passwords"
+    ],
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "plaintext_markers_on_disk": [],
+    "disk_scan_canaries": [
+      "OBLIVION_VM_A_CANARY_4d02",
+      "OBLIVION_VM_B_CANARY_b0ca",
+      "OBLIVION_VM_TEMP_CANARY_d9ae",
+      "OBLIVION_API_KEY_CANARY_5c91",
+      "OBLIVION_API_NEXT_CANARY_86ab",
+      "OBLIVION_API_RAM_CANARY_a13e",
+      "OBLIVION_PROXY_USER_CANARY_31d2",
+      "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+      "synthetic-general-password",
+      "synthetic-session-password-a",
+      "synthetic-session-password-b",
+      "OBLIVION_USB_SELECTED_CANARY_82f1",
+      "OBLIVION_USB_EDIT_CANARY_1b72",
+      "OBLIVION_USB_UNSELECTED_CANARY_29a1"
+    ],
+    "disk_sha256": "e4c7f8974c8338b8fce3b60045cbb2e815f6e7b9057799ad05bf943f851e03c0",
+    "import_source_sha256": "4c62f6a571b79dc595b711a5f22288b16bc8242c92f5a4e11a291cad96a3f532",
+    "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n0f5db017a286005d0b0df00a0c67ea69dc0d213784505b50767b13a3169a5f67  initrd\n8eab9fb76bfff962c772126ab9bc182d386b921a0299773c3000ca5ad8a60a4f  host.squashfs\n985a3bbd6ce19e1cf1d5992c6cda6b246ebbd1f4b45b98d11dfcf57b58131c51  host-packages.tsv\n007d9c014d0bc7709934b2af45b827633909690f06b61772b3f2ebd0ae628f3e  guest-packages.tsv\na3e9c42db1d80b6afc776acf89c9e7f6d1151787e577a39277d520535202e75b  sources.sha256\nd44c1d51ea9be67145ce7fa0b238346ceac9e197ae7f35a99f12ab615dcbb116  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  import-lab\n4c62f6a571b79dc595b711a5f22288b16bc8242c92f5a4e11a291cad96a3f532  import-source.raw\n",
+    "compiled_sources": "69693f4ad21f1154dafb437506411ee364c1621567d9d6d1a898778393d2a2d6  packages/oblivion-host/Cargo.lock\nf9741881a10caaba56a0385347341a447f73316a1c0c28b9262be9e7dc7240b6  packages/oblivion-host/Cargo.toml\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  packages/oblivion-host/examples/ipc-probe.rs\n05b64122fe8b152c7ce5ca4793861a085195496af8d4497575c6807aa8555c27  packages/oblivion-host/guest/conversation.sh\n17cefbda93572f4f252d3d178dd417341776abbb21d2beac321cc60d6391c941  packages/oblivion-host/guest/import-receive.sh\n44c4fb6dcfcbd597223b8bb15837d44cb7aca32ffd7f33574fbf9314d63c9815  packages/oblivion-host/guest/install.sh\nd744debcb6c6d2397652c5da325c3891d9519ee342fcb519acf08d374e19c7b7  packages/oblivion-host/guest/network.sh\nc1a8aef253c6e490277587ee53e514cff3358318f70e6cad0144ebe392c6d6e2  packages/oblivion-host/guest/oblivion-conversation.service\nfe5a4c17fa9db7fde2cae905da1ea539a74885d06e0d5e59edb2ec7bbf5ab595  packages/oblivion-host/guest/oblivion-import-receive@.service\n8f703fc1b02f035ba7782353837e3936217ef9fc3fa7bfcab757a21883039e6f  packages/oblivion-host/guest/oblivion-session-network.service\n0e7d92bf6f2abafc4c00978558973102dfb0e1868ff644d64e9b34fc12196c52  packages/oblivion-host/guest/oblivion-vault.service\n1a6f355aa5ebe103cd2832f58d8d75b5744653adb9cca3b826591e5d2299cd6d  packages/oblivion-host/guest/prepare.sh\nac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd  packages/oblivion-host/host/oblivion-controller.service\n7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015  packages/oblivion-host/host/oblivion-gateway-host.service\n0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327  packages/oblivion-host/host/oblivion-manager.service\n8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b  packages/oblivion-host/host/oblivion-recover.service\ne4fa5e156bb6a501982721bfbab16c386706b532012d4649d03685c1ec367ed3  packages/oblivion-host/host/oblivion-transfer-host.service\n5523d1c95003a1bae7f319209e16c92f7781960445504fc8ccae58dda9a84dd3  packages/oblivion-host/import/oblivion-import-source.service\n9ef26404ae8e52ab3afb4cf236a32b3b5b4991a3cbe66aa2c9137a62af1529f4  packages/oblivion-host/import/receive-source.sh\nd26ba5b2e6c479d267239bb30f40c8904df326c968e197e32455e53ba54ae987  packages/oblivion-host/src/channel.rs\na4e8bd56042ff5653ae829686e10b91fbe6aaf91fb03a183829dda2332e9eeb3  packages/oblivion-host/src/client.rs\n958c47df8149f342ab6c2f45874babd1a7d3192efb9d85a7bef8d6e24a3c8c85  packages/oblivion-host/src/control.rs\ne2fc2244144fd103bd59ee7f86c7dc8595c1f1065eba94b62b261fe63e5f21cf  packages/oblivion-host/src/egress.rs\n06e31ee060b640bdf116385a0369963986c7aedb30688bf86affb0d9eb2e276b  packages/oblivion-host/src/gateway.rs\n900e346b7ed2ddfaa520419fa9ff70f4a0d5565531d8a302d92e12405b4e3c10  packages/oblivion-host/src/ipc.rs\nc3c64ac480a4af605c803c22f73fd7542c071f04af853aceb985968ee19da203  packages/oblivion-host/src/keys.rs\n06ef6763b911cb43a8a3b3a52ada8ac792926922ff09ee41a4d8049ce7437faf  packages/oblivion-host/src/lib.rs\n0a55ae5e44b1b72863c5138d52ad518d82132d1694cca707fc85094bcbcfb4f1  packages/oblivion-host/src/main.rs\n8c18943c99accaa867dbedae5a09bbbe8775c2d72e78d20d51ccdcbe8640f145  packages/oblivion-host/src/manager.rs\na26a4761d6600daf8150fd8c840d5042bb51ee4a662632bb6076462f3e41e954  packages/oblivion-host/src/network.rs\n925cf6ec14efeb273ed7eb0c90213fd0e9969ae46d32077144d1f5d077cacf03  packages/oblivion-host/src/storage.rs\ne54fd049d007da68f22e454213e3d2c496db5a5c774036496f184a86c37d6c39  packages/oblivion-host/src/terminal.rs\nb0e85f353e4104ddd1f845766d46118ff9af2be6df1977448df19213dc3e8d26  packages/oblivion-host/src/transfer_host.rs\n1219ce05e26c7186c005395ce36030fc5fabf5d90417b91ee0d221f0d638f506  packages/oblivion-host/src/transfer_menu.rs\n05e38fa39fcb3563ecc960f971e9d41348a841f239e5979c9b45edfe8c22adc7  packages/oblivion-host/src/transfers.rs\nded8534d627944e3866fe03228eebebfe60e6428f53b63099b1fed85ea5b006e  packages/oblivion-host/src/vm.rs\n59ff2662534b95ced9cfd1a309bd7a60ac489c4d21863f5d51378b08234c4d64  packages/oblivion-host/tests/channel.rs\n4e6d50f7b3edbf2a8b8115dc273d64c1d44759039bbd7cd83c01815d2cd3c7f1  packages/oblivion-host/tests/console.rs\na77cb5e30ef916b34fb1590b777769e436ed9b8e9087b7ecc50974c360650d73  packages/oblivion-host/tests/egress.rs\nb755e896b52b7314b9f6823af446f9924c34a00f2ee5eec48422a49409f3aaee  packages/oblivion-host/tests/keys.rs\nd66174758abfab95566ad128ea638ca9f62f3018c69478e4b122922721c4c445  packages/oblivion-host/tests/network-policy.rs\n1a2a4b5b3ff7d599a68a53479a34a41f4c2d30c2b22b142cff503fb28aa3633f  packages/oblivion-tor-state/Cargo.lock\n5981028849ba5929786c2d7f7b465e92303f1a5d0c4eeeed11ed8b67d8bf6bbf  packages/oblivion-tor-state/Cargo.toml\n5d032d44646693873bd120323d74df4e334290d558758d6474c8cd9e2103f6a5  packages/oblivion-tor-state/src/lib.rs\n3bd7f90d1c20c7ca5136728a79e444547c60010e3fa6227db2a27468d6714bb6  packages/oblivion-transfer/Cargo.lock\neceb162a545ee91cb557a3097a63d1422b3ef64e7f41e2d50164ffc89026afa7  packages/oblivion-transfer/Cargo.toml\n9cd15a9086d3cf7985e1ea182c5ce157c1292d4b36935b05bcd0cbc0675c6460  packages/oblivion-transfer/src/channel.rs\na798dbaa1195e3830d369826ae8be69286560c38a5c0df2a9d30b3986556cef8  packages/oblivion-transfer/src/directory.rs\nd755d1ff3084ff483d8b72275b425c81ee534423bef16ddadee6bd66ba1d4341  packages/oblivion-transfer/src/endpoint.rs\na14f7b325080cc61c3fecf2beb4c3e378660b440f8ce6bf2651fa0167224d088  packages/oblivion-transfer/src/lib.rs\nac1e7d547c3085d1970a728787cdc3409ff01924ff69879d0d7cad464e299cf8  packages/oblivion-transfer/src/main.rs\n011e4a9208755cd121ecb236f5a3f0a3a07914e591ccbacd8559789edd072ab5  packages/oblivion-transfer/src/relay-main.rs\n7607b3fc4ede44e7563535c945556f22575d5da8cd54a7122174e8e5c0c443e7  packages/oblivion-transfer/src/relay.rs\ne135eb90b605f3d3d166b03abf4ae66d70e8f7fe6df3a62978745692a18607ba  packages/oblivion-transfer/src/runtime.rs\nb08580339fdf026398b64861806f7f108096ab3b7d8879c4e9174321bafb2060  packages/oblivion-transfer/tests/channel.rs\n919d036408773d85d44561031fe706db8d144f6000911933b96050384ebf7caf  packages/oblivion-transfer/tests/endpoint.rs\nec582f9a0144cf3ecad0987e8454923f3a6984f6fe5fae2f3c38eb2c140d872e  packages/oblivion-transfer/tests/relay.rs\n9ec10d9c13d32ab44d884d732f9a2009c38d96259e233b9550716a163d2f966f  packages/oblivion-transfer/tests/relay_process.rs\n928d8331b226650d976714c59a5a94f02df925532942fc0d7f065446075f1b54  packages/oblivion-transfer/tests/support/mod.rs\nf982a9e4824c11b4a0b213ef75ce954e49000bdf8287f7c82543aea4adf38450  packages/oblivion-transfer/tests/transfer.rs\n8dc68df0af76d6c99fd25b61200e584dda3f93139b2b6530ae9c36b3fda4e56d  packages/oblivion-transport/Cargo.toml\nfe7be1bde32e13b6292f99a71063d05b9e65f67a454e9fc91fe7ee2ade557e03  packages/oblivion-transport/src/lib.rs\n2a0623b0e7b5f2d5a15581f8008e0dcf3cfdd752ccfc8edca60970f3ff510209  packages/oblivion-transport/src/policy.rs\nf2956857cc98d463b977e79d42d06419910bc856600643ca9f443e26d4ae869c  script/oblivion/Dockerfile.vm-lab\nec76e99bc205822500920ec5abf9e1aad55485763f1321922aab6d9ae5231f0c  script/oblivion/Dockerfile.vm-lab.dockerignore\n37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86  script/oblivion/packet_capture.py\nac8fd94bc1ee7118a6ea0f3f1a96c5137d22c808913b3286767b5f0416bcc450  script/oblivion/run-tui-boot-lab.py\n44ec444d0b7c59c4c65d5116481c77e50299d456e24ac29b919ef13ba88c7406  script/oblivion/run-vm-lab.py\na5cf6578546d4320204579ed65b8b31cf2d3f01a3e5772055c5bdbd5a062e720  script/oblivion/transfer_fixture.py\n10e89b26e7a5c9fe0a8f405c36f1ec187759e67318f75a4e99fcbfe9dec0ab09  script/oblivion/vm-chat-probe.py\n0eb3a9da1a99b7f3fb85d47c148108b2c5921d77fb1f09ccdeca6d065c53628c  script/oblivion/vm-common-setup.sh\n2b00f81ec52fe7a9c363d168bc7d6a88e0a604c7e9b6906d9383b1f4fd91d49b  script/oblivion/vm-gateway-host-test.py\n3fe83ef38b75d96b224c572e1d1d602d244c89014864dfc0796fceeecc09c6a4  script/oblivion/vm-gateway-test.py\n3cc790945894c1e02f68985ff2f30c6ac4bc8482d4fb5cef28e0c0f001e1b460  script/oblivion/vm-guest-fixture.sh\nd83153c91a952a0dbe390dcdcb615d4766db61fa1e633b375d0656d0c7c7ae61  script/oblivion/vm-host-setup.sh\nbb3ecd9282fef4bb3d88cc10120cb22ab3fb845c4a42d9e77d84f3bdf02be6a5  script/oblivion/vm-import-test.py\neffdea519ee0e8527211fb8a13d3a9f1a865e2a301c94c5ab591238c5447857c  script/oblivion/vm-lab-pack.sh\n1590c7bae0ebf8b9c55beea426766a0d53c36b387a875c50dbf44d81e2c82747  script/oblivion/vm-lab-test.py\nae8c44b7047fcf7bd72ab435d9072da785956af537d6fcd1d2767068ef98944c  script/oblivion/vm-manager-test.py\nb93cedee955b573f49f562a67d5bb1ad8a651e0ffca3a48a9b1d99c31ae88d08  script/oblivion/vm-network-fixture.py\n00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41  script/oblivion/vm-network-setup.sh\ndc20fc6d90bd9b1158ace08ac84984fd891c8db4b4c832dd7efbc0750393360c  script/oblivion/vm-services-test.py\n056bd82f563896d331d48dd51e38c2f12363810449759d1a357e052267043679  script/oblivion/vm-session-network-guest.py\n86d70927ac00b7405af9d1ba4902c7af68aa5f4dc644a9977f4748f3acd4de36  script/oblivion/vm-session-network-test.py\n59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62  script/oblivion/vm-stream-cert.pem\n3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb  script/oblivion/vm-stream-key.pem\n6aa2854cdd6f36d2d865756d97b3727711072ec90d45ba1adf82edc980ee9697  script/oblivion/vm-stream-provider.py\n79b12f91537b954961ce5da9f982caa76ad49b5f548f2a184292c44838eb1b41  script/oblivion/vm-stream-provider.service\n2458ffc5c8e65330a71398fbd3a3d6f9824e2223f61c4ef7a76a34a029091e12  script/oblivion/vm-tor-state-test.py\n225314ed866a44aec0ecf01a8ad1431eddd7e24a61b6a20c4fed791afa0633b1  script/oblivion/vm-transfer-guest.py\n9bb10cca7e9d5378484b254afc8f7d24f75bed582fd8999b437531784693c7b0  script/oblivion/vm-transfer.service\n7cb5eda51d0d2e0a1e8b3e848c75685193a34ea54a8dc2fbe609d092b22e5bf7  script/oblivion/vm-tui-guest.py\nf0a658e56c63fa52acc158438e90bfc7753f288571162b70225482457afba1f8  script/oblivion/vm-tui-test.py\n",
+    "lab_initrd_sha256": "0f5db017a286005d0b0df00a0c67ea69dc0d213784505b50767b13a3169a5f67"
+  },
+  "vm_artifacts": {
+    "summary": {
+      "path": "artifacts/oblivion-manager-import/vm-06/summary.json",
+      "sha256": "623ff5b4a4100b741a12d69e14c93846ee6e13309b0c2947a9bcaadda282502a"
+    },
+    "serial": {
+      "path": "artifacts/oblivion-manager-import/vm-06/serial.log",
+      "sha256": "51d6da49a254150b264edad8291cf8e59d1829777126a59002dd3322cd8b27da"
+    }
+  },
+  "source_unchanged": true,
+  "ephemeral_general_unchanged": true,
+  "tui_preservation": {
+    "upstream": "68bc26b7da1990ce10ffecfbc1e09eb13aa5d824",
+    "unchanged_paths": [
+      "packages/tui/src/routes/session",
+      "packages/tui/src/plugin/markdown.ts",
+      "packages/tui/src/util/scroll.ts"
+    ]
+  },
+  "faults_fixed": [
+    {
+      "attempt": "vm-01 and vm-02",
+      "observed": "Cancellation left the session interlocked; QMP rejected immediate backend removal.",
+      "fix": "Bounded wait for asynchronous virtio-port unplug before requiring successful chardev-remove."
+    },
+    {
+      "attempt": "vm-03",
+      "observed": "Copy did not produce its final receipt with two separately writable bind mounts.",
+      "fix": "A single writable /vault mount allows atomic rename between private inbox and imports; Unix permissions keep UID 1001 out of chat directories."
+    },
+    {
+      "attempt": "vm-04",
+      "observed": "A SIGSTOP recipient made cancellation/closure wait beyond the test deadline before forced closure could be selected.",
+      "fix": "Bound connect itself with SO_SNDTIMEO; reproduce a full Unix-listener backlog in Linux tests. Explicit forced-close destroys an unresponsive recipient and then rechecks transfer cleanup."
+    }
+  ],
+  "ci": {
+    "previous_verified": {
+      "conclusion": "success",
+      "headSha": "2e5c2f4ca7ca61e6fd6c87738784399e13056ef2",
+      "jobs": [
+        {
+          "conclusion": "success",
+          "name": "Repository checks",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121001478323"
+        },
+        {
+          "conclusion": "success",
+          "name": "File copy engine arm64",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121001478482"
+        },
+        {
+          "conclusion": "success",
+          "name": "Debian ARM64 builds",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121001478502"
+        },
+        {
+          "conclusion": "success",
+          "name": "File copy engine amd64",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121001478503"
+        },
+        {
+          "conclusion": "success",
+          "name": "x86 host LUKS, manager and SOCKS streams",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002028005"
+        },
+        {
+          "conclusion": "success",
+          "name": "ARM64 compiled chat boot",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155176"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks none revoke",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155449"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks required reconfigure",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155453"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks required egress-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155462"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks none supervisor-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155471"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tools required egress-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155475"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks required control-disconnect",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155483"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tools none revoke",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155488"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tools required tools-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155508"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks none control-disconnect",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155518"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks required supervisor-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155521"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks none reconfigure",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155522"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tools required revoke",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155523"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks none broker-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155542"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks required revoke",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155543"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks required broker-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155561"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network socks none egress-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002155596"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation disconnect",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156221"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation shutdown",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156292"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation oversized",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156376"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation malformed",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156386"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation duplicate-grant",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156427"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation partial",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156433"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation supervisor-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156467"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation broker-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156560"
+        },
+        {
+          "conclusion": "success",
+          "name": "Network tor isolation egress-crash",
+          "status": "completed",
+          "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057/job/121002156647"
+        }
+      ],
+      "status": "completed",
+      "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057"
+    },
+    "new_manager_import_job": "Configured for x86/KVM host with lab-only TCG guests; not yet observed for this implementation."
+  },
+  "remaining": [
+    "Physical USB and production KVM guests",
+    "FAT/exFAT integration tests (configured readers, ext4 fixture only)",
+    "USB removal, ENOSPC and I/O failures during copying",
+    "Reconciliation of orphaned imports and lost receipts",
+    "Export with flush/unmount, A-to-B and OnionShare",
+    "Bootable live image and full-media ephemeral verification"
+  ]
+}

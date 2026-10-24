@@ -7,20 +7,33 @@ Lo sviluppo procede sul Mac ARM disponibile: Docker per build e prove del binari
 Debian/HVF e guest TCG per il laboratorio VM. L'hardware x86/KVM è un gate di
 rilascio, non un blocco allo sviluppo sul Mac.
 
-Il lavoro sui documenti parte dal [motore di copia](FILE-COPY.md), con file
-selezionati, quote, hash, percorsi risolti da descrittori e ricezione privata.
-Il componente non apre device o reti e non monta filesystem. Gli endpoint
-compilati sono provati su porte virtio-serial di VM separate, con sorgente
-virtuale readonly e destinazione LUKS. Il nuovo [relay host](file-copy-relay-evidence.json)
-interrompe la copia su annullamento o morte dei processi VM, tramite pidfd
-Linux. Passano 31 test sul Mac, 34 in Debian ARM64/x86-64 e nove controlli
-fra VM con relay compilato. Selezione e conferma nel manager, emissione delle
-autorizzazioni e aggancio a chiusura/blocco nel controller, consegna alla chat
-e USB fisica restano da integrare. La CI precedente passa 29 job ma fallisce
-i due nuovi test VM per un errore di avvio del laboratorio, ora corretto e
-verificato localmente in HVF/TCG. La nuova CI non è ancora verificata.
+L’[importazione dei documenti](FILE-COPY.md) è ora collegata al controller e
+al manager: `Ctrl+^`, scelta della sorgente e del percorso relativo, manifest
+e conferma esplicita, quindi file verificati in `/vault/imports/<id>/files`.
+Una VM sorgente senza rete riceve il solo dispositivo readonly; il ricevitore
+UID 1001 resta separato dalla chat e lavora nel suo volume. Nessun filesystem
+è condiviso fra ambienti. Blocco e chiusura revocano il relay e rimuovono
+VM sorgente, porta e mapping prima di chiudere LUKS.
 
-Ultima verifica locale: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
+Le [evidenze del commit `4f75dfc`](manager-import-evidence.json) registrano
+nove controlli Linux in VM sul Mac (207,65 s): annullamento, copia e permessi,
+riapertura, perdita della sorgente, destinatario congelato e chiusura forzata,
+blocco ed effimero. La sorgente resta byte-identica e il percorso effimero
+non modifica il generale; nessuno dei 14 marcatori cercati compare nel disco
+scrivibile. I test usano ext4 virtuale e una shell UID 1000, non un provider
+reale o USB fisica. Passano 35/38 test del motore su Mac/Linux ARM e x86,
+34/35 test host su Mac/Linux ARM, Clippy e 34 task del controllo completo.
+
+Le prove hanno corretto tre guasti: backend QMP ancora occupato dopo
+`device_del`, rename impedita da due mount distinti e connect QMP senza
+scadenza quando la VM è congelata. Il blocco non è dichiarato finché la
+pulizia non riesce; la chiusura forzata resta una scelta esplicita.
+La CI precedente `2e5c2f4` completa tutti i 31 job; il nuovo job x86 del
+manager import è predisposto, ma questa evidenza non ne dichiara l’esito.
+Restano export, riconciliazione di copie orfane/esiti incerti, guasti I/O,
+FAT/exFAT, supporti fisici, A→B, OnionShare e immagine live.
+
+Verifica precedente di storage e rete: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
 passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,
 webfetch/shell reali, cattura esterna e due chat effimere con stream revocati.
 Le nuove chiavi temporanee sono verificate anche con generale scrivibile:

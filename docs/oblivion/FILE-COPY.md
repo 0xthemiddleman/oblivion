@@ -3,8 +3,9 @@
 Il pacchetto `packages/oblivion-transfer` implementa il primo componente del
 percorso USB → sessione → USB: selezione di file e cartelle, offerta validata,
 stream di byte e ricezione in un deposito privato. Il binario `oblivion-copy`
-è ora provato fra due VM con porte virtio-serial dedicate. Non è ancora
-collegato al manager o a una USB fisica e non abilita importazioni nella chat.
+è provato fra due VM con porte virtio-serial dedicate. Il controller e il
+manager ora collegano l’importazione alla sessione attiva; export e USB fisica
+restano da verificare. Il prototipo non è una live pronta per documenti privati.
 
 Il confine resta quello di [NETWORK-AND-FILES.md](NETWORK-AND-FILES.md): la VM
 di importazione vede il solo dispositivo autorizzato; quella della chat
@@ -28,14 +29,14 @@ non carica configurazioni, plugin o interpreti presenti nella selezione.
 
 Il chiamante fornisce i limiti di byte e voci. Il protocollo ammette al massimo
 4.096 voci e 1 MiB di header, percorsi UTF-8 fino a 4.096 byte, componenti fino
-a 255 byte e profondità 32. Il controller dovrà scegliere quote operative
-compatibili con RAM e spazio del destinatario. I file aperti durante la
+a 255 byte e profondità 32. Il controller impone per la prima importazione un massimo di 256 MiB e
+1.024 voci, senza aumenti richiesti dal manager sul canale. I file aperti durante la
 selezione restano aperti: esaurire il limite dei descrittori causa errore,
 senza riaprire silenziosamente percorsi diversi.
 
 Percorsi assoluti, `.` e `..`, componenti vuoti, backslash, caratteri di
 controllo, controlli bidi, duplicati e conflitti file/directory sono rifiutati.
-Le directory genitrici devono comparire prima dei figli. La futura UI deve
+Le directory genitrici devono comparire prima dei figli. La UI deve
 comunque trattare tutti i nomi come dati non fidati e applicare il renderer
 sicuro del manager.
 
@@ -154,9 +155,27 @@ il mittente è ancora attivo. Il marcatore sintetico è assente dai quattro
 dischi destinatari dopo l'uscita delle VM. Nel caso `SIGKILL` il guest non
 smonta il volume; gli altri ricevitori verificano la normale chiusura LUKS.
 
-## Verifiche e integrazione ancora necessaria
+## Verifiche
 
-Le [evidenze di componente](file-copy-evidence.json) registrano **12 test passati**
+Le [evidenze del manager](manager-import-evidence.json), commit `4f75dfc`,
+registrano **nove controlli VM passati in 207,65 secondi** su Mac/HVF, con host
+Debian e due guest TCG. Comprendono annullamento prima della copia, ricezione
+verificata e modifica come UID della chat, riapertura, morte della sorgente,
+destinatario congelato con chiusura forzata, blocco durante la conferma ed
+effimero. Sorgente invariata; generale invariato nel percorso effimero;
+nessuno dei 14 marcatori cercati sul disco scrivibile. La fixture usa una
+shell UID 1000, non la chat compilata né una USB fisica.
+
+Passano 35 test del motore sul Mac e 38 in Debian ARM64/x86-64, 34 test host
+sul Mac e 35 in Debian ARM64, Clippy e i 34 task del controllo completo.
+Il job x86 dedicato al manager è configurato; il suo esito non fa parte di
+queste prove locali. Il laboratorio si riproduce con `HOST=import-host` nel
+Dockerfile VM e il normale `run-vm-lab.py`; `--refresh-import-test` sostituisce
+solo la fixture nella RAM del laboratorio, verificandone il digest.
+
+## Evoluzione delle prove
+
+Le prime [evidenze di componente](file-copy-evidence.json) registrano **12 test passati**
 sul Mac, in Debian ARM64 e in Debian x86-64 sotto Docker sul Mac. Passano
 Clippy sul Mac e il controllo completo del repository (34 task). I nuovi job
 CI sono predisposti; queste evidenze non ne dichiarano ancora l'esito.
@@ -183,18 +202,60 @@ configurazione crittografica del controller di produzione. Su Mac QEMU non
 supporta il flag Linux `dump-guest-core=off`: il runner imposta `RLIMIT_CORE=0`,
 senza presentare HVF come prova dell'isolamento Linux/KVM previsto dal prodotto.
 
-Queste prove **non** completano USB → sessione di chat → USB. Servono ancora:
+## Importazione nel manager
 
-1. Identità e unità isolate del ricevitore, con deposito LUKS/tmpfs e recupero.
-2. Ambiente di importazione senza rete e device autorizzato readonly; export
-   con autorizzazione di scrittura distinta e smontaggio verificato.
-3. Collegamento del relay al controller, con emissione della capacità monouso
-   per la coppia autorizzata e aggancio della revoca a chiusura/blocco;
-   gestione dei guasti del filesystem e recupero delle copie orfane.
-4. Selezione e conferma nel manager fidato, consegna alla chat e revoca su
-   blocco/cambio sessione; una sola sessione aperta resta obbligatoria.
-5. Prove VM con ENOSPC, USB rimossa, crash, nomi ostili, flush fallito e scansione
-   dei residui, poi prova sul supporto fisico. A→B e OnionShare seguono.
+`Ctrl+^` apre il menu documenti nell’area fidata, mantenendo la console e la
+VM della chat. `Ctrl+]` continua a chiudere la sessione. I due tasti incollati
+con bracketed paste rimangono dati. Non cambia la TUI upstream della chat.
+Il menu seleziona una sorgente e richiede il percorso relativo di un file o
+una cartella; non è ancora un browser del filesystem. Mostra il manifest,
+quantità e dimensioni prima di **Importa nella chat**. La conferma autorizza
+sia la copia verificata sia la disponibilità dei file per l’agente; non invia
+automaticamente i documenti al provider.
+
+Il controller elenca solo device USB foglia non montati, escludendo il
+filesystem del generale. Il binario di laboratorio ammette inoltre un disco
+virtio con seriale fisso; il binario di produzione non lo ammette. Crea una
+mappatura device-mapper readonly, assegnata esclusivamente alla VM temporanea
+UID/GID 1102. Quella VM non ha NIC né directory condivise; monta il solo
+dispositivo autorizzato con `ro,nodev,nosuid,noexec`, aggiungendo `noload` per
+ext4. I lettori FAT/exFAT sono configurati; la prova di integrazione usa ext4.
+Il controller host non monta né interpreta il filesystem esterno.
+
+`oblivion-transfer-host.service` prepara porte monouso e lega ID casuale,
+limiti e scadenza alla sessione già aperta e ai due pidfd QEMU. Le due porte
+devono essere pronte prima di iniziare il budget di cinque minuti. Il manager
+riceve manifest e ricevuta, mentre i byte passano nel relay a buffer limitato
+senza deposito sul filesystem host. Una disconnessione del manager o la morte
+di un proprietario interrompono il relay.
+
+Il ricevitore è UID 1001/GID 1000, distinto dalla chat UID 1000. L’inbox
+`/vault/.oblivion-inbox` è 0700; dopo hash, fine stream e sincronizzazione,
+`publish` rende accessibile `/vault/imports/<id>/files`: file 0660 e directory
+0770. La chat può modificarli ma non accedere all’inbox né sostituire gli ID
+nel genitore `/vault/imports`, 0750 del ricevitore. Il servizio vede un solo
+mount scrivibile `/vault`: due bind separati per inbox/imports impedirebbero
+la rename atomica con `EXDEV`. I permessi 0700 delle directory della chat
+impediscono al ricevitore di accedervi.
+
+Annullamento, chiusura, blocco e recupero fermano il worker, distruggono la VM
+sorgente e rimuovono porta e mapping readonly prima della chiusura LUKS.
+La rimozione QMP della porta è asincrona: il controller attende, entro un
+limite, che il backend sia effettivamente rimovibile. Una VM destinataria
+bloccata resta interdetta fino alla chiusura forzata esplicita; dopo averla
+fermata il controller verifica nuovamente la pulizia prima di chiudere LUKS.
+Anche l’apertura del socket QMP ha un timeout: la VM congelata può riempire
+la coda delle connessioni prima che inizi lo scambio dei messaggi. Il test
+Linux riproduce una coda piena con socket reali; il limite usa
+[`SO_SNDTIMEO`](https://man7.org/linux/man-pages/man7/socket.7.html).
+
+Una ricevuta persa dopo la pubblicazione non significa che la copia sia
+assente: il manager segnala esito incerto e non riprova automaticamente.
+Un errore durante la pubblicazione può lasciare un ID privato riservato;
+non viene sovrascritto. Restano da realizzare la riconciliazione di questi
+resti, export con flush/smontaggio, copia A→B e OnionShare. Rimozione USB,
+ENOSPC del destinatario, guasti I/O, FAT/exFAT e hardware fisico restano gate
+di verifica. Nessuna delle prove trasforma l’originale esterno in un file cifrato.
 
 Il core accetta un `Read`/`Write` limitato dal chiamante e non apre socket o
 device di trasporto. L'endpoint dispone ora del canale con deadline; le porte
@@ -205,7 +266,9 @@ destinatario sta ancora facendo il boot in emulazione. Il laboratorio ora
 aspetta che entrambe le porte siano pronte e solo allora avvia gli endpoint.
 Il budget di copia rimane 30 secondi, separato dall'attesa di avvio. La
 correzione supera nuovamente i sei controlli su Mac, con HVF (6,43 secondi)
-e TCG (59,55 secondi complessivi). La nuova esecuzione CI resta da verificare.
+e TCG (59,55 secondi complessivi). La successiva [CI `2e5c2f4`](https://github.com/0xthemiddleman/oblivion/actions/runs/40137315057)
+termina con tutti i 31 job passati, inclusi entrambi i laboratori di copia.
+È precedente all’integrazione del manager descritta sopra.
 
 Riferimenti tecnici: [I/O e sincronizzazione Rust](https://doc.rust-lang.org/std/fs/struct.File.html),
 [SHA-256 incrementale RustCrypto](https://docs.rs/sha2/0.10.9/sha2/),

@@ -1,15 +1,21 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.54 — 25 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.55 — 25 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
 
-La prima CI della copia tra VM ha evidenziato un errore del laboratorio:
-il timeout del mittente iniziava durante il boot del destinatario. La
-[correzione verificata in HVF e TCG](docs/oblivion/FILE-COPY.md) separa i due
-momenti e conserva la scadenza di 30 secondi della copia. Il suo esito CI
-resta da verificare; i test dei componenti passano su entrambe le architetture.
+Il [manager dei documenti](docs/oblivion/FILE-COPY.md) importa ora file e
+cartelle nella sessione attiva, con sorgente readonly in una VM senza rete,
+manifest da confermare e consegna verificata alla chat. Le
+[prove aggiornate](docs/oblivion/manager-import-evidence.json) superano nove
+controlli VM sul Mac: copia, annullamento, riapertura, crash, chiusura forzata,
+blocco ed effimero. La sorgente resta identica; il generale resta identico
+nel percorso effimero. Nessuno dei 14 marcatori cercati compare nel disco
+scrivibile del laboratorio. La prova usa un disco sorgente virtuale ext4 e
+una shell con l’identità della chat: non completa USB fisica, export o la live.
+La precedente CI `2e5c2f4` termina con tutti i 31 job passati; la nuova
+integrazione ha un job x86 dedicato, ancora da verificare.
 
 Sono implementati il generale LUKS2 e i volumi indipendenti delle sessioni,
 il controller Linux, una VM nuova per apertura, il manager fidato e il profilo
@@ -26,7 +32,7 @@ Si conservano grafica, componenti e interazioni della chat TUI upstream.
 | Sessioni e rete API | [31 controlli del ciclo host sul Mac](docs/oblivion/ram-credentials-evidence.json): token nuovi, revoca, regole A/B, Tor↔SOCKS, stream effimeri e credenziali RAM | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale del prodotto |
 | Proxy degli strumenti | [Client compilato e cattura esterna verificati](docs/oblivion/ram-credentials-evidence.json): webfetch HTTP/HTTPS, shell, redirect e destinazioni vietate; anche [quattro scenari di revoca/crash](docs/oblivion/tools-vm-evidence.json) | Isolamento Tor dei flussi tool e provider reale |
 | Regole amministrate | [Menu, persistenza e grant host verificati](docs/oblivion/host-policy-evidence.json); 13 test delle regole sul Mac e in Debian ARM/x86 | Conferme interattive, scadenze e revoca di singoli permessi |
-| Documenti, effimero e live | [Copia provata tra VM](docs/oblivion/FILE-COPY.md): selezione, conferma, deadline, ricevuta, destinazione LUKS e cancellazione; [effimero verificato](docs/oblivion/EPHEMERAL.md) | Integrazione USB/controller/manager, OOM, intera USB invariata, copie A→B, OnionShare e immagine Debian Live |
+| Documenti, effimero e live | [Importazione nel manager](docs/oblivion/manager-import-evidence.json): nove controlli con VM separate, LUKS, conferma, consegna, blocco ed effimero | Export, USB fisica e guasti I/O, riconciliazione, FAT/exFAT, OOM, intera USB invariata, copie A→B, OnionShare e immagine Debian Live |
 
 La [CI del commit `65112f3`](docs/oblivion/ephemeral-evidence.json) termina con
 **29 job passati**: compilazione Debian, controlli del repository,
@@ -92,9 +98,23 @@ lega le porte ai processi VM e interrompe la copia su annullamento o morte
 di una VM. Passano 31 test sul Mac, 34 in Debian ARM64/x86-64 e nove controlli
 fra VM separate con relay Linux: sorgente readonly invariata, destinazione
 LUKS, ricevuta, cancellazione e arresto forzato della VM destinataria.
-Non completa l'import/export USB: autorizzazione nel manager, aggancio del
-relay al controller e a chiusura/blocco, dispositivi fisici e consegna alla
-chat restano da collegare.
+L’[integrazione successiva](docs/oblivion/manager-import-evidence.json), commit
+`4f75dfc`, collega controller, manager e ricevitore dedicato. `Ctrl+^` apre
+Documenti mantenendo la chat, `Ctrl+]` conserva la chiusura della sessione.
+La conferma autorizza la copia in `/vault/imports/<id>/files`; limite operativo
+256 MiB/1.024 voci, cinque minuti, nessun mount condiviso. La chat può modificare
+i file verificati ma non accedere all’inbox privata. Passano 35 test del motore
+sul Mac e 38 in Debian ARM64/x86, 34 test host sul Mac e 35 in Debian ARM64,
+oltre ai 34 task del controllo completo. Il ciclo VM supera nove controlli in
+207,65 secondi. Sono corretti la rimozione asincrona delle porte, la rename
+tra mount separati e il connect QMP bloccante con destinatario congelato.
+
+Prossimi passi della fase documenti: verificare il nuovo job x86, definire e
+collaudare il recupero delle copie senza ricevuta, aggiungere export con
+conferma distinta e flush/smontaggio, poi A→B e OnionShare. Test FAT/exFAT,
+rimozione USB, disco pieno/I/O, integrazione con la chat compilata e supporto
+fisico restano aperti. Le caratteristiche del PC Windows serviranno a scegliere
+la prova di boot in VirtualBox; non bloccano lo sviluppo sul Mac.
 
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
 limiti e incidenti precedenti, incluso il guasto di riapertura della console non
