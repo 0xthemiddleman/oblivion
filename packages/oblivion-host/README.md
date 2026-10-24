@@ -39,9 +39,12 @@ and their ancestors belong to the trusted system, never to an imported document.
 | `unlock` | Opens/mounts the general and prepares profile/session directories |
 | `unlock-ephemeral` | Opens the existing general read-only, without journal replay |
 | `create` | Creates a session, prints its random opaque ID, leaves it locked |
-| `open <id>` | Opens the one session block device; **does not launch a VM yet** |
-| `close` | Closes the session mapping, or fails if it is still in use |
-| `lock` | Closes the session, unmounts the general, closes the general mapping |
+| `open <id>` | Internal root-only storage primitive; opens only the block device |
+| `close` | Internal root-only primitive; closes the mapping or fails if busy |
+| `enter <id>` | Requires KVM, opens the vault and starts its confined QEMU service |
+| `leave` | Requests guest shutdown, waits for QEMU termination, then closes the mapping |
+| `force-leave` | Explicit forced QEMU stop, then closes the mapping; unsaved data may be lost |
+| `lock` | Shuts down the guest, closes its mapping, unmounts and closes the general |
 | `status` | Returns kernel-derived state and opaque IDs, no conversation titles |
 | `serve` | Serves the restricted Unix control socket for the configured manager UID |
 
@@ -69,15 +72,44 @@ block for the manager, not a shell privilege escalation facility. The daemon
 inherits its own root-owned config path and executes only its own storage binary.
 Each storage command reacquires the independent operation lock.
 
+The manager protocol's `open` invokes `enter`; `close` invokes `leave` and
+`force-close` invokes `force-leave`. The manager cannot request the mapping-only
+root primitives. Configuration without a VM remains usable for isolated storage
+tests but rejects a manager session open.
+
+## VM boundary
+
+`vm` configuration selects root-owned public images, memory and CPUs, not an
+arbitrary executable or command line. Normal builds require a usable `/dev/kvm`
+before unlocking a session. There is no software-emulation fallback. The explicit
+`lab-emulation` Cargo feature is for synthetic tests only and is reported in
+`status`; never ship that binary as a privacy product.
+
+QEMU runs as UID/GID 1100 in a transient systemd unit, without capabilities and
+with a private device tree, filesystem root and network namespace. Its root holds
+only executables and libraries. Only the public boot images and active session
+block device are bound into it. No host or session directory is shared with the
+guest; the guest receives a readonly system disk and its own writable vault disk.
+This first prototype has **no network device**. QMP and console use private Unix
+sockets in RAM; the trusted user-facing console bridge is still to be implemented.
+
+The guest mounts its vault at `/vault`; the conversation runs as UID/GID 1000.
+Home, workspace, state and configuration belong to that vault. `/tmp` and `/var`
+are tmpfs; the system root is SquashFS. Journald storage, swap, hibernation and
+core dumps are disabled. Closing waits for the guest to power off; a timeout
+returns an error and leaves the volume interlocked, never reporting a false lock.
+Forced close is a separate explicit request. No memory snapshots are made.
+
 ## Verification and remaining work
 
-See [storage laboratory](../../docs/oblivion/STORAGE-LAB.md). Cargo dependencies
+See [storage laboratory](../../docs/oblivion/STORAGE-LAB.md) and
+[VM lifecycle laboratory](../../docs/oblivion/VM-LAB.md). Cargo dependencies
 are locked; build with `cargo build --locked --release`. Integration tests execute
 the compiled Linux binaries with real cryptsetup and real device-mapper mappings
 inside a disposable Debian VM, not mocks of encryption or process execution.
 
-Still required: production service confinement, VM lifecycle and block-device
-handoff, trusted TUI, quota UI, explicit recovery for interrupted initialization
+Still required: production controller-service confinement, KVM/hardware validation,
+actual OpenCode guest and trusted TUI, quota UI, explicit recovery for interrupted initialization
 and `.pending` session files, power-loss tests, profile settings/API broker,
 full ephemeral guests, USB provisioning, integrity/backup decisions and release
 hardening. A failed initialization retains its file and a failed creation may

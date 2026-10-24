@@ -1,0 +1,33 @@
+{
+  "scope": "real LUKS/systemd/QEMU lifecycle with synthetic guest; nested TCG is NOT an isolation guarantee",
+  "outer_accelerator": "hvf",
+  "inner_accelerator": "tcg",
+  "production_kvm_tested": false,
+  "seconds": 112.29,
+  "qemu_exit": 0,
+  "checks": [
+    "PASS: production requires usable KVM before unlocking a session",
+    "PASS: production binary rejects laboratory emulation configuration",
+    "PASS: QEMU runs unprivileged without capabilities in private filesystem and network namespaces",
+    "PASS: guest user is unprivileged, root is readonly and temporary files are RAM-backed",
+    "PASS: unprivileged manager IPC opens and closes the complete VM lifecycle",
+    "PASS: graceful shutdown terminates the VM and its detached work before closing LUKS",
+    "PASS: B starts in a new VM and cannot see A files or temporary state",
+    "PASS: unresponsive VM cannot be reported locked or release its vault",
+    "PASS: reopening A restores persistent files while RAM temporaries and worker state are absent",
+    "PASS: explicit forced close stops the service before removing the mapping",
+    "PASS: global lock shuts down the guest before closing both encryption layers"
+  ],
+  "guest_pass": true,
+  "plaintext_markers_on_disk": [],
+  "disk_sha256": "cea5234ce11d74437db94897aa6ffca54e34a3c046c7a760dfe63915fbc02707",
+  "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n2570d0ad940ec8c4f9f1923ab8bf9dce1a25404f76bd508e4b64902e923c372a  initrd\nc41286ecf54c057ca9c43bb162c569fbc029bcebb906b59c8b6cbfee7ef24731  host.squashfs\n985a3bbd6ce19e1cf1d5992c6cda6b246ebbd1f4b45b98d11dfcf57b58131c51  host-packages.tsv\n007d9c014d0bc7709934b2af45b827633909690f06b61772b3f2ebd0ae628f3e  guest-packages.tsv\n97868824ead7885253793556be6697b844fd9ca28f20b0bde99d2803d414a69a  sources.sha256\n",
+  "compiled_sources": "769bf8f761afc411bde94edf1ada03407a7567a3280932b9cd5b22d61321e853  packages/oblivion-host/Cargo.lock\nf1661688b668a4c514e1baeefe611da55ea85b0e10e22712ce4f2814fd8dc8bf  packages/oblivion-host/Cargo.toml\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  packages/oblivion-host/examples/ipc-probe.rs\n0a590f20a1be5d6b6bd2358871fe01d9a24e9fb485b4ccfe963e124f421805c9  packages/oblivion-host/guest/install.sh\n36e3dce8146baeae85971e22312bdde95ddce8c2b497e051fe7c0375f7e8c1dd  packages/oblivion-host/guest/oblivion-conversation.service\n0e7d92bf6f2abafc4c00978558973102dfb0e1868ff644d64e9b34fc12196c52  packages/oblivion-host/guest/oblivion-vault.service\ne48a7666d23bdfffd4ea7fe21550afd862b901e85d2c0499f3ef6ad1457dc33c  packages/oblivion-host/guest/prepare.sh\nbff4458cad0b5bb5128e9fbe9093ae1080d4d31b2b7851b505721b0d4d8fadec  packages/oblivion-host/src/client.rs\na752cdb2153751592d65cde0b84318c0bde75db3cba7d6b21c7b8ca0aade7ada  packages/oblivion-host/src/ipc.rs\n6b3c0f9b24cdfc054bfe7042cdd4ede5b98b70ad8c1e1023bd4191b3a1d7fe9e  packages/oblivion-host/src/main.rs\nadb8637029a0a7dc35fa637dcc51112761a825fe307337c6b63614090c24ad6c  packages/oblivion-host/src/storage.rs\n3ec9ada2f431cc36583643d2df0762c780916bc4ccb9f713d672410bb3e8a141  packages/oblivion-host/src/vm.rs\nb58cca6c31abca7ae2e41ffbf600cc7af81d68ac7f9a130503bdb13b4664cdcd  script/oblivion/Dockerfile.vm-lab\n4c309bbefd4b07add29254bbf790a755b9bef311a4c5e71fe00be63a385af4b5  script/oblivion/Dockerfile.vm-lab.dockerignore\n7692bbaae4f810e11036fadd988acc92240f2b6fce94d007acd16cc92b488a6b  script/oblivion/run-vm-lab.py\n0eb3a9da1a99b7f3fb85d47c148108b2c5921d77fb1f09ccdeca6d065c53628c  script/oblivion/vm-common-setup.sh\n76d7646acfc891cc90b8cf65b643d3606a8aa55f99185aa2f6948be519eace0a  script/oblivion/vm-guest-fixture.sh\nd83153c91a952a0dbe390dcdcb615d4766db61fa1e633b375d0656d0c7c7ae61  script/oblivion/vm-host-setup.sh\n7b76543cac056ed3cf7ac603e906fb43c71fd2a3fd34db9312dcf81e483b551d  script/oblivion/vm-lab-pack.sh\n3effc8effe49e75fb2a6f530a4195d1fc1e3ef11cd9239a58dd7a2c6f05d493b  script/oblivion/vm-lab-test.py\n",
+  "verified_at": "2026-10-24T01:08:45.677916+00:00",
+  "root_check": {
+    "command": "bun run check",
+    "exit_code": 0,
+    "successful_typecheck_tasks": 34,
+    "log_sha256": "9c33aabeb70c01c82c6126a1dcd3462d5afcada55dcb50d24219f06fe57618cf"
+  }
+}

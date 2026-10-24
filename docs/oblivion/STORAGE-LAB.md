@@ -5,7 +5,7 @@ Il laboratorio usa una VM Debian ARM64 con HVF sul Mac di sviluppo. Verifica
 storage e IPC reali; **non verifica l'isolamento delle future VM di sessione
 x86/KVM**, la console fisica o la live USB.
 
-L'ultima esecuzione verificata ha superato **16 controlli** in circa 35 secondi,
+L'ultima esecuzione verificata ha superato **17 controlli** in circa 36 secondi,
 senza marcatori in chiaro sul disco esaminato. Il [riepilogo con hash](storage-evidence.json)
 corrisponde ai sorgenti compilati presenti nel repository. `bun run check` ha
 superato lint e 34 task di typecheck upstream; la compilazione Rust è verificata
@@ -50,6 +50,8 @@ pubbliche e documenti sintetici. Tutti gli artefatti locali restano sotto
   rifiuto di remount RW e hash dell'immagine invariato dopo il ciclo.
 - Client con UID non privilegiato, controllo `SO_PEERCRED`, rifiuto di altri UID,
   operazioni arbitrarie, frame non validi e percorsi manipolati.
+- L'apertura dal manager richiede la configurazione della VM: non espone un
+  semplice sblocco del volume senza avviare l'ambiente isolato.
 - Ricerca dei marcatori e delle password sintetiche sull'intero disco virtuale
   spento, inclusi lo spazio libero e il journal esterno.
 
@@ -69,8 +71,9 @@ build di laboratorio non è dichiarata riproducibile bit per bit né firmata.
 
 ## Verifiche ancora aperte
 
-Il prototipo non include ancora VM di sessione, passaggio del blocco a un processo
-QEMU limitato, interfaccia password, boot del prodotto, Tor, provider reale o
+Il ciclo VM e il passaggio del blocco sono ora provati separatamente nel
+[laboratorio VM](VM-LAB.md), con guest sintetico e senza attestazione KVM.
+Mancano interfaccia password, boot del prodotto, Tor, provider reale e
 trasferimenti. Restano da provare interruzione di alimentazione, disco pieno,
 recupero della creazione incompleta, cancellazione/backup, integrità dei volumi e
 comportamento su hardware x86. La modalità effimera provata qui riguarda il solo

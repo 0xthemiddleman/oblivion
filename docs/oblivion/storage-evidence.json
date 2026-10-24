@@ -1,7 +1,7 @@
 {
   "scope": "real LUKS2 storage in disposable Debian arm64 VM; no product VM isolation claim",
   "accelerator": "hvf",
-  "seconds": 35.06,
+  "seconds": 36.15,
   "qemu_exit": 0,
   "checks": [
     "PASS: existing image cannot be initialized again",
@@ -19,14 +19,15 @@
     "PASS: ephemeral profile unlock is block-readonly and leaves image byte-identical",
     "PASS: control socket accepts only the manager UID and enumerated operations",
     "PASS: malformed, oversized, incomplete and path-injection requests are rejected",
+    "PASS: manager open refuses storage-only configuration without a VM",
     "PASS: unprivileged manager controls storage without access to the general filesystem"
   ],
   "guest_pass": true,
   "plaintext_markers_on_disk": [],
-  "disk_sha256": "1e7073a1add7c0f2eeca1d33197e0584e39c4596e7b8583beae8a326a6315596",
-  "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n209cf19b071c5707413618b1d02c63a826b67fdd70bfcdabf8e650deb71f1032  initramfs.gz\n2b3e5c8f7a9328142918f52b24bb8980334220b0e8722408fe4e0b7646acfa36  packages.tsv\n126ca1358e908bae2e2eafd32b9e16163b643e2c2cf166f3f26a59a20c507627  sources.sha256\n",
-  "compiled_sources": "74a3e32ea9b6027ffd97494cc09b5af1cba245d0e7ba44bd4f65d97ba904acd8  Cargo.toml\n769bf8f761afc411bde94edf1ada03407a7567a3280932b9cd5b22d61321e853  Cargo.lock\nbff4458cad0b5bb5128e9fbe9093ae1080d4d31b2b7851b505721b0d4d8fadec  src/client.rs\nb44a7beb733f23392fc6b1a86758df2ab81e97ecb9d056ffe4fe0c5228c92cee  src/ipc.rs\nc5a5a93bf0c6823cbc7e24af6271873941154d30aace5085d9872ac106247599  src/main.rs\n189d84f963323ca40f46212379aa25650f0d2098c75118f8e10b9c9c38b3e0e5  src/storage.rs\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  examples/ipc-probe.rs\na332789cd4885337c2a7d7e7a0720d932790b7ca87b4c553652a7e67b6edca76  /lab/init\n79df10bf1dbb0a90f385243e30c91e22ede3bdd412de8bd042e1ef7aa24a2464  /lab/storage-test\n2d48131bdbd5bc53be4f896c63f3a06091f4b9edeeb6770c95c907bae15a4821  /lab/pack\n",
-  "verified_at": "2026-10-24T00:32:08.075793+00:00",
+  "disk_sha256": "7ae9d1caa916b7177be74e8e6fd1d1d9cfe521920736b3eb5b62e99d25721e1d",
+  "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n52d7f51727afe214f2f86750858672e079fb74cfeb0daf1894fb5b9e7ec4c8f8  initramfs.gz\n2b3e5c8f7a9328142918f52b24bb8980334220b0e8722408fe4e0b7646acfa36  packages.tsv\nb7476047adbd6c7d131a70f5ed13e1546f3655ef1e3f28a1420291793f92c8f4  sources.sha256\n",
+  "compiled_sources": "f1661688b668a4c514e1baeefe611da55ea85b0e10e22712ce4f2814fd8dc8bf  Cargo.toml\n769bf8f761afc411bde94edf1ada03407a7567a3280932b9cd5b22d61321e853  Cargo.lock\nbff4458cad0b5bb5128e9fbe9093ae1080d4d31b2b7851b505721b0d4d8fadec  src/client.rs\na752cdb2153751592d65cde0b84318c0bde75db3cba7d6b21c7b8ca0aade7ada  src/ipc.rs\n6b3c0f9b24cdfc054bfe7042cdd4ede5b98b70ad8c1e1023bd4191b3a1d7fe9e  src/main.rs\nadb8637029a0a7dc35fa637dcc51112761a825fe307337c6b63614090c24ad6c  src/storage.rs\n3ec9ada2f431cc36583643d2df0762c780916bc4ccb9f713d672410bb3e8a141  src/vm.rs\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  examples/ipc-probe.rs\na332789cd4885337c2a7d7e7a0720d932790b7ca87b4c553652a7e67b6edca76  /lab/init\ne8c327318c2c4960d025514a97307de3040f83f956f2686ad206139ee93740f4  /lab/storage-test\n2d48131bdbd5bc53be4f896c63f3a06091f4b9edeeb6770c95c907bae15a4821  /lab/pack\n",
+  "verified_at": "2026-10-24T01:01:42.061304+00:00",
   "build_inputs": {
     "script/oblivion/Dockerfile.storage-lab": "3d342e4621d7a575bcb87a38cc0553c666c7f888b68965b0698e9b67ba7e0d38",
     "script/oblivion/Dockerfile.storage-lab.dockerignore": "76fe810cd63cfa71d056ba60565bcfd70c3687b7047b137713e16837c5fa4387",
@@ -36,6 +37,6 @@
     "command": "bun run check",
     "exit_code": 0,
     "successful_typecheck_tasks": 34,
-    "log_sha256": "d0be190e147a96406787fb2e140df88847a6de1eb1c60ac9bce697926f9b5462"
+    "log_sha256": "9c33aabeb70c01c82c6126a1dcd3462d5afcada55dcb50d24219f06fe57618cf"
   }
 }

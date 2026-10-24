@@ -6,6 +6,9 @@ rust-version = "1.85"
 license = "MIT"
 publish = false
 
+[features]
+lab-emulation = []
+
 [dependencies]
 libc = "0.2"
 serde = { version = "1", features = ["derive"] }

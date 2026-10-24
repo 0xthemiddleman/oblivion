@@ -1,0 +1,47 @@
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS os
+ARG DEBIAN_FRONTEND=noninteractive
+ARG TARGETARCH
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    systemd-sysv udev dbus util-linux e2fsprogs ca-certificates busybox-static \
+    initramfs-tools kmod linux-image-${TARGETARCH} && rm -rf /var/lib/apt/lists/*
+COPY script/oblivion/vm-common-setup.sh /tmp/setup
+RUN sh /tmp/setup && rm /tmp/setup
+
+FROM os AS compiler
+RUN apt-get update && apt-get install -y --no-install-recommends cargo rustc gcc libc6-dev && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+COPY packages/oblivion-host/ ./
+RUN cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
+    && cargo build --locked --release --features lab-emulation --bin oblivion-storage
+
+FROM os AS guest
+RUN groupadd --gid 1000 oblivion && useradd --uid 1000 --gid 1000 --no-create-home --home-dir /vault/home --shell /bin/sh oblivion \
+    && passwd -l root && mkdir -p /vault /usr/libexec
+COPY packages/oblivion-host/guest/ /usr/lib/oblivion/guest/
+COPY script/oblivion/vm-guest-fixture.sh /usr/libexec/oblivion
+RUN sh /usr/lib/oblivion/guest/install.sh
+
+FROM os AS host
+ARG TARGETARCH
+RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin python3 \
+    $(if [ "$TARGETARCH" = arm64 ]; then printf qemu-system-arm; else printf qemu-system-x86; fi) \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1100 oblivion-vm && useradd --uid 1100 --gid 1100 --no-create-home --shell /usr/sbin/nologin oblivion-vm
+COPY --from=compiler /tmp/oblivion-storage /usr/bin/oblivion-storage
+COPY --from=compiler /build/target/release/oblivion-storage /usr/bin/oblivion-storage-lab
+COPY --from=compiler /build/target/release/oblivion-control /usr/bin/oblivion-control
+COPY script/oblivion/vm-lab-test.py /usr/libexec/oblivion-vm-test
+COPY script/oblivion/vm-host-setup.sh /tmp/setup
+RUN sh /tmp/setup && rm /tmp/setup
+
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS pack
+RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
+COPY --from=guest / /guest/
+COPY --from=host / /host/
+COPY packages/oblivion-host/ /sources/packages/oblivion-host/
+COPY script/oblivion/ /sources/script/oblivion/
+COPY script/oblivion/vm-lab-pack.sh /pack
+RUN sh /pack
+
+FROM scratch AS artifacts
+COPY --from=pack /out/ /

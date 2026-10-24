@@ -9,7 +9,7 @@ immediato. Il prototipo di laboratorio non è una release da usare con dati priv
 | Audit iniziale v2 | Inventario, revisione e prove sintetiche in [fase 0](phase-0/AUDIT.md) | TUI completa e Abliteration/Tor reali |
 | Controller cifratura | Rust + cryptsetup, due livelli, interblocco, blocco e profilo RO in [laboratorio](STORAGE-LAB.md) | Recovery creazione, power loss, quota/esaurimento disco |
 | Privilegi | Client UID limitato e socket con credenziali del peer; nessun accesso diretto al generale | Servizi di sistema e confinamento nel prodotto |
-| VM della sessione | Architettura definita; nessuna VM di prodotto ancora avviata | Immagine guest, KVM, handoff del blocco, processi, arresto e riapertura |
+| VM della sessione | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md) con fixture sintetica | KVM/hardware x86, OpenCode reale, console fidata e servizi di prodotto |
 | Console e manager | [Specifica approvata](BOOT-AND-TUI.md) | Rendering reale senza desktop, input fidato, segreti e ciclo VM |
 | Fork privacy | Audit dei punti da modificare | Disabilitazione runtime di log/discovery/download e TUI ridotta |
 | Rete e provider | [Progetto](NETWORK-AND-FILES.md) e catture di fixture | Broker, Tor, policy, revoca, test di guasto e provider reale |
@@ -21,4 +21,5 @@ immediato. Il prototipo di laboratorio non è una release da usare con dati priv
 La prima consegna funzionale completa rimane: aprire A con la sua VM, far lavorare
 OpenCode su documenti e temporanei, chiudere tutto, aprire B senza accesso ad A,
 riaprire A recuperando solo i dati persistenti. Le prove storage sono un componente
-di questa consegna, non la sua sostituzione.
+di questa consegna. Il ciclo VM ora provato usa una fixture sintetica: non
+sostituisce l'integrazione di OpenCode e il collaudo del prodotto su KVM.

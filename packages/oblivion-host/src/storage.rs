@@ -24,6 +24,7 @@ struct Config {
     session_mib: u64,
     pbkdf_memory_kib: u32,
     manager_uid: u32,
+    vm: Option<crate::vm::Config>,
 }
 
 #[derive(Serialize)]
@@ -33,6 +34,8 @@ struct Status {
     general_readonly: bool,
     session_open: bool,
     sessions: Vec<String>,
+    vm_state: Option<String>,
+    laboratory_emulation: bool,
 }
 
 pub fn main() -> Result<()> {
@@ -45,15 +48,43 @@ pub fn main() -> Result<()> {
     }
     let _lock = lock()?;
     let op = args[2].as_str();
-    require(args.len() == if op == "open" { 4 } else { 3 }, "usage")?;
+    require(
+        args.len() == if matches!(op, "open" | "enter") { 4 } else { 3 },
+        "usage",
+    )?;
     match op {
         "init-general" => config.initialize(&password(true)?),
         "unlock" => config.unlock(&password(false)?, false),
         "unlock-ephemeral" => config.unlock(&password(false)?, true),
         "create" => config.create(&password(true)?),
         "open" => config.open(&args[3], &password(false)?),
+        "enter" => {
+            let vm = config.vm.as_ref().ok_or(Error("vm_not_configured"))?;
+            vm.validate()?;
+            require(crate::vm::stopped()?, "vm_already_running")?;
+            config.open(&args[3], &password(false)?)?;
+            // Failed startup keeps the vault interlocked until explicit leave/lock.
+            vm.start()
+        }
         "close" => close_session(),
-        "lock" => close_general(),
+        "leave" => {
+            if config.vm.is_some() {
+                crate::vm::stop(false)?;
+            }
+            close_session()
+        }
+        "force-leave" => {
+            if config.vm.is_some() {
+                crate::vm::stop(true)?;
+            }
+            close_session()
+        }
+        "lock" => {
+            if config.vm.is_some() {
+                crate::vm::stop(false)?;
+            }
+            close_general()
+        }
         "status" => {
             let mode = mount_mode()?;
             let status = Status {
@@ -66,6 +97,12 @@ pub fn main() -> Result<()> {
                 } else {
                     Vec::new()
                 },
+                vm_state: if config.vm.is_some() {
+                    Some(crate::vm::state()?)
+                } else {
+                    None
+                },
+                laboratory_emulation: cfg!(feature = "lab-emulation"),
             };
             println!(
                 "{}",

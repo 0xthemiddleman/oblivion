@@ -170,7 +170,13 @@ must_fail client shell
 check 'control socket accepts only the manager UID and enumerated operations'
 check 'malformed, oversized, incomplete and path-injection requests are rejected'
 printf 'synthetic-general-password' | client unlock
-printf 'synthetic-session-password-a' | client open "$a"
+printf 'synthetic-session-password-a' | must_fail client open "$a"
+grep -q control_request_failed /run/failed-error
+printf 'synthetic-session-password-a' | must_fail ctl enter "$a"
+grep -q vm_not_configured /run/failed-error
+[ ! -e /dev/mapper/oblivion-session ]
+check 'manager open refuses storage-only configuration without a VM'
+printf 'synthetic-session-password-a' | ctl open "$a"
 [ -e /dev/mapper/oblivion-session ]
 must_fail /usr/bin/setpriv --reuid=1000 --regid=1000 --clear-groups cat /run/oblivion/general/profile/settings
 client close

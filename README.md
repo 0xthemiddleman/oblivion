@@ -2,8 +2,10 @@
 
 This fork is pinned to OpenCode **v2.1.4** (`68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`).
 Phase 0 adds a privacy audit and reproducible synthetic probes; upstream application code is unchanged.
-A Linux storage-controller prototype now implements two-level LUKS2 and restricted local IPC.
-The live OS, per-session VMs, privacy TUI and network controls are **not implemented yet**.
+A Linux controller prototype implements two-level LUKS2, restricted local IPC
+and confined per-session QEMU lifecycle, tested with a synthetic guest.
+KVM/hardware validation, the actual OpenCode guest, live USB, privacy TUI and
+network controls remain unfinished.
 Do not treat this branch as a private or hardened distribution.
 
 - [Product and architecture plan (Italian)](PLAN.md)
@@ -13,6 +15,7 @@ Do not treat this branch as a private or hardened distribution.
 - [Minimal live system, boot flow and TUI design (Italian)](docs/oblivion/BOOT-AND-TUI.md)
 - [Implementation status and remaining gates (Italian)](docs/oblivion/IMPLEMENTATION.md)
 - [Real LUKS2 storage laboratory (Italian)](docs/oblivion/STORAGE-LAB.md)
+- [Session VM lifecycle laboratory and limitations (Italian)](docs/oblivion/VM-LAB.md)
 
 The upstream README follows. Its installation instructions install upstream OpenCode.
 

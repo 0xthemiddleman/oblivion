@@ -21,6 +21,7 @@ enum Operation {
     Create,
     Open,
     Close,
+    ForceClose,
     Lock,
     Status,
 }
@@ -142,8 +143,9 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         Operation::Unlock => "unlock",
         Operation::UnlockEphemeral => "unlock-ephemeral",
         Operation::Create => "create",
-        Operation::Open => "open",
-        Operation::Close => "close",
+        Operation::Open => "enter",
+        Operation::Close => "leave",
+        Operation::ForceClose => "force-leave",
         Operation::Lock => "lock",
         Operation::Status => "status",
     };
