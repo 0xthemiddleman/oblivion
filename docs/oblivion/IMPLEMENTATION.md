@@ -28,6 +28,8 @@ La prova diretta della stessa TUI ARM passa in 63,5 secondi. La ripetizione
 annidata fallisce con QEMU ancora attivo; la causa resta aperta. Il workflow
 ora conserva la prova ARM e predispone il ciclo completo su host x86/KVM,
 con guest TCG di laboratorio e senza fallback automatico dell'acceleratore.
+La TUI x86/KVM passa l'avvio diretto in 5,7 secondi; il ciclo host non è ancora
+eseguito per un errore di permessi del runner, la cui correzione è in verifica.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

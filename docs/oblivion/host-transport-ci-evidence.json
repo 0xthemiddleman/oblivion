@@ -118,5 +118,61 @@
       "host-evidence/ci/tui-boot/summary.json": "224b29e7bcaa867e5c529f4297b897025c8550a2a9a26300ee197b81200b8603",
       "host-evidence/oblivion-build/build-evidence.json": "de88b4b15b2e95630d1255ea0ddbcce56ea840bd87a35548caabcf5b585c297a"
     }
+  },
+  "cross_arch_boot": {
+    "source_commit": "96f6f6719e9a911588efe15315095b8608e92975",
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40094969310",
+    "arm64": {
+      "scope": "compiled chat TUI boot only; synthetic plaintext vault, no LUKS or host lifecycle assertion",
+      "accelerator": "tcg",
+      "architecture": "aarch64",
+      "nested": false,
+      "network_interfaces": 0,
+      "seconds": 58.73,
+      "markers": {
+        "Conversazioni e documenti": true,
+        "/exit blocca": true
+      },
+      "passed": true,
+      "termination": "QEMU terminated by diagnostic after observation; not a shutdown test",
+      "opencode_sha256": "4738fe48122960dd6082e49ce945db82814e1b5123e5e3fc8f6022e6fba325fd",
+      "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n15f7c0daf7d4b9609c1a7c448a55e7c4f35e1aa5f71883cdced30412d337e535  initrd\n7da0c37e0ca7d38f5877c7d01e9d496f54f1526d6781f2c84d7dd876a6115cb4  host.squashfs\n5f5dc1832ec5d93491b6f9cdbb0fda9350938d31ae20b97c340b46fbd5c1d78a  host-packages.tsv\nb23d84696f492da1c5998e8f4fb026d3357aa72b7b95de89d1e5104f172b2786  guest-packages.tsv\nd0410af7a5bef217937e19941c6757b8a9696c078ba7d74b982abf9e6f70287e  sources.sha256\nf136a225c8d8a4970535cd9c3cbe81ab7d5723251372175203bce206008a9a20  opencode.sha256\n2a954f3f61634d52532027e6064b1341cd1946da5065799a7f9842183570d05e  opencode-build.json\nc588c020590898778a225edd1d77af041d4cce28f59de1f1f5ff9dde79d7a428  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n"
+    },
+    "x86_64": {
+      "scope": "compiled chat TUI boot only; synthetic plaintext vault, no LUKS or host lifecycle assertion",
+      "accelerator": "kvm",
+      "architecture": "x86_64",
+      "nested": false,
+      "network_interfaces": 0,
+      "seconds": 5.71,
+      "markers": {
+        "Conversazioni e documenti": true,
+        "/exit blocca": true
+      },
+      "passed": true,
+      "termination": "QEMU terminated by diagnostic after observation; not a shutdown test",
+      "opencode_sha256": "835a41e580edcc90c4795b55da574bde967005f2ee2d8dcb3b3bff3646167634",
+      "image_manifest": "4336c75fc1a6a58e7bda66cbe9f4042f88064e7abc93faaea9e2aceb19459561  kernel\n974b4d066123ce5f0840999fb3f07cc7b0962d5f0b3c9988f39676f70a748590  initrd\n7393e04d820460e012f13606e9d4a675087d5c6f46504ce05571362dffaffca0  host.squashfs\nc4e3d56748e28d92b12918000a0a9da0f9a50bdc97f856425382a9df0a6e80a5  host-packages.tsv\ncab18832fa36e5efe3118d096505ee5915c7045b38cf40f8aaec5fd0a29a5314  guest-packages.tsv\nd0410af7a5bef217937e19941c6757b8a9696c078ba7d74b982abf9e6f70287e  sources.sha256\n275837408d1f56ef010dc9d0ca4bfd2c8997a5cf3a4194dc8cc35cd5766bc0a3  opencode.sha256\ndddd18dfa7946fffd6c46271e86a9ace4862faac260c6748753c071d7b97bd96  opencode-build.json\n19aec87bcf5c65376007ff947e0cda5a73bf9d1a4be0831fec2060c31020c48a  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n"
+    },
+    "host_lifecycle": "Not started: KVM access guard refused the runner immediately after the direct guest check. Permission handling is being corrected in CI.",
+    "local_artifacts": "artifacts/oblivion-linux-ci/run-96f6f67",
+    "artifact_hashes": {
+      "arm-evidence/ci/host-image/SHA256SUMS": "29db5d98763151aeeb0db3743cd395f524e9b10a968bde90aafbbf127b9a3e8e",
+      "arm-evidence/ci/host-image/sources.sha256": "d0410af7a5bef217937e19941c6757b8a9696c078ba7d74b982abf9e6f70287e",
+      "arm-evidence/ci/tui-boot/serial.log": "4700a0e81676c749666efc0563fdce29cdb74db3cb97c695bf32a740efa4952f",
+      "arm-evidence/ci/tui-boot/summary.json": "578c4ba5de8dacec52f338cddcb7a3568b7da6a778fc7e2d715c68682e0b6b19",
+      "arm-evidence/oblivion-build/build-evidence.json": "2a954f3f61634d52532027e6064b1341cd1946da5065799a7f9842183570d05e",
+      "x64-evidence/ci/host/SHA256SUMS": "299cd5ff0713c7d919001e108a9f6cbd70348ffc65addf804ea10bbf650ed46f",
+      "x64-evidence/ci/host/sources.sha256": "e615eb656a86ba3eba47be167aca3bb6321bdd6322a49363ee1934e2e57a1de8",
+      "x64-evidence/ci/host-image/SHA256SUMS": "c572f0dce10dce6add3c6c416fcf8cfdad79b2a3eb8f04ad907dd36b227ce898",
+      "x64-evidence/ci/host-image/sources.sha256": "d0410af7a5bef217937e19941c6757b8a9696c078ba7d74b982abf9e6f70287e",
+      "x64-evidence/ci/tui-boot/serial.log": "a6202000291833847a162865cdad8b9c2e036b56f4698f60bf95e3a3aebb3085",
+      "x64-evidence/ci/tui-boot/summary.json": "1f54a84a2f43e860590e2b287132802ce4443000f4589d4b58f618be75e9e980",
+      "x64-evidence/oblivion-build/build-evidence.json": "dddd18dfa7946fffd6c46271e86a9ace4862faac260c6748753c071d7b97bd96"
+    },
+    "limits": [
+      "These are direct boot checks with synthetic plaintext vault files, not LUKS or lifecycle tests.",
+      "No network, provider request, physical USB boot or production session isolation was tested."
+    ]
   }
 }
