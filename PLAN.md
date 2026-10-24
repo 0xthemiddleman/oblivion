@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.26 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.27 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -21,6 +21,10 @@ anche attraverso controller LUKS e due VM, con provider sintetico.
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md)
 raccoglie i risultati e i gate aperti.
 
+Sono ora richiesti [più API key salvate e un proxy SOCKS5 globale alternativo](docs/oblivion/KEYS-AND-EGRESS.md),
+con Tor predefinito. Questa estensione è da implementare: il codice attuale
+usa una sola chiave e il percorso online Tor.
+
 Restano da completare collaudo Abliteration reale e shutdown globale, proxy dei tool,
 trasferimenti USB e OnionShare, sessione effimera completa, rifinitura della TUI,
 gestione dei guasti e immagine live verificata. KVM e hardware x86 sono gate di
@@ -39,7 +43,7 @@ Oblivion è un ambiente personale per conversazioni private con un agente, con f
 | Volume generale             | LUKS2 con password all’avvio; contiene Wi-Fi, API key, impostazioni e i contenitori cifrati delle sessioni. Mai montato nelle VM.                                                              |
 | Interfaccia                 | Manager fidato delle sessioni protette e TUI di chat semplificata nel guest; un solo terminale visibile, logo ASCII Oblivion viola all’avvio.                                                  |
 | Strumenti                   | Conservare gli strumenti di OpenCode; imporre i limiti con sandbox e gateway, senza sostituire il toolset.                                                                                     |
-| Provider                    | Soltanto Abliteration.ai, riutilizzando l'adapter esistente indicato dall'utente.                                                                                                              |
+| Provider                    | Soltanto Abliteration.ai, riutilizzando l'adapter esistente; più API key nominate nel generale e selezione prima dell'apertura.                                                                |
 | Sessioni normali            | Persistenti nel volume generale, ciascuna in un proprio contenitore LUKS2 con password e chiave di volume indipendenti.                                                                        |
 | Isolamento delle sessioni   | Una VM distinta per sessione, ricreata a ogni apertura, con istanza e server OpenCode propri.                                                                                                  |
 | Concorrenza iniziale        | Una sola sessione aperta alla volta. Tutti gli altri volumi di sessione restano chiusi, senza chiavi caricate per l'uso.                                                                       |
@@ -50,9 +54,9 @@ Oblivion è un ambiente personale per conversazioni private con un agente, con f
 | Tracce locali               | Nessun log applicativo persistente, telemetria o copia in chiaro della sessione su disco. Cache e temporanei confinati.                                                                        |
 | Contesto                    | File e cartelle scelti dall'utente. Gli originali non vengono cifrati automaticamente.                                                                                                         |
 | Modifiche ai documenti      | Per mantenerle protette, lavorare su copie nel volume della sessione; esportazione esplicita verso altri filesystem.                                                                           |
-| Rete                        | Tor come percorso iniziale, gateway locale configurabile per consentire, bloccare o chiedere accesso. Nessuna uscita diretta automatica.                                                       |
+| Rete                        | Tor predefinito oppure SOCKS5 globale scelto esplicitamente; stesse regole consenti/blocca/chiedi, nessun fallback o uscita diretta.                                                           |
 | Autorità                    | Le regole di isolamento e di rete sono controllate dall'utente; l'agente non può concedersi nuovi privilegi.                                                                                   |
-| Condivisione remota         | OnionShare scelto per inviare e ricevere file tramite Tor, integrato nella TUI in un ambiente dedicato senza filesystem condivisi.                                                             |
+| Condivisione remota         | OnionShare tramite Tor, integrato nella TUI in un ambiente dedicato senza filesystem condivisi; inizialmente non disponibile in modalità SOCKS.                                                |
 
 **Volume generale e avvio — decisione confermata**
 
@@ -92,9 +96,13 @@ flowchart TB
     WORK --> BROKER["Servizio API: sola Abliteration"]
     BROKER --> GATE["Gateway e regole di rete"]
     WORK -->|"Traffico dei tool"| GATE
-    GATE --> TOR["Tor"]
+    GATE --> ROUTE{"Percorso scelto nel manager"}
+    ROUTE -->|Predefinito| TOR["Tor"]
+    ROUTE -->|Alternativa| SOCKS["SOCKS5 configurato"]
     TOR --> API["Abliteration via HTTPS"]
     TOR --> WEB["Altre destinazioni autorizzate"]
+    SOCKS --> API
+    SOCKS --> WEB
 ```
 
 | Componente                 | Responsabilità                                                                      | Limite                                                                                                                                       |
@@ -105,7 +113,7 @@ flowchart TB
 | VM della sessione          | Istanza e server OpenCode, strumenti, sottoprocessi e workspace della sola sessione | Solo il proprio disco virtuale; niente dischi fisici, contenitori di altre sessioni, mount host, regole del gateway o dispositivi video host |
 | Servizio di trasferimento  | Importazione, esportazione e copie selezionate attraverso un protocollo ristretto   | Nessun filesystem condiviso, nessun accesso generale ai vault; capacità limitata alla singola operazione autorizzata                         |
 | Servizio API               | Custodire la chiave API e inoltrare richieste strutturate al solo provider          | Nessun proxy generico; chiave non ereditata dai processi della shell                                                                         |
-| Gateway                    | Applicare le regole e consentire il solo percorso Tor                               | Nessun inoltro diretto alternativo; regole non modificabili dalla VM di lavoro                                                               |
+| Gateway                    | Applicare le regole e consentire solo il percorso scelto: Tor o SOCKS5              | Nessun inoltro diretto alternativo; regole non modificabili dalla VM di lavoro                                                               |
 
 Per il primo MVP: una sola sessione aperta alla volta, VM della sessione ricreata allo sblocco e distrutta al blocco, gateway riutilizzabile con connessioni e autorizzazioni della sessione precedente revocate. Il controllore impedisce anche la contemporanea apertura di due volumi di sessione. Il volume generale rimane aperto mentre il pannello è sbloccato: non conta come seconda sessione e non è visibile ai guest. Una richiesta di cambio resta sospesa finché la chiusura precedente non è completata. Le sessioni simultanee restano un'estensione successiva.
 
@@ -200,22 +208,22 @@ Il fork deve mantenere la TUI e gli strumenti, ma consentire l'iniezione di perc
 
 Non assumere che un solo flag privacy copra tutto. Mantenere il diff upstream piccolo e motivato; scegliere e bloccare release e commit dopo la prova dell'adapter. I riferimenti a file letti durante la ricerca sono indizi per l'audit, non percorsi garantiti per ogni versione.
 
-**Gateway configurabile e percorso Tor**
+**Gateway configurabile con Tor predefinito e SOCKS5 alternativo**
 
-Questa sezione fissa i requisiti. Lo [studio di networking](docs/oblivion/NETWORK-AND-FILES.md) propone la topologia, separa servizio API e proxy dei tool e identifica le prove ancora necessarie. Per il prototipo si preferisce un proxy con controllo delle destinazioni, senza offrire alla VM un SOCKS Tor libero che aggiri le regole.
+Questa sezione fissa i requisiti. Le [chiavi multiple e i due percorsi](docs/oblivion/KEYS-AND-EGRESS.md) sono una nuova estensione da realizzare. Lo [studio di networking](docs/oblivion/NETWORK-AND-FILES.md) propone la topologia, separa servizio API e proxy dei tool e identifica le prove ancora necessarie. Per il prototipo si preferisce un proxy con controllo delle destinazioni, senza offrire alla VM un SOCKS Tor libero che aggiri le regole.
 
 Il default per il traffico applicativo è bloccare ciò che non è autorizzato. La VM di lavoro non ha interfacce verso la LAN fisica e non eredita proxy o socket dell'host. Può raggiungere solo i servizi interni previsti; l'unico percorso Internet è quello del gateway. L'agente non riceve permessi di amministrazione delle reti e non può cambiare l'ora o il firewall host.
 
-| Categoria                                      | Default proposto                                            | Configurabilità                                                                 |
-| ---------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| API Abliteration                               | Consentita tramite servizio API e Tor, con HTTPS verificato | Modelli e opzioni supportate; unico provider resta un requisito di prodotto     |
-| Altri siti                                     | Bloccati finché una regola li autorizza o chiede conferma   | Consenti, blocca o chiedi; regole per dominio e porta                           |
-| Rete locale, indirizzi speciali e servizi host | Bloccati                                                    | Eccezione amministrativa esplicita, fuori dal profilo Tor-only se incompatibile |
-| IP letterali o destinazioni non classificabili | Bloccati nel profilo restrittivo                            | Regole esplicite separate                                                       |
-| DNS della sessione                             | Risoluzione attraverso il percorso Tor controllato          | Nessuna risoluzione diretta di ripiego                                          |
-| UDP/QUIC e protocolli non trasportati          | Bloccati                                                    | Nessuna uscita diretta per renderli funzionanti                                 |
-| Tor non disponibile                            | Nessuna connettività applicativa                            | Nessun fallback automatico                                                      |
-| Aggiornamenti e servizi infrastrutturali       | Separati dalle richieste dell'agente                        | Destinazioni e finestre di aggiornamento amministrate                           |
+| Categoria                                      | Default proposto                                                             | Configurabilità                                                             |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| API Abliteration                               | Consentita tramite servizio API e percorso selezionato, con HTTPS verificato | Modelli e opzioni supportate; unico provider resta un requisito di prodotto |
+| Altri siti                                     | Bloccati finché una regola li autorizza o chiede conferma                    | Consenti, blocca o chiedi; regole per dominio e porta                       |
+| Rete locale, indirizzi speciali e servizi host | Bloccati                                                                     | Solo eccezioni ristrette, incluso l’endpoint SOCKS scelto se nella LAN      |
+| IP letterali o destinazioni non classificabili | Bloccati nel profilo restrittivo                                             | Regole esplicite separate                                                   |
+| DNS della sessione                             | Risoluzione attraverso Tor o SOCKS selezionato, dopo autorizzazione          | Nessuna risoluzione diretta di ripiego                                      |
+| UDP/QUIC e protocolli non trasportati          | Bloccati                                                                     | Nessuna uscita diretta per renderli funzionanti                             |
+| Trasporto selezionato non disponibile          | Nessuna connettività applicativa                                             | Nessun fallback automatico                                                  |
+| Aggiornamenti e servizi infrastrutturali       | Separati dalle richieste dell'agente                                         | Destinazioni e finestre di aggiornamento amministrate                       |
 
 La configurazione deve supportare regole esatte e wildcard delimitate, priorità deterministica, ambito per sessione e scadenza. Proposta: i divieti espliciti prevalgono; una regola temporanea non può ampliare un divieto amministrativo. Se occorre cambiare il divieto, l'utente lo modifica nella UI fidata. L'azione chiedi accoda una richiesta di accesso senza trasmettere il payload alla destinazione prima della decisione.
 
@@ -223,15 +231,15 @@ Un'autorizzazione deve identificare la destinazione effettiva, non fidarsi di un
 
 Un filtro di destinazioni con TLS opaco non garantisce quali URL, contenuti o servizi applicativi vengano usati dietro un IP o CDN condiviso. Controlli su metodi, endpoint e opzioni Abliteration appartengono al servizio API. Per webfetch si possono applicare controlli sulle richieste nel client; per shell arbitraria restano limiti di rete e contenimento. Non dichiarare una protezione universale dall'esfiltrazione verso un sito consentito. Nessuna intercettazione TLS generale nell'MVP.
 
-Proteggere la risoluzione e la verifica delle destinazioni contro redirect, cambi di indirizzo, rebinding e accessi a loopback, link-local, subnet private o servizi di metadata. Applicare il divieto sia al nome sia agli indirizzi effettivamente utilizzati. Host condivisi o servizi non verificabili devono essere documentati come limiti della policy, non autorizzati implicitamente.
+Proteggere la risoluzione e la verifica delle destinazioni contro redirect, cambi di indirizzo, rebinding e accessi a loopback, link-local, subnet private o servizi di metadata. In modalità Tor applicare il divieto sia al nome sia agli indirizzi effettivamente utilizzati, verificando i controlli del trasporto. Con un SOCKS esterno la policy locale controlla nomi e IP espliciti, ma l’indirizzo risolto dal proxy non è attestato dal protocollo: i controlli sugli IP remoti richiedono un proxy fidato e verificato, come descritto nello [studio dei due percorsi](docs/oblivion/KEYS-AND-EGRESS.md). Host condivisi o servizi non verificabili devono essere documentati come limiti della policy, non autorizzati implicitamente.
 
-Separare i flussi per sessione tramite meccanismi standard Tor, senza promettere IP diversi o non correlabilità dell'account. HTTPS resta necessario sino al provider: Tor non sostituisce la verifica dei certificati ([Tor e HTTPS][R9]). Testare l'intero percorso con gli SDK e i sottoprocessi; la sola variabile `HTTPS_PROXY` non è un confine di sicurezza.
+In modalità Tor separare i flussi per sessione tramite i suoi meccanismi standard, senza promettere IP diversi o non correlabilità dell'account. Un SOCKS esterno non eredita queste proprietà; la sua autenticazione resta distinta dai token locali della sessione. HTTPS resta necessario sino al provider: Tor non sostituisce la verifica dei certificati ([Tor e HTTPS][R9]). Testare l'intero percorso con gli SDK e i sottoprocessi; la sola variabile `HTTPS_PROXY` non è un confine di sicurezza.
 
 Il sistema deve comunque ottenere una connessione fisica: DHCP, associazione Wi-Fi e l'avvio di Tor sono traffico infrastrutturale distinto, con eccezioni minime amministrate. Risolvere nella fase rete anche sincronizzazione dell'ora, bootstrap, IPv6 e captive portal, senza introdurre un browser o un accesso diretto disponibile all'agente. I portali non gestibili in modo coerente possono restare non supportati nell'MVP.
 
 Lo stato operativo di Tor, inclusa la scelta delle guardie, non va trattato alla cieca come una cache qualsiasi. Il profilo infrastrutturale ora risiede nel volume generale: Wi-Fi e bridge scelti dall'utente possono esservi salvati. La prima implementazione conserva record Guard, TorVersion e LastWritten validati contro Tor 0.4.9.14, senza log, destinazioni o storico della banda. Date e contatori path bias delle guardie sono metadati operativi persistenti. Il [protocollo di checkpoint](docs/oblivion/TOR-STATE.md) usa il canale privato del gateway, aggiornamento atomico nel generale e flush finale ordinato; un crash può perdere le modifiche successive all’ultimo checkpoint. Evitare rotazioni arbitrarie delle guardie al cambio chat. Nell'avvio effimero il gateway parte da una copia in RAM dello stato eventualmente disponibile e non ne salva le modifiche; il compromesso tra riavvii va documentato e verificato con la documentazione upstream ([manuale Tor][R10]).
 
-VPN opzionale, combinazioni VPN/Tor e modalità diretta non sono decisioni necessarie per l'MVP: Tor-only è il percorso iniziale. Una futura modalità VPN deve essere selezionata esplicitamente e avere il proprio blocco delle uscite fuori tunnel. Non introdurre una transizione automatica tra identità o percorsi.
+Tor è predefinito; un proxy SOCKS5 personalizzato è l’alternativa globale richiesta. La scelta copre il traffico Internet applicativo di Oblivion, inclusi tool e futuri servizi di manutenzione; le sole variabili proxy non bastano. Endpoint e credenziali sono nel generale cifrato. Cambiare chiave o percorso richiede sessioni e trasferimenti chiusi, revoca e fine verificata del vecchio gateway. Nessun fallback, cambio account o reinvio automatico. VPN, modalità diretta e Tor-su-SOCKS restano fuori da questa estensione. OnionShare sarà disponibile solo in modalità Tor nella prima versione.
 
 **Immagine live, avvio e aggiornamenti**
 
@@ -266,7 +274,7 @@ La fase 0 ha consegnato l'audit iniziale e le prove contro una fixture locale; i
 | 0 — Base e compatibilità    | Identificare l'adapter esistente; scegliere release/commit OpenCode e base Linux; verificare licenza, tool calling e TUI; inventariare scritture e connessioni | Mappa dell'upstream, dipendenze fissate e lista dei punti da modificare | Conversazione, streaming e ciclo di tool funzionano con Abliteration su dati sintetici; ogni effetto su disco/rete è censito                               |
 | 1 — Cifratura a due livelli | Generale con profilo amministrativo e contenitori LUKS2 interni indipendenti; avvio, creazione, salvataggio, blocco e ripristino; interblocco aperture         | Prototipo dei due livelli su dischi virtuali                            | Password indipendenti; generale più al massimo un volume di sessione aperto; nessun canary in chiaro sul supporto; chiusura ordinata e recovery verificati |
 | 2 — Isolamento e TUI        | VM nuova per apertura con disco dedicato; nessun filesystem condiviso; root in sola lettura; terminale live e IPC ristretto                                    | Sessione OpenCode confinata e usabile, server dedicato                  | Tool e processi figli non leggono né alterano altri vault, non scrivono sull'host e non simulano approvazioni                                              |
-| 3 — Rete e provider         | Gateway Tor, servizio API, proxy con policy, credenziali separate, DNS e revoca connessioni                                                                    | Profilo Tor-only con policy applicate fuori dall'agente                 | Funzionamento Abliteration via Tor; zero traffico applicativo diretto nei test di guasto e aggiramento; nessuna richiesta prima dell'autorizzazione        |
+| 3 — Rete e provider         | Tor predefinito o SOCKS5, servizio API, policy, chiavi multiple, DNS e revoca connessioni                                                                      | Percorso scelto e policy applicati fuori dall'agente                    | Abliteration via Tor e SOCKS; nessun fallback o cambio chiave automatico; nessun traffico applicativo diretto o prima dell'autorizzazione                  |
 | 4 — Effimero e documenti    | Storage RAM; trasferimenti tramite protocollo; USB import/export; copie tra sessioni senza apertura simultanea; quote                                          | Entrambe le modalità con gestione dei documenti senza mount condivisi   | L'effimero non cambia l'area dati della USB; nessuna sovrascrittura arbitraria; annullamento, file grandi e cambio sessione rispettano i confini           |
 | 5 — Immagine avviabile      | Build Debian Live; boot reale; password generale prima del profilo; layout USB; servizi inclusi; rete, input e shutdown                                        | Prima immagine avviabile per hardware di riferimento                    | Avvio senza OS installato, dischi interni non modificati, impostazioni ripristinate dal generale, sessioni ancora chiuse fino alla propria password        |
 | 6 — Robustezza e integrità  | Audit dei percorsi di scrittura; integrità dei volumi; backup; interruzioni di alimentazione; immagine firmata e aggiornamenti                                 | Alpha privata con matrice delle garanzie e dei limiti                   | Tutti i test obbligatori passano; nessun difetto noto che esponga contenuti o consenta uscite di rete non autorizzate                                      |
@@ -293,7 +301,7 @@ Non fissare una data di rilascio prima delle prove dell'adapter, del boot e del 
 | Trasferimenti                | USB in ingresso, A→B, export, percorsi ostili, file grandi, sorgente modificata, quota piena, annullamento e interruzione | Solo copie selezionate; destinazione controllata; nessuna apertura simultanea di A e B né staging in chiaro su disco; nessun autorun |
 | Terminale                    | Scorrimento, titolo finestra, clipboard, escape sequence, resize, blocco e crash                                          | Nessun transcript salvato; contenuti non lasciati nel selettore; output dell'agente incapace di effettuare azioni amministrative     |
 | Rete                         | Tool che ignora proxy, DNS diretto, IPv4/IPv6, UDP/QUIC, redirect, IP letterali e indirizzi privati                       | Nessun percorso applicativo fuori dal gateway; regole coerenti sul destinatario effettivo                                            |
-| Guasti di rete               | Arresto Tor, crash gateway, riavvio servizi, cambio Wi-Fi, revoca con connessione aperta                                  | Blocco delle connessioni; nessun fallback diretto o inoltro di richieste rimaste in coda senza permesso                              |
+| Guasti di rete               | Arresto Tor o SOCKS, auth errata, cambio percorso, crash gateway, riavvio servizi, revoca con connessione aperta          | Blocco delle connessioni; nessun fallback diretto o inoltro di richieste rimaste in coda senza permesso                              |
 | API                          | Streaming, tool calling, cancellazione, errori, retry, allegati, redirect e richieste ausiliarie                          | Solo Abliteration; chiave non esposta ai tool o nei log; feature server-side non autorizzate assenti                                 |
 | Storage e crash              | Spazio pieno, USB rimossa, interruzione di alimentazione e archivio parziale                                              | Nessun fallback in chiaro; errore rilevato; recupero oppure diagnosi esplicita senza sovrascrivere l'originale                       |
 | Backup e password            | Ripristino completo, perdita header, cambio password e copia precedente                                                   | Procedura documentata, coerente e provata; limiti delle copie precedenti visibili                                                    |
@@ -304,7 +312,7 @@ I test devono essere ripetibili e generare evidenza su dati fittizi. Il traffico
 
 **Confine della prima versione**
 
-L'MVP include il volume LUKS2 generale con password all'avvio e persistenza di Wi-Fi, API key e impostazioni, una sola sessione aperta con VM e volume LUKS2 individuali, nessun filesystem condiviso, avvio effimero con profilo in sola lettura, manager fidato e TUI di chat ridotta con strumenti upstream, solo Abliteration, importazione di file/cartelle, esportazione esplicita, Tor-only e policy di rete essenziali. Copie tra sessioni e integrazione OnionShare sono descritte nel documento collegato: il primo trasferimento da realizzare è USB→sessione→USB, seguito dagli altri flussi. La scelta di OnionShare è confermata; la sua disponibilità nella prima release dipende dalle prove di integrazione. Deve essere dimostrabile prima come prototipo e poi come live reale. Non deve essere presentato come prodotto sicuro prima di superare i test pertinenti.
+L'MVP include il volume LUKS2 generale con password all'avvio e persistenza di Wi-Fi, API key e impostazioni, una sola sessione aperta con VM e volume LUKS2 individuali, nessun filesystem condiviso, avvio effimero con profilo in sola lettura, manager fidato e TUI di chat ridotta con strumenti upstream, solo Abliteration, importazione di file/cartelle, esportazione esplicita, Tor predefinito o SOCKS5 globale e policy di rete essenziali. Include più API key Abliteration nominate, una predefinita e selezione prima dell’apertura, con segreti esclusi dal guest. Copie tra sessioni e integrazione OnionShare sono descritte nel documento collegato: il primo trasferimento da realizzare è USB→sessione→USB, seguito dagli altri flussi. La scelta di OnionShare è confermata; la sua disponibilità nella prima release dipende dalle prove di integrazione. Deve essere dimostrabile prima come prototipo e poi come live reale. Non deve essere presentato come prodotto sicuro prima di superare i test pertinenti.
 
 Sono rinviati: provider aggiuntivi, nuova GUI di chat, terminale riscritto da zero, sincronizzazione cloud, recupero password centralizzato, ricerca tra vault chiusi, sessioni simultanee, VPN opzionale, supporto generico Apple Silicon, rilevamento infallibile delle catture e funzionalità avanzate di occultamento dei metadati.
 
@@ -318,9 +326,9 @@ Le capacità degli strumenti restano quelle di OpenCode, ma autorizzazioni, soft
 | Crittografia         | Generale e volumi per sessione con chiavi e password indipendenti; cifratura continua               | Parametri, integrità, costi dei due livelli, durabilità, backup e quote                                        |
 | Isolamento           | VM e LUKS2 separati, una sessione aperta, nessun filesystem condiviso                               | Backend VM, passaggio del solo dispositivo autorizzato, confinamento dell'hypervisor e IPC minimo              |
 | Trasferimenti        | Copie esplicite, nessun accesso generale alle sorgenti dall'agente                                  | Protocollo, ambiente di importazione, staging cifrato effimero e integrazione OnionShare scelta, da verificare |
-| Credenziali e policy | Persistenza nel LUKS2 generale, accesso solo ai servizi fidati; nessuna password delle chat salvata | Schema del profilo, IPC ristretto, revoca delle copie in RAM, aggiornamenti atomici e recovery                 |
+| Credenziali e policy | Persistenza nel LUKS2 generale, accesso solo ai servizi fidati; nessuna password delle chat salvata | Archivio chiavi multiple, selezione, migrazione, IPC ristretto, revoca, aggiornamenti atomici e recovery       |
 | Terminale            | TUI nel sistema live                                                                                | Compatibilità della console senza desktop, resa della TUI e controllo delle escape sequence                    |
-| Tor                  | Percorso iniziale senza ripiego diretto; profilo infrastrutturale nel generale                      | Compatibilità API, guasti del checkpoint, ora, Wi-Fi, captive portal e avvio effimero completo                 |
+| Trasporto            | Tor predefinito o SOCKS5 esplicito, senza fallback; profilo nel generale                            | Compatibilità API, guasti del checkpoint, ora, Wi-Fi, captive portal e avvio effimero completo                 |
 | Regole               | Configurabili dall'utente, non dall'agente                                                          | Identificazione attendibile delle destinazioni e gestione delle connessioni esistenti                          |
 | Distribuzione        | Live USB con dati cifrati                                                                           | Hardware iniziale, boot verificato, firma rootfs e aggiornamenti interrotti                                    |
 | Volume generale      | Password all’avvio, profilo cifrato e contenitori interni separati                                  | Layout, chiusura dei dispositivi dipendenti, effimero in sola lettura e recovery dei due livelli               |

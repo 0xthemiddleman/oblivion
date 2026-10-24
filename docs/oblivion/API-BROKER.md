@@ -143,6 +143,12 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
 
 ## Prossimi gate
 
+La nuova estensione [chiavi multiple e SOCKS5 globale](KEYS-AND-EGRESS.md)
+richiede selezione nella UI fidata e un trasporto controllato nel gateway.
+Il broker attuale accetta un SOCKS loopback con credenziale di isolamento Tor;
+non è già un client per proxy esterni configurabili. Non si cambia il suo
+origin né si consegnano chiavi o credenziali proxy alla chat.
+
 1. Verificare indirizzi interni e rebinding via Tor nel percorso completo;
    [persistenza e bootstrap](TOR-STATE.md) sono integrati nel ciclo del generale.
 2. Estendere il collaudo della revoca nel controller reale a shutdown globale

@@ -1,11 +1,17 @@
 # Credenziale Abliteration nel generale cifrato
 
+Questa pagina descrive la singola chiave attualmente implementata. È ora
+richiesto un [archivio di più chiavi nominate](KEYS-AND-EGRESS.md), con selezione
+prima dell’apertura e migrazione del formato esistente; il supporto multiplo
+non è ancora implementato.
+
 Il manager fidato permette di salvare, sostituire e rimuovere la API key
 Abliteration dopo lo sblocco del volume generale, con tutte le sessioni chiuse.
 Il [collegamento dal controller LUKS](HOST-GATEWAY.md) al supervisore privato
 è implementato: con il gateway configurato, salvare la credenziale avvia una
-VM dedicata e gliela consegna. Tor resta disabilitato e non viene ancora
-abilitato l’accesso al provider. Il [token della sessione](SESSION-NETWORK.md)
+VM dedicata e gliela consegna. Il collaudo originario di questa pagina mantiene
+Tor disabilitato; il successivo [ciclo Tor](TOR-STATE.md) implementa persistenza
+e bootstrap online. Il provider reale resta da collaudare. Il [token della sessione](SESSION-NETWORK.md)
 autorizza il broker locale e viene revocato alla chiusura.
 
 ## Comportamento

@@ -1,0 +1,118 @@
+# Più chiavi API e scelta del percorso di rete
+
+Requisiti aggiunti il 24 ottobre 2026: salvare più API key Abliteration e
+scegliere tra Tor, predefinito, e un proxy SOCKS5 globale per Oblivion.
+Queste funzioni sono da implementare: il prototipo attuale conserva una sola
+chiave e il suo percorso online usa Tor. Le prove precedenti restano valide
+per quella configurazione, senza attestare ancora il nuovo percorso SOCKS.
+
+## Chiavi salvate
+
+Il manager fidato gestirà un elenco di chiavi con nome e identificatore opaco:
+aggiunta con campo nascosto, rinomina, rimozione confermata e scelta di una
+predefinita. Prima dell'apertura si potrà scegliere quale usare per quella
+sessione. La selezione vale per tutte le chiamate AI, inclusi titoli e
+compaction, fino alla chiusura. Non vengono cambiate le password LUKS.
+
+I segreti rimangono nel volume generale, in file root 0600 e directory 0700.
+L'IPC del manager espone nomi e stato dopo lo sblocco, mai valori delle chiavi.
+Al gateway viene consegnata solo quella selezionata; alla chat resta il token
+locale revocabile. L'agente non può elencare o scegliere chiavi. Non si salva
+automaticamente un'associazione fra archivio e account: un'eventuale
+preferenza per archivio richiederà una decisione esplicita di prodotto.
+
+Cambio di chiave, modifica e rimozione richiedono tutte le sessioni chiuse.
+Prima del cambio viene arrestato il gateway che possiede la vecchia chiave.
+Se la chiave manca, è rifiutata o esaurisce il credito, il sistema restituisce
+un errore: nessuna rotazione automatica, selezione alternativa o nuovo invio
+su un altro account. Una chiave diversa non garantisce un'identità diversa
+se le chiavi appartengono allo stesso account del provider.
+
+La migrazione da `profile/abliteration.key` deve essere atomica e recuperabile:
+il vecchio segreto si elimina solo dopo la pubblicazione durevole del nuovo
+archivio. In lettura sola viene presentato come unica chiave disponibile senza
+migrazione. Nel profilo effimero si possono scegliere chiavi salvate in RAM;
+aggiunte, rinomine, rimozioni e modifica della predefinita non vengono salvate.
+
+## Un percorso globale scelto dall'utente
+
+| Modalità              | Uscita applicativa                                     | Comportamento                                  |
+| --------------------- | ------------------------------------------------------ | ---------------------------------------------- |
+| Tor, predefinita      | Gateway → Tor → destinazioni autorizzate               | Isolamento dei flussi e stato Tor già previsti |
+| SOCKS5 personalizzato | Gateway → proxy configurato → destinazioni autorizzate | Tor non viene avviato per questa modalità      |
+
+Per «globale» si intende il traffico Internet applicativo di Oblivion:
+richieste AI, strumenti e futuri servizi di rete e manutenzione. Non si
+ereditano le impostazioni proxy del Mac usato per sviluppare. Wi-Fi, DHCP e
+raggiungibilità del trasporto sono infrastruttura distinta con eccezioni
+ristrette; UDP/QUIC e client incompatibili devono fallire, senza uscita diretta.
+
+Indirizzo, porta, eventuali username/password e modalità scelta si salvano nel
+generale cifrato. L'assenza di una scelta usa Tor; configurazione invalida o
+proxy indisponibile producono un errore, mai un cambio automatico. Nel
+profilo readonly una scelta temporanea resta soltanto in RAM.
+
+La modalità è visibile nel manager. Il cambio richiede chat e trasferimenti
+chiusi: revoca, fine verificata delle connessioni e del gateway precedente,
+poi avvio del nuovo percorso. Una richiesta interrotta non viene reinviata.
+Non sono previste modalità diretta, fallback Tor↔SOCKS o concatenazione
+automatica Tor-su-SOCKS.
+
+Le regole consenti/blocca/chiedi restano davanti a entrambi i trasporti.
+La VM della chat non accede al proxy grezzo, alle sue credenziali o alla LAN.
+Per SOCKS il firewall del gateway consentirà solo all'apposito servizio
+l'endpoint configurato, senza l'uscita generale oggi attribuita a Tor.
+Un proxy su LAN richiede un'eccezione limitata al suo IP e porta, non l'apertura
+della rete locale all'agente.
+
+I nomi delle destinazioni vengono passati al proxy dopo l'autorizzazione,
+usando l'indirizzamento per dominio di [SOCKS5, RFC 1928](https://www.rfc-editor.org/rfc/rfc1928#section-5).
+Il bootstrap dell'endpoint stesso non deve usare DNS di sistema implicito:
+la prima implementazione potrà ricevere un IP esplicito; l'accettazione di
+hostname richiede prima una procedura di risoluzione amministrata e verificata.
+
+## Differenze da rendere visibili
+
+SOCKS5 non sostituisce TLS applicativo: l'API conserva HTTPS verificato fino
+ad Abliteration. L'autenticazione username/password standard invia la password
+del proxy in chiaro sul collegamento SOCKS, come specifica
+[RFC 1929](https://www.rfc-editor.org/rfc/rfc1929#section-3).
+La UI deve descrivere questa proprietà nella configurazione; il salvataggio
+cifrato non rende cifrata la connessione al proxy.
+
+Il proxy scelto vede i nomi richiesti e controlla la risoluzione remota. Il
+campo `BND.ADDR` di SOCKS5 non attesta l'IP finale della destinazione
+([RFC 1928](https://www.rfc-editor.org/rfc/rfc1928#section-6)). La policy locale
+può rifiutare IP privati espliciti, ma non promette di verificare tutti gli IP
+risolti da un proxy arbitrario. La protezione equivalente contro destinazioni
+interne remote richiede controlli sul proxy stesso, da verificare. Le credenziali
+del proxy non offrono automaticamente l'isolamento dei circuiti di Tor.
+
+OnionShare usa servizi onion e Tor
+([documentazione](https://docs.onionshare.org/2.6/en/security.html)). Nella prima
+versione sarà disponibile solo con modalità Tor selezionata; in modalità
+SOCKS verrà mostrato come non disponibile, senza avviare Tor di nascosto.
+
+## Passi di implementazione e verifica
+
+1. Estendere storage e IPC host da una chiave a un archivio versionato;
+   preservare aggiornamenti atomici, readonly, permessi e recupero. Aggiungere
+   selezione e gestione nella TUI fidata, quindi migrare il formato precedente.
+2. Consegnare al supervisore la sola chiave scelta e un profilo di trasporto
+   tipizzato. Mantenere immutabile la coppia chiave/percorso durante l'apertura.
+3. Inserire un connettore locale del gateway per Tor o SOCKS esterno, riusabile
+   dal broker e dal futuro proxy dei tool. Separare il token locale e le
+   credenziali di isolamento Tor dall'autenticazione del SOCKS esterno.
+   Le credenziali esterne non devono essere trasmesse al guest o in argv/log.
+4. Applicare firewall e lifecycle per modalità: nessuna uscita Tor in SOCKS,
+   nessun accesso al SOCKS esterno in Tor, revoca delle connessioni già aperte,
+   recupero dopo crash e salvataggio dello stato Tor solo dove pertinente.
+5. Provare sul Mac con Debian ARM, LUKS reale e fixture: due chiavi distinguibili,
+   selezione e riapertura, errori e assenza di rotazione, migrazione interrotta,
+   ENOSPC, readonly, proxy autenticato e non autenticato, auth errata, risoluzione
+   per dominio, proxy caduto, cambio percorso e revoca durante lo stream.
+   Combinare catture e tracing per dimostrare assenza di fallback, DNS diretto
+   e bypass dai sottoprocessi. Confermare poi su KVM e con provider reale.
+
+Questi passi precedono l'estensione del proxy dei tool: quest'ultimo deve
+applicare la stessa policy indipendentemente dal trasporto selezionato.
