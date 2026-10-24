@@ -255,7 +255,10 @@ with (output / "serial.log").open("xb") as log:
         "-object", f"filter-dump,id=uplink-capture,netdev=uplink,file={output / 'uplink.pcap'}",
     ] if args.tor_online else [])
     result = online_vm(command, log, output) if args.tor_online else subprocess.run(
-        command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, timeout=900)
+        # The expanded 31-check stream lifecycle took 870 seconds on CI x86;
+        # keep room for real VM startups without changing any per-operation check.
+        command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+        timeout=1200 if args.stream else 900)
 serial = (output / "serial.log").read_text(errors="replace")
 fixture_prefix = "OBLIVION_TOR_STATE_FIXTURE_SHA256 " if args.tor_state else "OBLIVION_SESSION_NETWORK_FIXTURE_SHA256 " if session_image else "OBLIVION_GATEWAY_HOST_FIXTURE_SHA256 " if gateway_image else "OBLIVION_GATEWAY_FIXTURE_SHA256 " if args.gateway_bundle else "OBLIVION_SERVICES_FIXTURE_SHA256 " if args.services_bundle else "OBLIVION_TUI_FIXTURE_SHA256 "
 fixture_verified = fixture is None or (fixture_prefix + hashlib.sha256(fixture).hexdigest()) in serial.splitlines()

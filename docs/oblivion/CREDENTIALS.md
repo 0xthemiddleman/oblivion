@@ -106,6 +106,9 @@ controlli storage/manager in 308,53 secondi e 31 di rete in 540,80 secondi.
 Passano 34 test host sul Mac e in Debian, Clippy sul Mac, due test della
 fixture e `bun run check` (34 task). I 13 marcatori cercati nel disco dei
 servizi e i 19 nel disco del ciclo di rete non compaiono in chiaro.
+La successiva CI `b86547c` passa tutti i 29 job: ripete i 40 controlli storage
+e i 31 di rete su x86, con client ricompilato, senza marcatori in chiaro nei
+dischi esaminati. Il report separa questa prova da quella locale ARM.
 
 Il manager reale crea, rinomina, sostituisce e rimuove chiavi temporanee;
 le prove coprono generale readonly e scrivibile, archivio RAM non leggibile

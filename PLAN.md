@@ -32,8 +32,10 @@ parte di quella CI. Le [evidenze delle chiavi RAM](docs/oblivion/ram-credentials
 registrano separatamente build host corrente e client ARM64 riusato dalla CI `bff2090`.
 La successiva CI `51f203b` supera tutti i quattro job eseguiti, con 37 controlli
 storage e 29 di rete x86: quota RAM e stream effimeri sono quindi verificati
-anche in CI. La matrice di rete invariata è esclusa; le nuove chiavi RAM
-restano coperte dal laboratorio locale nel report separato.
+anche in CI. La matrice di rete invariata è esclusa. La successiva CI `b86547c`
+verifica anche le chiavi RAM: tutti i 29 job passano, con 40 controlli storage
+e 31 di rete x86 e un client ricompilato da quel commit. Nessuno dei 19
+marcatori cercati sul disco del ciclo di rete compare in chiaro.
 Le regole possono essere globali o per sessione, persistenti oppure temporanee
 fino al blocco generale. Senza profilo il servizio tool rimane spento;
 `ask` blocca finché non esiste una conferma fidata.

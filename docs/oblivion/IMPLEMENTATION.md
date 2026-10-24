@@ -28,8 +28,10 @@ l'OOM fisico o il provider remoto reale.
 La CI `65112f3` termina inoltre con **29 job passati**, 36 controlli storage
 e 26 del ciclo di rete x86, senza i 18 marcatori cercati sul disco. La successiva
 CI `51f203b` passa tutti i quattro job eseguiti, con 37 controlli storage e 29
-di rete: quota RAM e stream effimeri sono verificati anche in CI. Le nuove
-credenziali RAM sono coperte dalla prova locale; i report distinguono le coperture.
+di rete: quota RAM e stream effimeri sono verificati anche in CI. La CI
+`b86547c` verifica poi le credenziali RAM con un client x86 ricompilato:
+tutti i 29 job passano, con 40 controlli storage e 31 di rete, senza i 19
+marcatori cercati sul disco. I report distinguono le coperture.
 
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager fidato:
 archivio versionato, migrazione, scelta per apertura e nessuna rotazione
