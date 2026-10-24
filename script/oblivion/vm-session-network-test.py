@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import shutil
+import select
 import signal
 import socket
 import struct
@@ -336,6 +337,32 @@ await_revocation(owner)
 command("close")
 command("lock")
 check("normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes")
+
+command("unlock", secret=GENERAL)
+ready()
+# A privileged client that drips a frame must not hold the gateway owner
+# indefinitely. The production five-second admission budget expires and the
+# owner destroys its VM, rather than keeping credentials behind a stuck channel.
+with socket.socket(socket.AF_UNIX) as control:
+    control.settimeout(5)
+    control.connect("/run/oblivion/gateway-control.sock")
+    control.sendall(struct.pack(">I", 1024) + b"{")
+    deadline = time.monotonic() + 15
+    sent = 1
+    while time.monotonic() < deadline:
+        if select.select([control], [], [], 1)[0]:
+            assert control.recv(1) == b""
+            break
+        control.sendall(b" ")
+        sent += 1
+    else:
+        raise AssertionError("gateway frame deadline renewed by partial input")
+    assert sent > 1
+stopped()
+assert status()["general_open"] and not status()["session_open"]
+check("fragmented private requests expire despite continued progress; the owner destroys its gateway VM and leaves storage state explicit")
+command("lock")
+assert not status()["general_open"]
 
 for path in Path("/run").rglob("*"):
     if path.is_symlink() or not path.is_file():

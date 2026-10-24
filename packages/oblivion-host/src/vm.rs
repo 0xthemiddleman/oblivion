@@ -1,4 +1,5 @@
 use crate::storage::{Error, Result, require};
+use oblivion_host::channel::Channel;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::fs::{self, OpenOptions};
@@ -119,14 +120,11 @@ impl Config {
     pub fn start(&self, token: Option<&str>) -> Result<()> {
         self.launch(Role::Session, token.is_some())?;
         if let Some(token) = token {
-            let mut channel = UnixStream::connect("/run/oblivion-session/token.sock")
+            let stream = UnixStream::connect("/run/oblivion-session/token.sock")
                 .map_err(|_| Error("session_channel_unavailable"))?;
-            crate::gateway::peer(&channel, VM_UID)?;
+            crate::gateway::peer(&stream, VM_UID)?;
             crate::gateway::grant(token)?;
-            channel
-                .set_read_timeout(Some(Duration::from_secs(60)))
-                .and_then(|()| channel.set_write_timeout(Some(Duration::from_secs(5))))
-                .map_err(|_| Error("session_channel_failed"))?;
+            let mut channel = Channel::new(&stream, Duration::from_secs(60));
             qmp(Role::Session, "cont")?;
             let mut ready = [0u8; 6];
             // Virtio serial can discard bytes before the guest opens its port.
@@ -441,13 +439,7 @@ pub fn resume_gateway() -> Result<()> {
 fn qmp(role: Role, operation: &str) -> Result<Value> {
     let stream = UnixStream::connect(format!("{}/qmp.sock", role.runtime()))
         .map_err(|_| Error("vm_control_unavailable"))?;
-    stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .map_err(|_| Error("vm_control_failed"))?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
-        .map_err(|_| Error("vm_control_failed"))?;
-    let mut reader = BufReader::new(stream);
+    let mut reader = BufReader::new(Channel::new(&stream, Duration::from_secs(5)));
     require(
         read_qmp(&mut reader)?.get("QMP").is_some(),
         "invalid_vm_greeting",
@@ -475,9 +467,14 @@ fn qmp(role: Role, operation: &str) -> Result<Value> {
     Err(Error("vm_control_failed"))
 }
 
-fn read_qmp(reader: &mut BufReader<UnixStream>) -> Result<Value> {
+fn read_qmp(reader: &mut BufReader<Channel<'_>>) -> Result<Value> {
     let mut bytes = Vec::new();
     loop {
+        // Buffered events must not bypass the overall QMP deadline either.
+        reader
+            .get_ref()
+            .remaining()
+            .map_err(|_| Error("vm_control_failed"))?;
         let available = reader.fill_buf().map_err(|_| Error("vm_control_failed"))?;
         require(!available.is_empty(), "vm_control_closed")?;
         let count = available

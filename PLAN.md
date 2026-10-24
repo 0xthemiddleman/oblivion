@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.23 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.24 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -11,7 +11,9 @@ L'[audit iniziale](docs/oblivion/phase-0/AUDIT.md) distingue inventario, analisi
 statica e prove sintetiche. Il [profilo privacy](docs/oblivion/PRIVACY-PROFILE.md),
 la [rete delle sessioni](docs/oblivion/SESSION-NETWORK.md) e lo
 [stato Tor](docs/oblivion/TOR-STATE.md) hanno evidenze riproducibili nel laboratorio
-Mac/Debian ARM. Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md)
+Mac/Debian ARM. I [canali privati host](docs/oblivion/CHANNEL-DEADLINES.md)
+applicano scadenze complessive anche ai messaggi frammentati.
+Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md)
 raccoglie i risultati e i gate aperti.
 
 Restano da completare compatibilità e streaming Abliteration, proxy dei tool,

@@ -1,3 +1,4 @@
+use crate::channel::Channel;
 use serde::Deserialize;
 use serde_json::json;
 use std::io::{Read, Write};
@@ -34,7 +35,7 @@ fn connect(operation: &str, session: Option<&str>, secret: &[u8]) -> Result<Unix
     if secret.len() > 1024 {
         return Err("secret_too_large".into());
     }
-    let mut stream = UnixStream::connect("/run/oblivion-control.sock")?;
+    let stream = UnixStream::connect("/run/oblivion-control.sock")?;
     #[cfg(target_os = "linux")]
     unsafe {
         use std::os::fd::AsRawFd;
@@ -52,26 +53,25 @@ fn connect(operation: &str, session: Option<&str>, secret: &[u8]) -> Result<Unix
             return Err("untrusted_controller".into());
         }
     }
-    stream.set_read_timeout(Some(Duration::from_secs(120)))?;
-    stream.set_write_timeout(Some(Duration::from_secs(10)))?;
+    let mut channel = Channel::new(&stream, Duration::from_secs(10));
     let header = serde_json::to_vec(
         &json!({"operation": operation, "session": session, "secret_len": secret.len()}),
     )?;
-    stream.write_all(&(header.len() as u32).to_be_bytes())?;
-    stream.write_all(&header)?;
-    stream.write_all(secret)?;
+    channel.write_all(&(header.len() as u32).to_be_bytes())?;
+    channel.write_all(&header)?;
+    channel.write_all(secret)?;
     stream.shutdown(std::net::Shutdown::Write)?;
     Ok(stream)
 }
 
 pub fn request(operation: &str, session: Option<&str>, secret: &[u8]) -> Result<String> {
     let stream = connect(operation, session, secret)?;
-    response(stream)
+    response(Channel::new(&stream, Duration::from_secs(120)))
 }
 
-fn response(stream: UnixStream) -> Result<String> {
+fn response(channel: Channel<'_>) -> Result<String> {
     let mut bytes = Vec::new();
-    stream.take(1024 * 1024 + 1).read_to_end(&mut bytes)?;
+    channel.take(1024 * 1024 + 1).read_to_end(&mut bytes)?;
     if bytes.len() > 1024 * 1024 {
         return Err("response_too_large".into());
     }
@@ -92,6 +92,7 @@ fn response(stream: UnixStream) -> Result<String> {
 pub fn console() -> Result<UnixStream> {
     use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
     let stream = connect("console", None, &[])?;
+    let channel = Channel::new(&stream, Duration::from_secs(120));
     let mut byte = 0u8;
     let mut data = libc::iovec {
         iov_base: (&mut byte as *mut u8).cast(),
@@ -103,6 +104,7 @@ pub fn console() -> Result<UnixStream> {
     message.msg_iovlen = 1;
     message.msg_control = control.as_mut_ptr().cast();
     message.msg_controllen = std::mem::size_of_val(&control);
+    channel.prepare_read()?;
     unsafe {
         if libc::recvmsg(stream.as_raw_fd(), &mut message, libc::MSG_CMSG_CLOEXEC) != 1 {
             return Err("console_transfer_failed".into());
@@ -121,7 +123,7 @@ pub fn console() -> Result<UnixStream> {
         if byte != b'F' || message.msg_flags & libc::MSG_CTRUNC != 0 {
             return Err("console_transfer_failed".into());
         }
-        response(stream)?;
+        response(channel)?;
         Ok(UnixStream::from(fd))
     }
 }

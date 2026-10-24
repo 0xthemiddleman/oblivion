@@ -1,4 +1,5 @@
 use crate::storage::{Error, Result, lock_named, require};
+use oblivion_host::channel::Channel;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Read, Write};
@@ -80,14 +81,15 @@ pub fn serve(config: &Path, uid: u32) -> Result<()> {
         };
         // Only a connected serial console descriptor is delegated, never QMP or
         // permission to traverse the hypervisor's private runtime directory.
+        let mut channel = Channel::new(&stream, Duration::from_secs(10));
         if let Some(console) = &response.console {
-            if send_console(&stream, console).is_err() {
+            if channel.prepare_write().is_err() || send_console(&stream, console).is_err() {
                 continue;
             }
         }
         // One request per connection; neither payloads nor errors are logged.
         if let Ok(bytes) = serde_json::to_vec(&response) {
-            let _ = stream.write_all(&bytes);
+            let _ = channel.write_all(&bytes);
         }
     }
     Err(Error("listener_stopped"))
@@ -109,20 +111,15 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         )?;
         require(peer.assume_init().uid == uid, "unauthorized_peer")?;
     }
-    stream
-        .set_read_timeout(Some(Duration::from_secs(10)))
-        .map_err(|_| Error("timeout_setup_failed"))?;
-    stream
-        .set_write_timeout(Some(Duration::from_secs(10)))
-        .map_err(|_| Error("timeout_setup_failed"))?;
+    let mut channel = Channel::new(stream, Duration::from_secs(10));
     let mut size = [0; 4];
-    stream
+    channel
         .read_exact(&mut size)
         .map_err(|_| Error("invalid_frame"))?;
     let size = u32::from_be_bytes(size) as usize;
     require((1..=1024).contains(&size), "invalid_frame_length")?;
     let mut header = vec![0; size];
-    stream
+    channel
         .read_exact(&mut header)
         .map_err(|_| Error("invalid_frame"))?;
     let request: Request = serde_json::from_slice(&header).map_err(|_| Error("invalid_request"))?;
@@ -157,7 +154,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         "unexpected_secret",
     )?;
     let mut secret = Zeroizing::new(vec![0; request.secret_len as usize]);
-    stream
+    channel
         .read_exact(&mut secret)
         .map_err(|_| Error("incomplete_secret"))?;
     if matches!(request.operation, Operation::Console) {

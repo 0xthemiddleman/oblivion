@@ -67,6 +67,11 @@ Il servizio associa inoltre ogni grant al processo QEMU della sessione tramite
 un pidfd e revoca quando quel processo termina, senza fermare Tor se la revoca
 riesce. Non c’è riavvio automatico del gateway con credenziali ancora in memoria.
 
+Le [scadenze dei canali host](CHANNEL-DEADLINES.md) coprono ogni frame e scambio
+completo: ricevere pochi byte alla volta non prolunga il limite. Un frame
+root-only incompleto interrompe il proprietario e provoca la distruzione della
+VM; lo stato storage rimane verificato separatamente.
+
 ## Configurazione e laboratorio Mac
 
 Il campo opzionale `gateway` del file root del controller usa lo stesso schema

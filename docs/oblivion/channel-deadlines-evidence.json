@@ -1,0 +1,139 @@
+{
+  "scope": "Absolute deadlines for private host exchanges; real Unix sockets on macOS and Linux, synthetic LUKS/systemd/QEMU regressions on Mac ARM/HVF with nested TCG.",
+  "production_kvm_tested": false,
+  "network": "Offline; no external provider requests or real credentials.",
+  "implementation": {
+    "module": "packages/oblivion-host/src/channel.rs",
+    "mechanism": "One monotonic Instant per exchange; read/write calls use its remaining budget and check expiry after I/O. Interrupted or early kernel timeouts never renew it.",
+    "qmp": "Greeting, capabilities, command and all intermediate events share a five-second deadline, including buffered events.",
+    "session_token": "QMP resume, token request, token delivery and ready acknowledgement share sixty seconds after grant.",
+    "storage": "One ten-second admission deadline for length, JSON and secret. Worker execution is separate. Response send has ten seconds; manager waits at most 120 seconds for the full response.",
+    "gateway": "Five-second root-only frame admission; ten-second worker request/acknowledgement (thirty for stop); thirty seconds per supervisor operation; sixty seconds for boot readiness.",
+    "failure": "Incomplete storage requests are rejected before dispatch. Gateway channel errors terminate the owner and destroy its VM. A timeout never declares a LUKS mapping closed."
+  },
+  "host_bundle": {
+    "directory": "artifacts/oblivion-channel-deadlines/bundle-01",
+    "manifest_sha256": "0317f1f53a167a2c7ee6655bfe93e55b527f7563e7be7d007d2f69277ed57033",
+    "source_manifest_sha256": "7ef7bd362813dd2c8d720dc4d2e390b9edf20ec7f12700bea29d9dcf5a092b5b"
+  },
+  "storage_manager": {
+    "artifacts": "artifacts/oblivion-channel-deadlines/services-01",
+    "summary_sha256": "d50b7368dd14089ac637c1718705e5cbcc97f4c4f1523d801f769d77ed304dc5",
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "seconds": 221.1,
+    "checks": [
+      "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+      "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+      "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+      "PASS: fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request",
+      "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+      "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+      "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+      "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+      "PASS: profile exhaustion preserves the previous key; retry publishes a complete replacement",
+      "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+      "PASS: an open session prevents changes to the infrastructure credential",
+      "PASS: read-only profile exposes only credential presence, rejects key changes and pending deletion, and remains byte-identical",
+      "PASS: interrupted session formatting survives restart, cannot open, and is discarded only after confirmation",
+      "PASS: disk exhaustion is explicit, preserves existing archives and permits reopening after pending cleanup",
+      "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+      "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+      "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+      "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+      "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+      "PASS: synthetic passwords and API keys never appear on the managed console"
+    ],
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "6103b64503447d35c7c8d86518c4b943e760e3889d85c6d2a77a8e3fe6a4ee25",
+    "runtime_fixture_override": {
+      "file": "vm-services-test.py",
+      "sha256": "d4253601cacddeebe3e6387e1517e168d0af57dc420087d4fdecd30194b59d78"
+    },
+    "fixture_verified": true
+  },
+  "session_gateway": {
+    "artifacts": "artifacts/oblivion-channel-deadlines/session-01",
+    "summary_sha256": "da9105a5bc7d8e81e5db310c74c6b04beacd48da5488ba365c4caa3b5af3f123",
+    "guest_pass": true,
+    "qemu_exit": 0,
+    "seconds": 326.82,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and cannot reach provider while Tor is disabled",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+      "PASS: normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes",
+      "PASS: fragmented private requests expire despite continued progress; the owner destroys its gateway VM and leaves storage state explicit",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ],
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "4edafd45d61b4f04898010886177e24daeff8a0d564c4586c1c3d249084f5b1c",
+    "runtime_fixture_override": {
+      "file": "vm-session-network-test.py",
+      "sha256": "6e318d4afd5de2a92c7e9912e7968ae61164c3d4dcd83c0a32696d4b179c1ead"
+    },
+    "fixture_verified": true
+  },
+  "verification": {
+    "native_rust": {
+      "exit_code": 0,
+      "channel_tests": 5,
+      "console_tests": 4,
+      "log": "artifacts/oblivion-channel-deadlines/native-tests.log",
+      "sha256": "968c4497c4740d3bea0191dcaaee05f202ca1ca2a13c35b643d579e99c6e839b"
+    },
+    "linux_build": {
+      "exit_code": 0,
+      "channel_tests": 5,
+      "console_tests": 4,
+      "production_and_lab_bins_compiled": true,
+      "log": "artifacts/oblivion-channel-deadlines/build-bundle-01.log",
+      "sha256": "c008b35aec5074ce73c212d2386a12750716c5f75dfb7a288843bfef5252c082"
+    },
+    "canonical_root_check": {
+      "exit_code": 0,
+      "lint_warnings": 1225,
+      "lint_errors": 0,
+      "typecheck_tasks": 34,
+      "cached_typecheck_tasks": 34,
+      "log": "artifacts/oblivion-channel-deadlines/root-check.log",
+      "sha256": "40d709eaae673abd159a840cf7611d96c2d7e463a73b4c3c15ca08aae7495e09"
+    },
+    "rust_format": "passed",
+    "python_syntax": "passed",
+    "real_admission_faults": [
+      "UID 1000 sends an incomplete JSON frame with one-byte progress each second; controller rejects it.",
+      "UID 1000 sends an incomplete secret with one-byte progress each second; controller rejects it and serves a subsequent valid status request.",
+      "Root-only gateway client sends an incomplete frame with one-byte progress each second; the owner exits, its VM stops and storage state remains explicit."
+    ]
+  },
+  "limits": [
+    "Deadlines start after Unix socket connection and do not bound subprocesses, cryptsetup, filesystem calls or the complete lifecycle operation.",
+    "Manager timeout does not cancel a dispatched storage worker; recovery must inspect actual state.",
+    "Gateway-internal API-child handshake and provider HTTP timing are not changed.",
+    "No dedicated hostile QMP event flood or fragmented token guest in this run; their shared Channel is exercised with real socket fragmentation and the normal VM flow.",
+    "Pidfd observation can be delayed by bounded in-flight IPC; no instantaneous revocation or physical scheduling guarantee.",
+    "Synthetic marker scans do not prove universal absence of writes or physical RAM erasure."
+  ],
+  "remaining_gates": [
+    "Full adapter streaming/tool calling, active upstream cancellation and authorized Abliteration/Tor tests.",
+    "Tool proxy, Wi-Fi/bridges, file transfers/OnionShare, full ephemeral sessions and TUI refinement.",
+    "I/O failures, power loss, OOM, full shutdown, signed live image, hardware and independent audit."
+  ],
+  "artifact_retention": [
+    {
+      "artifact": "artifacts/oblivion-session-exit/run-01/data.raw",
+      "sha256": "6b42a9160fa5b740b0a2c32f3e75a9c6e8f054fcc8169284358a81156a1714b3",
+      "reason": "completed synthetic regression disk; report and logs retained"
+    },
+    {
+      "artifact": "artifacts/oblivion-session-exit/lifecycle-01/data.raw",
+      "sha256": "a3f628b424fb2e1aca63b733359b4986cba6224181da0392ae3332fe0f82fdf0",
+      "reason": "completed synthetic regression disk; report and logs retained"
+    }
+  ]
+}

@@ -45,3 +45,8 @@ suo pidfd. La [revoca all'uscita del processo](session-exit-evidence.json)
 copre SIGKILL e uscita QMP senza chiusura preventiva del controller. Il volume
 non viene dichiarato chiuso dall'osservatore; rimangono le verifiche storage
 prima di una nuova apertura.
+
+I [canali privati host](CHANNEL-DEADLINES.md) ora usano scadenze complessive
+per frame e scambi, inclusi token e QMP. Le richieste storage incomplete vengono
+rifiutate; un errore sul canale gateway provoca la distruzione della sua VM.
+Le prove e i limiti della copertura sono nel [report dedicato](channel-deadlines-evidence.json).

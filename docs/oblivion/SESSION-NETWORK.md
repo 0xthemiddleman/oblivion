@@ -33,6 +33,11 @@ Un avvio fallito revoca il grant; il volume rimane interbloccato fino alla
 chiusura esplicita. Un gateway fermo impedisce una nuova apertura con rete.
 Non viene avviato automaticamente un collegamento alternativo.
 
+La consegna del token ha una [scadenza complessiva di 60 secondi](CHANNEL-DEADLINES.md),
+che comprende ripresa del guest, richiesta della porta, invio e conferma.
+I frammenti non rinnovano il tempo disponibile. QMP ha un proprio limite di
+5 secondi per greeting, capabilities e comando, compresi gli eventi intermedi.
+
 ## Uscita imprevista della VM
 
 Il servizio host conserva un pidfd del processo QEMU durante l'autorizzazione.

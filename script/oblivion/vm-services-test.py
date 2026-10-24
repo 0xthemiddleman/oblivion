@@ -261,6 +261,47 @@ try:
     assert property(CONTROLLER, "Type") == "notify"
     locked()
     check("systemd waits for controller readiness and runs the confined manager as UID 1000")
+    # Real UID 1000 clients drip incomplete frames/secrets into the production
+    # controller. Progress every second must not renew its ten-second deadline.
+    probe = subprocess.run(["python3", "-c", r'''
+import json, select, socket, struct, time
+for secret in [False, True]:
+    with socket.socket(socket.AF_UNIX) as client:
+        client.settimeout(5)
+        client.connect("/run/oblivion-control.sock")
+        header = json.dumps({"operation": "unlock", "session": None, "secret_len": 1024}).encode()
+        client.sendall(struct.pack(">I", len(header) if secret else 1024))
+        client.sendall(header + b"x" if secret else b"{")
+        deadline = time.monotonic() + 20
+        sent = 1
+        response = bytearray()
+        while time.monotonic() < deadline:
+            if select.select([client], [], [], 1)[0]:
+                while chunk := client.recv(4096):
+                    response.extend(chunk)
+                    assert len(response) <= 4096
+                break
+            client.sendall(b"x" if secret else b" ")
+            sent += 1
+        assert sent > 1
+        reply = json.loads(response)
+        assert reply == {"ok": False, "output": "", "error": "incomplete_secret" if secret else "invalid_frame"}, reply
+with socket.socket(socket.AF_UNIX) as client:
+    client.settimeout(10)
+    client.connect("/run/oblivion-control.sock")
+    header = json.dumps({"operation": "status", "session": None, "secret_len": 0}).encode()
+    client.sendall(struct.pack(">I", len(header)) + header)
+    client.shutdown(socket.SHUT_WR)
+    response = bytearray()
+    while chunk := client.recv(4096):
+        response.extend(chunk)
+        assert len(response) <= 1024 * 1024
+    reply = json.loads(response)
+    assert reply["ok"] and not json.loads(reply["output"])["general_open"], reply
+'''], user=1000, group=1000, extra_groups=[], capture_output=True, timeout=50)
+    assert probe.returncode == 0, probe.stderr
+    assert int(property(CONTROLLER, "MainPID")) > 0
+    check("fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request")
     assert status()["api_key_present"] is None
     assert command("set-api-key", secret=API_KEY, success=False) == "general_not_writable"
     assert command("clear-api-key", success=False) == "general_not_writable"
