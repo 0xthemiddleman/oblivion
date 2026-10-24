@@ -8,6 +8,11 @@ chroot /guest /usr/bin/dpkg-query -W -f='${Package}\t${Version}\n' > /out/guest-
 cp /out/kernel /host/usr/lib/oblivion/vm/kernel
 cp /out/initrd /host/usr/lib/oblivion/vm/initrd
 chmod 0644 /host/usr/lib/oblivion/vm/kernel /host/usr/lib/oblivion/vm/initrd
+if [ -f /guest/usr/bin/oblivion ]; then
+    touch /host/usr/lib/oblivion/vm/chat-lab
+    cp /guest/usr/lib/oblivion/build-evidence.json /out/opencode-build.json
+    (cd /guest && sha256sum usr/bin/oblivion) > /out/opencode.sha256
+fi
 # The hypervisor's root contains public executables/libraries, no configuration,
 # profile, host devices or session filesystems. systemd binds just the active disk.
 for tree in usr/share/qemu usr/share/qemu-efi-aarch64 usr/share/seabios usr/share/ipxe; do
@@ -35,3 +40,4 @@ cd /sources
 find packages script -type f -print0 | sort -z | xargs -0 sha256sum > /out/sources.sha256
 cd /out
 sha256sum kernel initrd host.squashfs host-packages.tsv guest-packages.tsv sources.sha256 > SHA256SUMS
+if [ -f opencode.sha256 ]; then sha256sum opencode.sha256 opencode-build.json >> SHA256SUMS; fi

@@ -20,3 +20,17 @@ script/oblivion/*
 !script/oblivion/vm-*.py
 !script/oblivion/Dockerfile.vm-lab
 !script/oblivion/Dockerfile.vm-lab.dockerignore
+!artifacts/
+artifacts/*
+!artifacts/oblivion-build/
+artifacts/oblivion-build/*
+!artifacts/oblivion-build/cli-linux-arm64/
+artifacts/oblivion-build/cli-linux-arm64/*
+!artifacts/oblivion-build/cli-linux-arm64/bin/
+artifacts/oblivion-build/cli-linux-arm64/bin/*
+!artifacts/oblivion-build/cli-linux-arm64/bin/opencode
+!docs/
+docs/*
+!docs/oblivion/
+docs/oblivion/*
+!docs/oblivion/privacy-evidence.json

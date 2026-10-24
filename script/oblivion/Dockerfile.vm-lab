@@ -1,3 +1,4 @@
+ARG GUEST=guest
 FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS os
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TARGETARCH
@@ -21,6 +22,17 @@ COPY packages/oblivion-host/guest/ /usr/lib/oblivion/guest/
 COPY script/oblivion/vm-guest-fixture.sh /usr/libexec/oblivion
 RUN sh /usr/lib/oblivion/guest/install.sh
 
+FROM guest AS opencode-guest
+ARG TARGETARCH
+RUN test "$TARGETARCH" = arm64 && apt-get update && apt-get install -y --no-install-recommends \
+    python3 git ripgrep && rm -rf /var/lib/apt/lists/*
+COPY artifacts/oblivion-build/cli-linux-arm64/bin/opencode /usr/bin/oblivion
+COPY docs/oblivion/privacy-evidence.json /usr/lib/oblivion/build-evidence.json
+COPY script/oblivion/vm-chat-probe.py /usr/libexec/oblivion-chat-probe
+RUN python3 -c 'import hashlib,json; from pathlib import Path; assert hashlib.sha256(Path("/usr/bin/oblivion").read_bytes()).hexdigest() == json.loads(Path("/usr/lib/oblivion/build-evidence.json").read_text())["binary_sha256"]'
+
+FROM ${GUEST} AS selected-guest
+
 FROM os AS host
 ARG TARGETARCH
 RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin python3 \
@@ -36,7 +48,7 @@ RUN sh /tmp/setup && rm /tmp/setup
 
 FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS pack
 RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
-COPY --from=guest / /guest/
+COPY --from=selected-guest / /guest/
 COPY --from=host / /host/
 COPY packages/oblivion-host/ /sources/packages/oblivion-host/
 COPY script/oblivion/ /sources/script/oblivion/

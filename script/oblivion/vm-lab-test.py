@@ -12,6 +12,7 @@ PRODUCTION = "/usr/bin/oblivion-storage"
 LAB = "/usr/bin/oblivion-storage-lab"
 CONFIG = "/run/oblivion-vm-test.json"
 SESSION = "/dev/mapper/oblivion-session"
+CHAT = Path("/usr/lib/oblivion/vm/chat-lab").exists()
 checks = []
 
 
@@ -36,7 +37,7 @@ def config(accelerator):
         "session_mib": 128, "pbkdf_memory_kib": 65536, "manager_uid": 1000,
         "vm": {"root": "/usr/lib/oblivion/vm/qemu-root", "kernel": "/usr/lib/oblivion/vm/kernel",
                "initrd": "/usr/lib/oblivion/vm/initrd", "filesystem": "/usr/lib/oblivion/vm/guest.squashfs",
-               "memory_mib": 512, "cpus": 1, "accelerator": accelerator},
+               "memory_mib": 1536 if CHAT else 512, "cpus": 2 if CHAT else 1, "accelerator": accelerator},
     }
     Path(CONFIG).write_text(json.dumps(value))
     os.chmod(CONFIG, 0o600)
@@ -118,6 +119,9 @@ def run():
         check("QEMU runs unprivileged without capabilities in private filesystem and network namespaces")
         check("guest user is unprivileged, root is readonly and temporary files are RAM-backed")
         command(LAB, "enter", b, secret=b"synthetic-session-password-b", fail="vm_already_running")
+        if CHAT:
+            send(stream, "chat-a", "OBLIVION_CHAT_CREATED")
+            check("compiled OpenCode streams a conversation and executes its shell inside A")
         send(stream, "write-a", "OBLIVION_A_WRITTEN")
         client("close")
         assert not Path(f"/proc/{pid}").exists() and not Path(SESSION).exists()
@@ -127,11 +131,17 @@ def run():
     with console() as stream:
         send(stream, "probe", "OBLIVION_GUEST_CONFINED")
         send(stream, "check-b", "OBLIVION_B_ISOLATED")
+        if CHAT:
+            send(stream, "chat-b", "OBLIVION_CHAT_EMPTY")
+            check("B has no OpenCode conversation, document or temporary file from A")
         command(LAB, "leave")
     check("B starts in a new VM and cannot see A files or temporary state")
     command(LAB, "enter", a, secret=b"synthetic-session-password-a")
     with console() as stream:
         send(stream, "check-a", "OBLIVION_A_RESTORED")
+        if CHAT:
+            send(stream, "chat-resume", "OBLIVION_CHAT_RESUMED")
+            check("OpenCode resumes the same conversation after A is reopened; RAM temporaries are gone")
         os.kill(service_pid(), signal.SIGSTOP)
         command(LAB, "leave", fail="vm_control_failed")
         state = json.loads(command(LAB, "status"))

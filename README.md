@@ -5,8 +5,9 @@ Phase 0 records the unchanged upstream baseline with reproducible synthetic prob
 The optional `--oblivion` build now disables application logging/OTLP, diagnostic
 dumps, the updater, provider discovery and project configuration loading.
 A Linux controller prototype implements two-level LUKS2, restricted local IPC
-and confined per-session QEMU lifecycle, tested with a synthetic guest.
-KVM/hardware validation, the actual OpenCode guest, live USB, privacy TUI and
+and confined per-session QEMU lifecycle, tested with the compiled OpenCode CLI
+and a synthetic provider inside the guest on Mac ARM.
+KVM/hardware validation, live USB, privacy TUI and
 network controls remain unfinished.
 Do not treat this branch as a private or hardened distribution.
 

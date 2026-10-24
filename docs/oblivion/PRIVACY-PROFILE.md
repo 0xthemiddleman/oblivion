@@ -67,8 +67,9 @@ sintetico e sono esclusi da Git.
 ## Limiti e lavoro successivo
 
 Questa prova riguarda il binario CLI e server, non ancora la TUI nel guest.
-Database, messaggi e output dei tool sono ancora dati persistenti di sessione:
-sarà il volume LUKS a contenerli. Non è una prova di assenza universale di
+Il successivo [laboratorio VM](VM-LAB.md) esegue lo stesso binario nel guest e
+verifica la riapertura della chat nel volume LUKS. Database, messaggi e output
+dei tool rimangono dati persistenti di sessione. Non è una prova di assenza universale di
 scritture né un divieto di rete. Plugin esterni, MCP, download degli strumenti,
 configurazioni amministrative e percorsi TUI richiedono ancora interventi.
 Filtrare il catalogo non costituisce una policy che impedisce qualsiasi altro
@@ -78,4 +79,4 @@ La chiave fittizia del laboratorio è ancora nell'ambiente del processo; la
 chiave reale dovrà stare soltanto nel broker, fuori dal guest e dalla shell.
 Non sono state inviate richieste reali ad Abliteration o a Tor.
 Lo sviluppo su Mac non rende privato macOS: l'immagine live, il manager fidato,
-il guest completo e le verifiche su hardware Linux/KVM restano da completare.
+il guest interattivo e le verifiche su hardware Linux/KVM restano da completare.

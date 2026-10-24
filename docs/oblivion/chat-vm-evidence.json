@@ -1,0 +1,33 @@
+{
+  "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
+  "workload": "compiled OpenCode CLI",
+  "outer_accelerator": "hvf",
+  "inner_accelerator": "tcg",
+  "production_kvm_tested": false,
+  "seconds": 112.6,
+  "qemu_exit": 0,
+  "checks": [
+    "PASS: production requires usable KVM before unlocking a session",
+    "PASS: production binary rejects laboratory emulation configuration",
+    "PASS: QEMU runs unprivileged without capabilities in private filesystem and network namespaces",
+    "PASS: guest user is unprivileged, root is readonly and temporary files are RAM-backed",
+    "PASS: compiled OpenCode streams a conversation and executes its shell inside A",
+    "PASS: unprivileged manager IPC opens and closes the complete VM lifecycle",
+    "PASS: graceful shutdown terminates the VM and its detached work before closing LUKS",
+    "PASS: B has no OpenCode conversation, document or temporary file from A",
+    "PASS: B starts in a new VM and cannot see A files or temporary state",
+    "PASS: OpenCode resumes the same conversation after A is reopened; RAM temporaries are gone",
+    "PASS: unresponsive VM cannot be reported locked or release its vault",
+    "PASS: reopening A restores persistent files while RAM temporaries and worker state are absent",
+    "PASS: explicit forced close stops the service before removing the mapping",
+    "PASS: global lock shuts down the guest before closing both encryption layers"
+  ],
+  "guest_pass": true,
+  "plaintext_markers_on_disk": [],
+  "disk_sha256": "0f9bde1ae9f50e0cefa87e921b12309b0e2d14b6d37a06e69f9356a6eb08174f",
+  "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n2570d0ad940ec8c4f9f1923ab8bf9dce1a25404f76bd508e4b64902e923c372a  initrd\nf55ea754930f9688b4f43184460d066ebe57c541db0316276e27ebd5ee0102c9  host.squashfs\n985a3bbd6ce19e1cf1d5992c6cda6b246ebbd1f4b45b98d11dfcf57b58131c51  host-packages.tsv\nb23d84696f492da1c5998e8f4fb026d3357aa72b7b95de89d1e5104f172b2786  guest-packages.tsv\n72fd66e44c4aa1d442f9a3d86e21309f9a808af342c0681d4b9d6546830727c6  sources.sha256\n2eaf9835ca1492dad9982808555f8c36afaf796d6e76d8323164642f7a81b3ce  opencode.sha256\n1b71d7c546a82df09045bda0be42bb10b02affac6da69b455d7c24f9ceb82dea  opencode-build.json\n",
+  "compiled_sources": "769bf8f761afc411bde94edf1ada03407a7567a3280932b9cd5b22d61321e853  packages/oblivion-host/Cargo.lock\nf1661688b668a4c514e1baeefe611da55ea85b0e10e22712ce4f2814fd8dc8bf  packages/oblivion-host/Cargo.toml\n76a12350f411b77933f7bddbf1beb8fa276dd62bbc97bedbf10e23b29678417b  packages/oblivion-host/examples/ipc-probe.rs\n0a590f20a1be5d6b6bd2358871fe01d9a24e9fb485b4ccfe963e124f421805c9  packages/oblivion-host/guest/install.sh\n36e3dce8146baeae85971e22312bdde95ddce8c2b497e051fe7c0375f7e8c1dd  packages/oblivion-host/guest/oblivion-conversation.service\n0e7d92bf6f2abafc4c00978558973102dfb0e1868ff644d64e9b34fc12196c52  packages/oblivion-host/guest/oblivion-vault.service\ne48a7666d23bdfffd4ea7fe21550afd862b901e85d2c0499f3ef6ad1457dc33c  packages/oblivion-host/guest/prepare.sh\nbff4458cad0b5bb5128e9fbe9093ae1080d4d31b2b7851b505721b0d4d8fadec  packages/oblivion-host/src/client.rs\na752cdb2153751592d65cde0b84318c0bde75db3cba7d6b21c7b8ca0aade7ada  packages/oblivion-host/src/ipc.rs\n6b3c0f9b24cdfc054bfe7042cdd4ede5b98b70ad8c1e1023bd4191b3a1d7fe9e  packages/oblivion-host/src/main.rs\nadb8637029a0a7dc35fa637dcc51112761a825fe307337c6b63614090c24ad6c  packages/oblivion-host/src/storage.rs\n3ec9ada2f431cc36583643d2df0762c780916bc4ccb9f713d672410bb3e8a141  packages/oblivion-host/src/vm.rs\n775c0ee670841d87ae999490a0a4e11454da15c2593a2822e29cb6cde4e220cd  script/oblivion/Dockerfile.vm-lab\nc411b7dae81c505c75be116751b7804054f4edf89eb52f4a027d5ed3b682a912  script/oblivion/Dockerfile.vm-lab.dockerignore\ndd0b2b14b4b27ba5db07b3096daa255e93cf3983207e09453dc91aaac1cc75e9  script/oblivion/run-vm-lab.py\n10e89b26e7a5c9fe0a8f405c36f1ec187759e67318f75a4e99fcbfe9dec0ab09  script/oblivion/vm-chat-probe.py\n0eb3a9da1a99b7f3fb85d47c148108b2c5921d77fb1f09ccdeca6d065c53628c  script/oblivion/vm-common-setup.sh\n7e54a8db69f2757d61b45844c41457e54025ddbbd12882300d6f93e53602a14a  script/oblivion/vm-guest-fixture.sh\nd83153c91a952a0dbe390dcdcb615d4766db61fa1e633b375d0656d0c7c7ae61  script/oblivion/vm-host-setup.sh\n6fbde4f2b6901dc41c0e82cfca69eff0f9908add0549182c1d35226015ee0360  script/oblivion/vm-lab-pack.sh\n1590c7bae0ebf8b9c55beea426766a0d53c36b387a875c50dbf44d81e2c82747  script/oblivion/vm-lab-test.py\n",
+  "opencode_sha256": "b2fdad65e1c0592e0dfeae3c9faa86057cc6859e38acedad19abe8371e5e3f98",
+  "date": "2026-10-24",
+  "local_artifacts": "artifacts/oblivion-chat-vm/run-01"
+}

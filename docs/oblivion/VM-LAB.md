@@ -6,7 +6,7 @@ A → B → A è stato eseguito con systemd, QEMU e LUKS reali, usando documenti
 password sintetici. Il [riepilogo verificato](vm-evidence.json) collega le prove
 agli hash dei sorgenti e delle immagini.
 
-L'ultima esecuzione ha superato **11 controlli**, compresi IPC da UID non
+La prova iniziale con fixture shell ha superato **11 controlli**, compresi IPC da UID non
 privilegiato e VM non responsiva. Nessuno dei marcatori o delle password
 sintetiche cercati è stato trovato in chiaro sul disco spento. Il laboratorio
 storage separato ha superato 17 controlli; `bun run check` ha superato i 34 task
@@ -40,9 +40,36 @@ guest ostili; il collaudo x86/KVM resta un gate aperto
 - L'IPC del manager apre e chiude l'intero ciclo VM; non espone la primitiva root
   che apre soltanto il blocco. Il socket di controllo non viene passato al guest.
 
-Il servizio guest esegue per ora una **fixture shell sintetica**, non OpenCode.
+La variante iniziale del guest usa una fixture shell. La nuova variante
+`opencode-guest` esegue anche il **binario OpenCode reale con profilo privacy**:
+la CLI e il server lavorano nel guest con un provider sintetico su loopback.
 La console privata è un socket Unix; il bridge e la TUI fidata per l'utente non
 sono ancora implementati. Non esiste un'immagine installabile di prodotto.
+
+## OpenCode nel guest sul Mac ARM
+
+La [prova con OpenCode](chat-vm-evidence.json) ha superato **14 controlli in
+112,60 secondi**. Collega l'immagine al medesimo hash del binario già verificato
+nel [profilo privacy](PRIVACY-PROFILE.md); la build rifiuta un binario che non
+corrisponde all'evidenza. Tutte le credenziali e i contenuti sono sintetici.
+
+1. In A, OpenCode riceve un documento come contesto, usa lo streaming nativo
+   Abliteration e avvia la shell per creare un documento in `/vault/workspace`
+   e temporanei in `/tmp` e `/var/tmp`.
+2. Il controller spegne A e chiude il suo mapping. B parte con un nuovo guest:
+   non trova il database, il documento, il contesto o i temporanei di A.
+3. Riaprendo A, OpenCode riprende lo stesso Session ID. Il provider sintetico
+   riceve la cronologia precedente, compresi risposta e risultato del tool;
+   il documento persiste e i temporanei non esistono più.
+4. Restano verificati il rifiuto di aperture simultanee, i privilegi limitati,
+   la VM non responsiva, la chiusura forzata esplicita e il blocco generale.
+
+Nessuno dei marcatori cercati è stato trovato in chiaro nel disco spento. I test
+non dimostrano cancellazione fisica della RAM, assenza di ogni rappresentazione
+possibile dei dati o resistenza di TCG a guest ostili. Non è ancora un test della
+TUI, di prompt interrotti durante una scrittura o della compatibilità Tor reale.
+La chiave API del fixture è nell'ambiente del guest: il broker esterno rimane
+necessario prima di usare credenziali reali.
 
 ## Riproduzione
 
@@ -55,6 +82,25 @@ python3 script/oblivion/run-vm-lab.py \
   --image artifacts/oblivion-vm/image \
   --output artifacts/oblivion-vm/my-new-run
 ```
+
+Per la variante con OpenCode, compilare prima il binario come descritto nel
+[profilo privacy](PRIVACY-PROFILE.md), poi:
+
+```sh
+docker build --file script/oblivion/Dockerfile.vm-lab \
+  --build-arg GUEST=opencode-guest --target artifacts \
+  --output type=local,dest=artifacts/oblivion-chat-vm/image .
+python3 script/oblivion/run-vm-lab.py \
+  --image artifacts/oblivion-chat-vm/image \
+  --output artifacts/oblivion-chat-vm/my-new-run
+```
+
+L'evidenza include l'hash del binario: per una nuova compilazione che produce un
+hash diverso, rieseguire prima le prove privacy e aggiornare il loro riepilogo
+solo dopo averne verificato il risultato. La VM esterna usa 4 GiB; il guest
+OpenCode 1,5 GiB e 2 vCPU. La variante shell usa 512 MiB e 1 vCPU. Nessun
+filesystem è condiviso con il Mac o fra le VM. La rete del guest resta senza NIC;
+il provider di prova vive nel guest stesso.
 
 Il runner richiede una directory nuova e crea un disco virtuale vuoto da 1 GiB.
 L'init del laboratorio formatta **solo il disco virtuale previsto dal runner**:
@@ -89,7 +135,7 @@ immutabile di QEMU e driver input mancanti nell'initramfs minimale ARM: senza
 `gpio_keys`/`evdev`, il guest non riceveva la richiesta di spegnimento. Il
 controller restituiva un timeout lasciando il volume aperto, come previsto.
 
-Restano: avvio KVM su hardware Linux x86, integrazione e audit di OpenCode nel
+Restano: avvio KVM su hardware Linux x86, TUI interattiva e audit esteso di OpenCode nel
 guest, console fidata, servizio controller di prodotto, gateway e broker,
 trasferimenti, guest effimero, USB fisica, power loss, integrità e revisione
 indipendente. La [roadmap](IMPLEMENTATION.md) mantiene separati questi gate.

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Synthetic workload only. The release guest will execute the actual Oblivion TUI.
+# Laboratory console only. Optional chat probe executes the actual CLI, not the TUI.
 set -eu
 printf 'OBLIVION_GUEST_READY\n'
 while IFS= read -r command; do
@@ -48,6 +48,9 @@ while IFS= read -r command; do
             [ ! -e /var/tmp/session-temporary ]
             [ ! -e /tmp/detached-worker ]
             printf 'OBLIVION_A_RESTORED\n'
+            ;;
+        chat-a|chat-b|chat-resume)
+            python3 /usr/libexec/oblivion-chat-probe "$command"
             ;;
         *) exit 1 ;;
     esac
