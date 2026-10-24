@@ -25,7 +25,7 @@ immagine del laboratorio e cattura pacchetti.
 ## Prove eseguite sul Mac
 
 Il binario compilato ha superato sei controlli con provider locale sintetico,
-shell reale, server HTTP reale, `strace` e `tcpdump`. La cattura contiene 125
+shell reale, server HTTP reale, `strace` e `tcpdump`. La cattura aggiornata contiene 126
 pacchetti senza perdite o troncamenti. Nessun tentativo DNS o discovery sulle
 porte dei provider locali osservato. Catalogo e OTLP sono indirizzati verso
 endpoint esca: non ricevono richieste. Il test include una configurazione di
@@ -66,17 +66,17 @@ sintetico e sono esclusi da Git.
 
 ## Limiti e lavoro successivo
 
-Questa prova riguarda il binario CLI e server, non ancora la TUI nel guest.
+La cattura descritta qui riguarda il binario CLI e server. La [prova interattiva](MANAGER.md) copre separatamente la TUI nel guest; non equivale ancora a una cattura di tutti i suoi percorsi di rete.
 Il successivo [laboratorio VM](VM-LAB.md) esegue lo stesso binario nel guest e
 verifica la riapertura della chat nel volume LUKS. Database, messaggi e output
 dei tool rimangono dati persistenti di sessione. Non è una prova di assenza universale di
 scritture né un divieto di rete. Plugin esterni, MCP, download degli strumenti,
-configurazioni amministrative e percorsi TUI richiedono ancora interventi.
-Filtrare il catalogo non costituisce una policy che impedisce qualsiasi altro
+configurazioni amministrative e percorsi TUI residui richiedono ancora interventi. Il profilo ora disabilita anche plugin TUI esterni, clipboard condivisa, apertura diretta dei link, schede, devtools e comandi esclusi. Mantiene il motore e il toolset upstream.
+Le opzioni CLI avanzate, compreso un endpoint server esplicito, non sono ancora tutte eliminate dalla distribuzione. Il launcher del laboratorio usa soltanto il server standalone dentro il guest. Filtrare il catalogo non costituisce una policy che impedisce qualsiasi altro
 provider; quella garanzia richiede il gateway esterno.
 
 La chiave fittizia del laboratorio è ancora nell'ambiente del processo; la
 chiave reale dovrà stare soltanto nel broker, fuori dal guest e dalla shell.
 Non sono state inviate richieste reali ad Abliteration o a Tor.
 Lo sviluppo su Mac non rende privato macOS: l'immagine live, il manager fidato,
-il guest interattivo e le verifiche su hardware Linux/KVM restano da completare.
+il completamento del guest e le verifiche su hardware Linux/KVM restano da completare.

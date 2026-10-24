@@ -1,4 +1,5 @@
 import type { PluginInfo } from "@opencode/client"
+import { Oblivion } from "@opencode/util/oblivion"
 import type { Plugin } from "@opencode/plugin/tui"
 import type { MarkdownCodeBlockRenderer, MarkdownOptions } from "@opentui/core"
 import {
@@ -287,26 +288,28 @@ export function PluginProvider(props: ParentProps<{ packages: PackageSource; dir
     )
     // Discovery admits TUI-only plugins while server inventory carries combined plugins.
     // Their overlap is intentional; explicit configuration remains the final authority.
-    const entries = mergePluginTargets(
-      [
-        ...(
-          await trace("discover", { reconciliation: id, directories: props.directories }, () =>
-            discoverPluginTargets(props.directories),
-          )
-        ).map((entry) => ({
-          entry,
-          install: true,
-          optional: true,
-        })),
-        ...serverTuiPlugins().map((plugin) => ({
-          entry: plugin.source.type === "package" ? plugin.source.target : path.dirname(plugin.source.path),
-          install: false,
-          optional: true,
-        })),
-        ...(config.data.plugins ?? []).map((entry) => ({ entry, install: true, optional: false })),
-      ],
-      directory,
-    )
+    const entries = Oblivion.enabled
+      ? []
+      : mergePluginTargets(
+          [
+            ...(
+              await trace("discover", { reconciliation: id, directories: props.directories }, () =>
+                discoverPluginTargets(props.directories),
+              )
+            ).map((entry) => ({
+              entry,
+              install: true,
+              optional: true,
+            })),
+            ...serverTuiPlugins().map((plugin) => ({
+              entry: plugin.source.type === "package" ? plugin.source.target : path.dirname(plugin.source.path),
+              install: false,
+              optional: true,
+            })),
+            ...(config.data.plugins ?? []).map((entry) => ({ entry, install: true, optional: false })),
+          ],
+          directory,
+        )
 
     // Resolve: fold entries into one desired generation. A source that fails
     // to import keeps its running previous version and only reports failure.

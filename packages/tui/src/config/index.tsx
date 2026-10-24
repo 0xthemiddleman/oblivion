@@ -8,6 +8,7 @@ import { createStore, reconcile } from "solid-js/store"
 import { safeWatch } from "../util/watch"
 import path from "path"
 import { TuiKeybind } from "./keybind"
+import { Oblivion } from "@opencode/util/oblivion"
 
 export interface Interface {
   readonly path?: string
@@ -289,6 +290,18 @@ export function resolve(
   input: Info,
   options: { terminalSuspend: boolean; environment?: Readonly<Record<string, string | undefined>> },
 ): Resolved {
+  if (Oblivion.enabled)
+    input = {
+      ...input,
+      plugins: [],
+      highlights: false,
+      debug: { ...input.debug, devtools: false },
+      attention: { ...input.attention, notifications: false, sound: false },
+      terminal: { ...input.terminal, title: false, copy: "manual" },
+      tabs: { ...input.tabs, mode: "off", enabled: false },
+      prompt: { ...input.prompt, editor: false },
+      session: { ...input.session, sidebar: "hide" },
+    }
   const tabsMode = input.tabs?.mode ?? (input.tabs?.enabled === undefined ? "auto" : input.tabs.enabled ? "on" : "off")
   const keybinds: TuiKeybind.KeybindOverrides = { ...input.keybinds }
   if (!options.terminalSuspend) {

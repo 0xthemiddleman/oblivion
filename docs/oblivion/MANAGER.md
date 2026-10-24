@@ -4,7 +4,7 @@
 motore OpenCode. Il ciclo completo del manager è stato provato sul Mac ARM nel
 laboratorio Debian: **9 controlli superati in 95,09 secondi**. Le
 [evidenze](manager-evidence.json) registrano gli hash di sorgenti, binari e immagini.
-Non è ancora una live installabile né la TUI di conversazione definitiva.
+È ora collegato anche alla prima TUI di conversazione ridotta, con una prova distinta descritta sotto. Non è ancora una live installabile né l’interfaccia definitiva.
 
 ## Flusso implementato
 
@@ -59,6 +59,53 @@ lunghe, con schermi 80×24 e 32×10. La dipendenza usa `vte` senza feature `std`
 quindi il suo buffer OSC è limitato. Il renderer usa colori ANSI per la console
 Linux; i colori RGB del guest vengono convertiti alla palette.
 
+## TUI di conversazione e richieste al manager
+
+Il profilo compilato limita palette, scorciatoie e slash command alle azioni di
+conversazione, modelli Abliteration, strumenti e navigazione dei messaggi. Le
+schede sono spente; plugin TUI esterni, editor esterno, clipboard condivisa,
+apertura diretta dei link, devtools e installazione/connessione di provider non
+sono disponibili nella UI. Le scelte sono imposte dal profilo compilato anche se
+la configurazione prova a riabilitarle. Gli strumenti dell'agente rimangono quelli
+di OpenCode; la riduzione della UI non è un firewall o un controllo delle API.
+
+`/new`, `/sessions` e `/exit` chiedono rispettivamente creazione, selezione e
+chiusura. Anche `exit`, `quit`, `:q` e le scorciatoie di uscita seguono il percorso
+fidato. Il messaggio OSC `777;oblivion;<azione>` è soltanto un suggerimento del
+guest: contiene un enum, mai password, percorsi o comandi. Qualsiasi processo nel
+guest può emetterlo. Il manager mostra la richiesta fuori dall'area guest e
+richiede un nuovo Ctrl+] dalla propria TTY; Esc torna alla chat. Dopo la conferma
+attende la chiusura della VM e del mapping, e soltanto dopo mostra la lista o la
+nuova password. Il guest non ottiene il socket amministrativo.
+
+Il decoder conserva i delimitatori di incolla anche fra letture separate. Ctrl+]
+all'interno dell'incolla è dato, non conferma; Esc singolo viene inoltrato dopo il
+timeout della sequenza. Queste prove coprono sequenze delimitate ordinarie e
+frammentate; interruzioni, reconnect e paste esteso durante i cambi di schermata
+restano nella matrice da completare. Non si dichiara autenticità hardware di un
+tasto ricevuto da una PTY: l'host rimane nel confine fidato.
+
+Nel lancio previsto la CLI usa un'istanza standalone e riprende la conversazione principale
+più vecchia nel vault. Le sottosessioni tecniche restano accessibili nello stesso
+ambiente. Un primo messaggio in un vault nuovo crea la conversazione; non vengono
+copiati titoli nel generale. Dettagli e limiti in [SESSION-MODEL.md](SESSION-MODEL.md).
+
+La [prova interattiva](tui-evidence.json) ha superato **8 controlli in 134,01 secondi**. Esegue il binario compilato e il manager
+UID 1000 su una PTY reale, con provider sintetico nel guest e nessuna NIC:
+
+- Tool shell e risposta in A, passaggio a B e assenza dei dati di A.
+- Riapertura di A con la stessa cronologia e documento, senza i temporanei RAM.
+- Richieste nuova/cambia/chiudi, Esc, Ctrl+] incollato e conferma dalla TTY host.
+- Password non presenti nell'output, due mapping chiusi e marcatori assenti nel
+  disco spento.
+
+Le schermate PNG derivano dalle celle effettive della PTY del laboratorio;
+l'harness attende la fine del ridisegno, senza costruire una copia grafica della
+UI. Il guest è fissato a 100×27 sotto tre righe fidate; i test dei componenti
+coprono anche 44 colonne. Il ridimensionamento della console seriale non è ancora
+implementato. Il bridge può ancora mostrare ridisegni intermedi e la palette a 16 colori perde alcuni bordi a basso contrasto: sincronizzazione del rendering e accessibilità restano da rifinire. Restano etichette e comportamento degli agenti upstream da adattare,
+oltre a importazione file, impostazioni, gateway, varianti sperimentali della UI e gestione dei guasti.
+
 ## Riprodurre sul Mac
 
 Anteprima nativa senza volumi o password:
@@ -87,15 +134,50 @@ forzata. Infine controlla che entrambe le cifrature siano chiuse e che nessuna
 password sintetica compaia nell'output della TTY. Il runner cerca i marcatori
 anche nel disco spento: nessuna corrispondenza osservata.
 
-La conversazione usa OpenCode compilato, streaming e shell reali, con provider
-sintetico su loopback del guest. Il launcher del guest resta la console di prova:
-non è ancora la TUI OpenCode interattiva. La VM esterna usa HVF; quelle interne
+Questa prima variante mantiene il launcher a comandi del laboratorio. La variante seguente esegue invece la TUI interattiva compilata. La VM esterna usa HVF; quelle interne
 TCG, che non viene presentato come una garanzia di isolamento.
+
+Per la variante interattiva:
+
+```sh
+docker build --file script/oblivion/Dockerfile.vm-lab \
+  --build-arg GUEST=tui-guest --build-arg HOST=tui-host \
+  --target artifacts --output type=local,dest=artifacts/oblivion-tui/image .
+python3 script/oblivion/run-vm-lab.py \
+  --image artifacts/oblivion-tui/image \
+  --output artifacts/oblivion-tui/my-new-run
+```
+
+Per la suite TUI completa, usare Node reale nel container: i test upstream del
+loader ESM non funzionano con lo shim Node di Bun.
+
+```sh
+docker build -f script/oblivion/Dockerfile.tui-tests -t oblivion-tui-tests:v2.1.4 .
+docker run --rm --network none --log-driver none \
+  --mount type=bind,source="$PWD",target=/work --workdir /work/packages/tui \
+  -e HOME=/tmp/oblivion-tui-tests oblivion-tui-tests:v2.1.4 \
+  bun test --define OBLIVION_PROFILE=true --timeout 30000 test/oblivion.test.tsx --rerun-each 10
+```
+
+Per cambiare soltanto il test Python sul Mac, aggiungere `--refresh-tui-test` al
+runner. L'opzione è accettata solo con un'immagine `tui-host`: aggiunge un archivio
+CPIO all'initramfs del laboratorio e monta il solo script di collaudo dalla RAM
+sopra quello della root host. Conserva l'ordine degli hook Debian. Il formato a
+più archivi è [documentato dal kernel](https://docs.kernel.org/driver-api/early-userspace/buffer-format.html).
+Non condivide un filesystem Mac e non modifica guest o controller. Le evidenze
+separano manifest dell'immagine, hash dell'initramfs di prova e hash dello script
+eseguito, verificato dall'interno della VM. Non è un'opzione dell'avvio di prodotto.
+
+La suite ordinaria si esegue nello stesso container con `bun run test`: profilo
+Oblivion compilato fuori, regressioni upstream attive. Le prove dedicate hanno
+superato 30 esecuzioni, la suite ordinaria 1.546 test senza errori e il controllo
+root 34 task. I quattro test Rust della console passano su Mac e nel compilatore
+Linux del laboratorio. Tutte le credenziali e i dati di prova sono sintetici.
 
 ## Lavoro ancora necessario
 
-- Adattare la TUI OpenCode, rimuovere schede/comandi superflui e collegare
-  `session.new`/`session.list` al flusso fidato, senza concedere autorità al guest.
+- Completare identità e terminologia della TUI, comportamento conversazionale
+  degli agenti, percorso dei file e inventario dei comandi residui.
 - Completare input incollato e multilinea, ridimensionamento, ripristino del
   rendering dopo riconnessione e verifica visiva sulla console Linux fisica.
 - Gestire avvio automatico, crash/arresto del manager e confinamento dei servizi

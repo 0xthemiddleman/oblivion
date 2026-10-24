@@ -15,6 +15,7 @@ import { Service } from "@opencode/client/effect/service"
 import { OpenCode } from "@opencode/client/promise"
 import { findSession } from "../../session-target"
 import { errorMessage } from "../../util/error"
+import { Oblivion } from "@opencode/util/oblivion"
 
 export default Runtime.handler(Commands, (input) =>
   Effect.gen(function* () {
@@ -34,7 +35,7 @@ export default Runtime.handler(Commands, (input) =>
     )
     const server = yield* ServerConnection.resolve({
       server: requestedServer,
-      standalone: input.standalone,
+      standalone: Oblivion.enabled || input.standalone,
       mismatch: "replace",
       onStart: (reason, previousVersion) => {
         Queue.offerUnsafe(serviceStarts, { reason, previousVersion })
@@ -50,13 +51,25 @@ export default Runtime.handler(Commands, (input) =>
         Effect.promise(() => preflight.fail("OpenCode update could not start the new background service")),
       ),
     )
-    const session = Option.getOrUndefined(input.session)
+    const session = Oblivion.enabled
+      ? (yield* Effect.tryPromise(() =>
+          OpenCode.make({ baseUrl: server.endpoint.url, headers: Service.headers(server.endpoint) }).session.list({
+            limit: 1,
+            parentID: null,
+            order: "asc",
+            directory: process.cwd(),
+          }),
+        )).data[0]?.id
+      : Option.getOrUndefined(input.session)
     // A missing --session ID becomes the ID of the session the first prompt creates.
     const sessionExists =
       session !== undefined &&
       (yield* Effect.tryPromise({
         try: () =>
-          findSession(OpenCode.make({ baseUrl: server.endpoint.url, headers: Service.headers(server.endpoint) }), session),
+          findSession(
+            OpenCode.make({ baseUrl: server.endpoint.url, headers: Service.headers(server.endpoint) }),
+            session,
+          ),
         catch: (cause) => new Error(errorMessage(cause)),
       })) !== undefined
     const updater = yield* Updater.Service
@@ -110,7 +123,7 @@ export default Runtime.handler(Commands, (input) =>
           : undefined,
       },
       args: {
-        continue: input.continue,
+        continue: !Oblivion.enabled && input.continue,
         sessionID: sessionExists ? session : undefined,
         newSessionID: sessionExists ? undefined : session,
         prompt: Option.getOrUndefined(input.prompt),

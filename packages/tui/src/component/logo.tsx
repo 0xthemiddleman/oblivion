@@ -4,10 +4,17 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { useTheme } from "../context/theme"
 import { tint } from "../theme/color"
 import { go, logo } from "../logo"
+import { Oblivion } from "@opencode/util/oblivion"
 
 export function Logo() {
   const theme = useTheme()
   const dimensions = useTerminalDimensions()
+  if (Oblivion.enabled)
+    return (
+      <text fg={theme.text.base} attributes={TextAttributes.BOLD}>
+        OBLIVION
+      </text>
+    )
 
   const renderLine = (line: string, fg: RGBA, bold: boolean): JSX.Element[] => {
     const shadow = tint(theme.background.base, fg, 0.25)

@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::num::NonZeroU16;
 use std::os::fd::AsRawFd;
 use std::os::unix::net::UnixStream;
+use std::time::{Duration, Instant};
 use zeroize::Zeroizing;
 
 // Semantic roles for the trusted UI; guest colors are rendered separately.
@@ -144,9 +145,38 @@ impl Drop for Terminal {
 #[derive(Default)]
 pub struct Replies {
     bytes: Vec<u8>,
+    request: Option<Action>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Action {
+    New,
+    Sessions,
+    Close,
+}
+
+impl Replies {
+    pub fn take_request(&mut self) -> Option<Action> {
+        self.request.take()
+    }
 }
 
 impl vt100::Callbacks for Replies {
+    fn unhandled_osc(&mut self, _: &mut vt100::Screen, params: &[&[u8]]) {
+        if self.request.is_some()
+            || params.len() != 3
+            || params[0] != b"777"
+            || params[1] != b"oblivion"
+        {
+            return;
+        }
+        self.request = match params[2] {
+            b"new" => Some(Action::New),
+            b"sessions" => Some(Action::Sessions),
+            b"close" => Some(Action::Close),
+            _ => None,
+        };
+    }
     fn unhandled_csi(
         &mut self,
         screen: &mut vt100::Screen,
@@ -300,18 +330,74 @@ fn color(out: &mut String, value: vt100::Color, background: bool) {
     color(out, vt100::Color::Idx(index), background);
 }
 
-pub fn bridge(terminal: &mut Terminal, mut stream: UnixStream) -> Result<()> {
+#[derive(Default)]
+pub struct Input {
+    pending: Vec<u8>,
+    paste: bool,
+    since: Option<Instant>,
+}
+
+impl Input {
+    // The reserved key is never recognized inside a bracketed paste. Prefixes
+    // can be split across PTY reads; their bounded state belongs to this bridge.
+    pub fn decode(&mut self, bytes: &[u8], now: Instant) -> (Vec<u8>, bool) {
+        let mut output = Vec::new();
+        // Escape is also a complete key. Only incomplete sequences outside a
+        // paste expire; a slow paste must never turn its contents into actions.
+        if bytes.is_empty()
+            && !self.paste
+            && self
+                .since
+                .is_some_and(|since| now.duration_since(since) >= Duration::from_millis(50))
+        {
+            output.append(&mut self.pending);
+            self.since = None;
+        }
+        for byte in bytes.iter().copied() {
+            if byte == 29 && !self.paste {
+                self.pending.clear();
+                self.since = None;
+                return (Vec::new(), true);
+            }
+            self.pending.push(byte);
+            let marker: &[u8] = if self.paste {
+                b"\x1b[201~"
+            } else {
+                b"\x1b[200~"
+            };
+            while !marker.starts_with(&self.pending) {
+                output.push(self.pending.remove(0));
+            }
+            if self.pending == marker {
+                output.append(&mut self.pending);
+                self.paste = !self.paste;
+            }
+            self.since = (!self.pending.is_empty()).then_some(now);
+        }
+        (output, false)
+    }
+}
+
+pub fn bridge(terminal: &mut Terminal, stream: UnixStream) -> Result<Action> {
+    terminal.write("\x1b[?2004h")?;
+    let result = bridge_inner(terminal, stream);
+    terminal.write("\x1b[?2004l")?;
+    result
+}
+
+fn bridge_inner(terminal: &mut Terminal, mut stream: UnixStream) -> Result<Action> {
     stream.set_nonblocking(true)?;
     let (rows, cols) = terminal.size();
     let mut parser = parser(rows - 3, cols);
     terminal.flush_input();
     terminal.write(&render_guest(parser.screen()))?;
     let mut bytes = [0u8; 4096];
+    let mut keyboard = Input::default();
     loop {
-        let input = terminal.input(20)?;
-        if input.contains(&29) {
+        let (input, attention) = keyboard.decode(&terminal.input(20)?, Instant::now());
+        if attention {
             terminal.flush_input();
-            return Ok(());
+            return Ok(Action::Sessions);
         }
         if !input.is_empty() {
             stream.write_all(&input)?;
@@ -320,6 +406,28 @@ pub fn bridge(terminal: &mut Terminal, mut stream: UnixStream) -> Result<()> {
             Ok(0) => return Err("console_closed".into()),
             Ok(size) => {
                 parser.process(&bytes[..size]);
+                if let Some(action) = parser.callbacks_mut().take_request() {
+                    terminal.flush_input();
+                    let label = match action {
+                        Action::New => "creare una nuova sessione protetta",
+                        Action::Sessions => "cambiare sessione protetta",
+                        Action::Close => "chiudere e bloccare questa sessione",
+                    };
+                    terminal.write(&format!("{CLEAR}{BRAND} OBLIVION - controllo fidato{RESET}\r\n\r\n La chat chiede di {label}.\r\n\r\n {ACTION}Ctrl+] conferma la chiusura e prosegue\r\n Esc annulla e torna alla chat{RESET}"))?;
+                    let mut confirmation = Input::default();
+                    loop {
+                        let (input, attention) =
+                            confirmation.decode(&terminal.input(20)?, Instant::now());
+                        if attention {
+                            terminal.flush_input();
+                            return Ok(action);
+                        }
+                        if input == b"\x1b" {
+                            break;
+                        }
+                    }
+                    terminal.flush_input();
+                }
                 if !parser.callbacks().bytes.is_empty() {
                     stream.write_all(&parser.callbacks().bytes)?;
                     parser.callbacks_mut().bytes.clear();

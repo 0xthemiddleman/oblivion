@@ -1,6 +1,6 @@
 # Sessioni OpenCode e ambienti Oblivion
 
-24 ottobre 2026. Analisi sul commit upstream `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`. **Volumi, VM e primo [manager](MANAGER.md) implementati; adattamento delle azioni della TUI OpenCode ancora da realizzare.** Il manager e la riduzione dell'interfaccia sono definiti nella [specifica di avvio e TUI](BOOT-AND-TUI.md). Rimangono confermati un volume e una password indipendenti per sessione Oblivion, una sola aperta e nessun filesystem condiviso.
+24 ottobre 2026. Analisi sul commit upstream `68bc26b7da1990ce10ffecfbc1e09eb13aa5d824`. **Volumi, VM, [manager](MANAGER.md) e primo adattamento della TUI implementati e provati sul Mac ARM.** Il manager e la riduzione dell'interfaccia sono definiti nella [specifica di avvio e TUI](BOOT-AND-TUI.md). Rimangono confermati un volume e una password indipendenti per sessione Oblivion, una sola aperta e nessun filesystem condiviso.
 
 ## Il comportamento attuale di OpenCode
 
@@ -37,6 +37,27 @@ La UI dell'agente può esprimere una richiesta di cambio ambiente, ma non può s
 Nel generale rimane soltanto un indice minimo di identificatori opachi, senza titoli, anteprime o indici dei messaggi. Dopo lo sblocco si può mostrare il titolo interno della sessione aperta. Il requisito di titoli visibili a sessioni chiuse richiederebbe una scelta esplicita diversa sulla riservatezza dei metadati.
 
 L'alternativa più vicina a OpenCode invariato è un **vault con molte chat**, tutte con la stessa password. È più semplice da integrare ma cambia il requisito: le chat di quel vault si sbloccano insieme. L'utente ha confermato invece il modello con una chat principale per ambiente protetto.
+
+## Adattamento implementato nel profilo compilato
+
+`session.new`, `session.list` e `app.exit` emettono una richiesta terminale tipizzata
+(`new`, `sessions`, `close`). Il bridge la intercetta: non la inoltra al terminale
+host e non esegue operazioni amministrative senza una nuova conferma Ctrl+] dalla
+TTY del manager. Esc annulla. Un Ctrl+] contenuto in un incolla delimitato non
+vale come conferma. Per una nuova sessione, i campi password compaiono soltanto
+dopo la chiusura riuscita della VM e del mapping precedente.
+
+Nel lancio previsto la TUI usa un server standalone nel guest e riprende la conversazione
+principale più vecchia, escludendo le sessioni figlie. Se non esiste ancora una
+conversazione, il primo messaggio la crea. Non viene aggiunto un indice dei titoli
+nel generale. Schede, fork utente e creazione di altre chat tramite i comandi
+ordinari sono esclusi dal profilo; ciò non trasforma il numero di ID nel DB in un
+confine di sicurezza. Il server e gli strumenti restano confinati dalla VM.
+
+Il laboratorio interattivo verifica A→B→A, cronologia e documenti persistenti,
+temporanei assenti dopo riapertura, annullamento e conferma delle richieste,
+uscita e stato LUKS. Restano da provare riavvio del solo client, molti ID creati
+via API, guasti del manager e revoca di rete/trasferimenti quando saranno implementati.
 
 ## `/tmp` e il momento della pulizia
 

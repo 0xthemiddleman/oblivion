@@ -112,6 +112,8 @@ import { ClientMcp } from "./context/client-mcp"
 import { PanelProvider, usePanel } from "./context/panel"
 import { SessionFrame } from "./component/session-frame"
 import { createTuiClipboard } from "./clipboard"
+import { Oblivion } from "@opencode/util/oblivion"
+import { OblivionTui } from "./oblivion"
 
 const appGlobalBindingCommands = ["session.list", "session.new", "open.menu"] as const
 
@@ -209,7 +211,7 @@ export type TuiInput = {
 }
 
 export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
-  const log = input.log ?? (() => {})
+  const log = Oblivion.enabled ? () => {} : (input.log ?? (() => {}))
   const global = yield* Global.Service
   const config = Config.resolve(yield* Effect.tryPromise(() => input.config.get()), {
     terminalSuspend: process.platform !== "win32",
@@ -226,7 +228,9 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
     Effect.catch(() => Effect.tryPromise(() => api.location.get())),
   )
   const directory = location.directory
-  const pluginDirectories = yield* Effect.promise(() => localPluginDirectories(process.cwd(), global.config))
+  const pluginDirectories = Oblivion.enabled
+    ? []
+    : yield* Effect.promise(() => localPluginDirectories(process.cwd(), global.config))
   const handoff = input.terminalHandoff ? yield* Effect.promise(input.terminalHandoff) : undefined
   const managed = input.server.service
   const service = managed
@@ -270,7 +274,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
             }),
           )
         }
-        if (process.env.OPENCODE_DRIVE) {
+        if (!Oblivion.enabled && process.env.OPENCODE_DRIVE) {
           const { Drive } = yield* Effect.promise(() => import("@opencode/simulation/frontend"))
           return yield* Drive.create(options, input.app.version)
         }
@@ -363,20 +367,21 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                             >
                               <TuiStartupProvider
                                 value={{
-                                  initialRoute: process.env.OPENCODE_STORY
-                                    ? {
-                                        type: "plugin",
-                                        id: "opencode.storybook",
-                                        name: "storybook",
-                                        // OPENCODE_STORY=1 opens the index; any other value opens that story.
-                                        data:
-                                          process.env.OPENCODE_STORY === "1"
-                                            ? undefined
-                                            : { story: process.env.OPENCODE_STORY },
-                                      }
-                                    : process.env.OPENCODE_ROUTE
-                                      ? JSON.parse(process.env.OPENCODE_ROUTE)
-                                      : undefined,
+                                  initialRoute:
+                                    !Oblivion.enabled && process.env.OPENCODE_STORY
+                                      ? {
+                                          type: "plugin",
+                                          id: "opencode.storybook",
+                                          name: "storybook",
+                                          // OPENCODE_STORY=1 opens the index; any other value opens that story.
+                                          data:
+                                            process.env.OPENCODE_STORY === "1"
+                                              ? undefined
+                                              : { story: process.env.OPENCODE_STORY },
+                                        }
+                                      : !Oblivion.enabled && process.env.OPENCODE_ROUTE
+                                        ? JSON.parse(process.env.OPENCODE_ROUTE)
+                                        : undefined,
                                   skipInitialLoading: Boolean(process.env.OPENCODE_FAST_BOOT),
                                 }}
                               >
@@ -758,21 +763,29 @@ function App() {
       },
       {
         name: "session.list",
-        title: "Switch session",
+        title: Oblivion.enabled ? "Cambia sessione protetta" : "Switch session",
         category: "Session",
         suggested: data.session.list().length > 0,
         slash: { name: "sessions", aliases: ["resume", "continue"] },
         run: () => {
+          if (Oblivion.enabled) {
+            dialog.clear()
+            return OblivionTui.request("sessions")
+          }
           dialog.replace(() => <DialogSessionList />)
         },
       },
       {
         name: "session.new",
-        title: "New session",
+        title: Oblivion.enabled ? "Nuova sessione protetta" : "New session",
         suggested: route.data.type === "session",
         category: "Session",
         slash: { name: "new" },
         run: () => {
+          if (Oblivion.enabled) {
+            dialog.clear()
+            return OblivionTui.request("new")
+          }
           const model = local.model.current()
           const agent = local.agent.current()
           const current =
@@ -1163,9 +1176,9 @@ function App() {
       },
       {
         name: "app.exit",
-        title: "Exit the app",
+        title: Oblivion.enabled ? "Chiudi e blocca la sessione" : "Exit the app",
         slash: { name: "exit", aliases: ["quit", "q"] },
-        run: () => exit(),
+        run: () => (Oblivion.enabled ? OblivionTui.request("close") : exit()),
         category: "System",
       },
       {
@@ -1404,7 +1417,7 @@ function App() {
       }}
       onMouseUp={(event) => {
         const url = clickedLink(renderer, event)
-        if (url) return void openUrl(url).catch(toast.error)
+        if (url && !Oblivion.enabled) return void openUrl(url).catch(toast.error)
         if (copyOnSelectEnabled()) Selection.copyOnSelectRelease(event, renderer, toast, clipboard)
       }}
     >

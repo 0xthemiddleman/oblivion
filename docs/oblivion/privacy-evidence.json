@@ -8,7 +8,7 @@
     "no log, heap snapshot or CPU profile files remain in isolated application storage",
     "packet capture and syscall trace show no local provider discovery or DNS attempts"
   ],
-  "packets": 125,
+  "packets": 126,
   "dropped_packets": 0,
   "truncated_packets": 0,
   "provider_requests": [
@@ -31,32 +31,13 @@
       "tool_result": true
     }
   ],
-  "binary_sha256": "b2fdad65e1c0592e0dfeae3c9faa86057cc6859e38acedad19abe8371e5e3f98",
-  "pcap_sha256": "6e2c42c0642aa8af6e385a1f16f2ef575f70d92880fb2e2b4b535401b5c08004",
+  "binary_sha256": "31e23f46019d921b47c3fb6fe2f28af9477eaaa274d711354ea436275a25bd15",
+  "pcap_sha256": "eefd2be10e97db168161eee86fae97cee9544ecceef3cc0a0ecb7b032609c605",
   "limits": [
     "No real Abliteration, Tor or TUI exercised.",
     "Synthetic provider key still lives inside guest environment until broker integration.",
     "Database and shell output persistence remain session data; this is not a disk-isolation test."
   ],
-  "base_commit": "d73be75d9cf3b80d283226a2651b14ecc3329abb",
-  "date": "2026-10-24",
-  "source_sha256": {
-    "bun.lock": "47359ba0731b02d14b9a93a6b71b2db104cf9b9716ab0b6371fe96f02c6d71b2",
-    "package.json": "1767628e91b25f3b730c39edf67069a4575ff2d5509b0e494fa95ec6b693e246",
-    "packages/cli/script/build.ts": "06536db9b30e150b858019f792e0bd14794e39a34a78d483f4a55ec456336b92",
-    "packages/cli/src/cpu-profile.ts": "db79eb4a60c41b08e899d1f75534850403dc04234a979e860606f1416d0bd2b2",
-    "packages/cli/src/heap.ts": "1a3c17bd353a47c80fcb6072a740da8b1e71ec6021aa6e04152774910f3393dd",
-    "packages/cli/src/server-process.ts": "1692898e84c1fa4e4c549d690e387fd0ede9449130de6b7ebb697129d92be8ec",
-    "packages/cli/src/services/updater.ts": "b896f75ddf9648ba93651071a7a9d36170c3352c8ca97d577705a6ce50f6f3c3",
-    "packages/core/src/models-dev.ts": "c2ae86078e20760ab98bacd9e9680e91b12e92eff111ae31e3c9b5cf9bf0e0a0",
-    "packages/core/src/plugin/provider.ts": "b3ac05434469b0041717848c7dc5194f1462244b2c110e8b09b5b22e2e0b4563",
-    "packages/util/src/heap-snapshot.ts": "a5e239b5a41d2568866e42b01682ba3850420367bda9614f0bb4116e0c3801d9",
-    "packages/util/src/oblivion.ts": "b3f9454ae082a584b92a6a5353a5a1e47d1636292ff87c8300874b24020d87b9",
-    "packages/util/src/observability.ts": "fd594fd702f9ae0aa3488b8b39b4728afd63f37ed5094050960fe93836a2ba10",
-    "packages/util/test/fixture/oblivion.ts": "77def57300be4b9141c25e7d562338d2b7741a590a59aa131beb6ed9f8f6c3cc",
-    "packages/util/test/oblivion.test.ts": "b64d74da490f2023858e6abbf198daed78d909078f07a70e8d1455b73ccc1e6f",
-    "script/oblivion/profile-probe.py": "f8834cc3796c2ec1498146579b2daafacf1d94c17b12baa1af2a428fe27db2cd"
-  },
   "audit_image_id": "sha256:a0da909c7ff6000b0985ddeec73492970a78fed040b5778a58274c197a51653e",
   "bun_version": "1.4.4",
   "build_flags": [
@@ -67,11 +48,36 @@
   ],
   "build_channel": "oblivion-lab",
   "build_version": "2.1.4-oblivion.0",
-  "unit_checks": {
-    "privacy_repetitions": 10,
-    "util_suite": 98,
-    "root_check_tasks": 34,
-    "cli_regressions": 16
+  "source_sha256": {
+    "bun.lock": "47359ba0731b02d14b9a93a6b71b2db104cf9b9716ab0b6371fe96f02c6d71b2",
+    "package.json": "1767628e91b25f3b730c39edf67069a4575ff2d5509b0e494fa95ec6b693e246",
+    "packages/cli/script/build.ts": "06536db9b30e150b858019f792e0bd14794e39a34a78d483f4a55ec456336b92",
+    "packages/cli/src/commands/handlers/default.ts": "bd81b73b7ec3643f538a08b8d7693c54749aca3b5adb35c34c18813cfa59c57e",
+    "packages/cli/src/cpu-profile.ts": "db79eb4a60c41b08e899d1f75534850403dc04234a979e860606f1416d0bd2b2",
+    "packages/cli/src/heap.ts": "1a3c17bd353a47c80fcb6072a740da8b1e71ec6021aa6e04152774910f3393dd",
+    "packages/cli/src/server-process.ts": "1692898e84c1fa4e4c549d690e387fd0ede9449130de6b7ebb697129d92be8ec",
+    "packages/cli/src/services/updater.ts": "b896f75ddf9648ba93651071a7a9d36170c3352c8ca97d577705a6ce50f6f3c3",
+    "packages/core/src/models-dev.ts": "c2ae86078e20760ab98bacd9e9680e91b12e92eff111ae31e3c9b5cf9bf0e0a0",
+    "packages/core/src/plugin/provider.ts": "b3ac05434469b0041717848c7dc5194f1462244b2c110e8b09b5b22e2e0b4563",
+    "packages/tui/src/app.tsx": "6b53fd44f7285cf696e51f5071f7a5b9fee5eb7cd7fb24c25357356175f69fe9",
+    "packages/tui/src/clipboard.ts": "f18a9ddb5da667e177b5032a45e4dc73d64647a273ab1ef62b3b63b30fe1dc2a",
+    "packages/tui/src/component/dialog-model.tsx": "fd9dd67e9b09dce4d2727e595954feabc49098218924990fc80e015c0f343656",
+    "packages/tui/src/component/logo.tsx": "a82e177f73fb08cea45023b867372a3dc2f506926853db1ae25283547090e8e2",
+    "packages/tui/src/component/prompt/index.tsx": "c52a7c5a0ce3c5dfc10a530ee1f1ffdc74fed637f1c9ccb649ae436e85ae5355",
+    "packages/tui/src/config/index.tsx": "bd3fa3fcdee4959813a174e098d3a02d9f2957704b370ad0dc9541603ea80544",
+    "packages/tui/src/context/keymap.tsx": "91bb00de9022a5b1ac6539938e257b47a39d910bd1761a56baaf18d4f9ab5971",
+    "packages/tui/src/context/local.tsx": "aa2f59921628b7b3d737969ed47ce6d0c59a0f928a1bdebf5206f4bc06d500f2",
+    "packages/tui/src/feature-plugins/prompt/footer.tsx": "00f302a767d17c43c0fc0b8ba2f265159c6c8c8548cf8c586f3a84eff588167e",
+    "packages/tui/src/oblivion.ts": "cbdf5de8209300f3002f3739fb35588f159210e2cf1d7283fbd953d8c27ffb79",
+    "packages/tui/src/plugin/builtins.ts": "1b2913753b06b5b787d37d3113dbdf312b3286cf130d7eb50f0960eefa31a42f",
+    "packages/tui/src/plugin/context.tsx": "828f45187b041cdc3765a45313433723cba441b03672b3501bc4437766d55287",
+    "packages/tui/src/routes/home.tsx": "a56a98fc65e071e5d91cb0eb9afb0caf0612396344457b7ea293062020f8f472",
+    "packages/util/src/heap-snapshot.ts": "a5e239b5a41d2568866e42b01682ba3850420367bda9614f0bb4116e0c3801d9",
+    "packages/util/src/oblivion.ts": "b3f9454ae082a584b92a6a5353a5a1e47d1636292ff87c8300874b24020d87b9",
+    "packages/util/src/observability.ts": "fd594fd702f9ae0aa3488b8b39b4728afd63f37ed5094050960fe93836a2ba10",
+    "packages/util/test/fixture/oblivion.ts": "77def57300be4b9141c25e7d562338d2b7741a590a59aa131beb6ed9f8f6c3cc",
+    "packages/util/test/oblivion.test.ts": "b64d74da490f2023858e6abbf198daed78d909078f07a70e8d1455b73ccc1e6f",
+    "script/oblivion/profile-probe.py": "f8834cc3796c2ec1498146579b2daafacf1d94c17b12baa1af2a428fe27db2cd"
   },
-  "local_artifacts": "artifacts/oblivion-profile/run-03"
+  "local_artifacts": "artifacts/oblivion-profile/run-05"
 }

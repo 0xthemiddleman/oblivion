@@ -40,6 +40,7 @@ fn run(preview: bool) -> Result<()> {
     }
     let mut selected = 0usize;
     let mut notice = String::new();
+    let mut requested_new = false;
     loop {
         let status: Status = serde_json::from_str(&control::request("status", None, &[])?)?;
         if status.sessions.iter().any(|s| {
@@ -100,7 +101,11 @@ fn run(preview: bool) -> Result<()> {
             "\r\n {FEEDBACK}{notice}{RESET}\r\n [Q] Blocca tutto ed esci"
         ));
         terminal.write(&view)?;
-        let input = terminal.input(-1)?;
+        let input = if std::mem::take(&mut requested_new) {
+            zeroize::Zeroizing::new(vec![b'n'])
+        } else {
+            terminal.input(-1)?
+        };
         let key = if input.as_slice() == b"\x1b[A" {
             b'k'
         } else if input.as_slice() == b"\x1b[B" {
@@ -134,10 +139,7 @@ fn run(preview: bool) -> Result<()> {
             }
             if status.session_open {
                 if matches!(key, b'\r' | b'\n') {
-                    let result = terminal::bridge(&mut terminal, control::console()?);
-                    busy(&mut terminal, "Chiusura della sessione")?;
-                    control::request("close", None, &[])?;
-                    result?;
+                    requested_new = enter_console(&mut terminal)?;
                 }
                 if key == b'c' {
                     busy(&mut terminal, "Chiusura della sessione")?;
@@ -194,10 +196,8 @@ fn run(preview: bool) -> Result<()> {
             busy(&mut terminal, "Apertura della VM della sessione")?;
             control::request("open", Some(&id), &secret)?;
             drop(secret);
-            let result = terminal::bridge(&mut terminal, control::console()?);
-            busy(&mut terminal, "Chiusura della sessione")?;
-            control::request("close", None, &[])?;
-            result
+            requested_new = enter_console(&mut terminal)?;
+            Ok(())
         })();
         if let Err(error) = result {
             notice = match error.to_string().as_str() {
@@ -217,4 +217,11 @@ fn busy(terminal: &mut Terminal, message: &str) -> Result<()> {
     terminal.write(&format!(
         "{CLEAR}{BRAND} OBLIVION - controllo fidato{RESET}\r\n\r\n {message}..."
     ))
+}
+
+fn enter_console(terminal: &mut Terminal) -> Result<bool> {
+    let result = terminal::bridge(terminal, control::console()?);
+    busy(terminal, "Chiusura della sessione")?;
+    control::request("close", None, &[])?;
+    Ok(result? == terminal::Action::New)
 }

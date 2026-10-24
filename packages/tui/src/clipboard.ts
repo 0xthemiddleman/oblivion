@@ -7,10 +7,21 @@ import {
   type RendererClipboardBoundary,
 } from "@opentui/core"
 import type { ClipboardContent, ClipboardService } from "./context/clipboard"
+import { Oblivion } from "@opencode/util/oblivion"
 
 export type OwnedClipboardService = Required<ClipboardService> & Readonly<{ dispose(): Promise<void> }>
 
 export function createTuiClipboard(renderer: RendererClipboardBoundary): OwnedClipboardService {
+  if (Oblivion.enabled)
+    return {
+      async read() {
+        return undefined
+      },
+      async write() {
+        throw new Error("Clipboard condivisa non disponibile in Oblivion")
+      },
+      async dispose() {},
+    }
   return createClipboardAdapter(
     createClipboard({
       host: createHostClipboard(),

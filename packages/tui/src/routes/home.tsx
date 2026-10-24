@@ -15,10 +15,13 @@ import { useTheme } from "../context/theme"
 import { useUpdateNotification } from "../context/update-notification"
 import { useExit } from "../context/exit"
 import { FadeInText } from "../component/fade-in-text"
+import { Oblivion } from "@opencode/util/oblivion"
 
 let once = false
 const placeholder = {
-  normal: ["Fix a TODO in the codebase", "What is the tech stack of this project?", "Fix broken tests"],
+  normal: Oblivion.enabled
+    ? ["Ragioniamo insieme su questa idea", "Aiutami a capire questo documento", "Confronta i file che ho importato"]
+    : ["Fix a TODO in the codebase", "What is the tech stack of this project?", "Fix broken tests"],
   shell: ["ls -la", "git status", "pwd"],
 }
 
@@ -32,6 +35,7 @@ export function Home() {
   const data = useData()
   const location = useLocation()
   const dimensions = useTerminalDimensions()
+  const theme = useTheme()
   const [logoWidth, setLogoWidth] = createSignal(0)
   // Global MCP elicitations can arrive without a session route, so keep them reachable from Home.
   const currentLocation = () => route.location ?? data.location.default()
@@ -95,6 +99,9 @@ export function Home() {
           }}
         >
           <Logo />
+          <Show when={Oblivion.enabled}>
+            <text fg={theme.text.muted}>Conversazioni e documenti</text>
+          </Show>
         </box>
         <box height={1} flexShrink={0} />
         <UpdateNotification width={logoWidth()} />
@@ -104,6 +111,9 @@ export function Home() {
         <box flexGrow={1} minHeight={0} />
       </box>
       <box width="100%" flexShrink={0}>
+        <Show when={Oblivion.enabled}>
+          <text fg={theme.text.muted}> /new nuova sessione /sessions cambia /exit blocca</text>
+        </Show>
         <Slot path="home.footer" />
       </box>
       <Show when={forms()[0]?.id} keyed>

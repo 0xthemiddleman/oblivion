@@ -1,3 +1,4 @@
+import { Oblivion } from "@opencode/util/oblivion"
 import { createStore } from "solid-js/store"
 import { dedupeWith } from "effect/Array"
 import { createSimpleContext } from "./helper"
@@ -41,8 +42,14 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const permission = usePermission()
     const location = useLocation()
 
-    const models = () => data.location.model.list(location.ref)
-    const providers = () => data.location.provider.list(location.ref)
+    const models = () =>
+      data.location.model
+        .list(location.ref)
+        ?.filter((model) => !Oblivion.enabled || model.providerID === "abliteration-ai")
+    const providers = () =>
+      data.location.provider
+        .list(location.ref)
+        ?.filter((provider) => !Oblivion.enabled || provider.id === "abliteration-ai")
 
     function isModelValid(model: ModelPreferenceModel) {
       return !!models()?.some((item) => item.providerID === model.providerID && item.id === model.modelID)

@@ -26,6 +26,8 @@ import {
 import { useConfig } from "../config"
 import { TuiKeybind } from "../config/keybind"
 import { resolveInteractivity, useInteractivity } from "./interactivity"
+import { Oblivion } from "@opencode/util/oblivion"
+import { OblivionTui } from "../oblivion"
 
 declare module "@opentui/keymap" {
   interface Command {
@@ -67,6 +69,7 @@ function Provider(props: ParentProps<{ config?: KeymapConfig }>) {
   const mode = createMode(keymap)
   let invocation: { readonly id: string; readonly input?: string } | undefined
   const dispatch = (id: string, input?: string) => {
+    if (Oblivion.enabled && !OblivionTui.allowed(id)) return
     const previous = invocation
     invocation = { id, input }
     try {
@@ -207,7 +210,9 @@ function createLayer(input: () => KeymapLayer) {
   useBindings(() => {
     const layer = input()
     const { commands, bindings, mode, ...options } = layer
-    const grouped = groupCommands(commands)
+    const grouped = groupCommands(
+      commands?.filter((command) => !Oblivion.enabled || command.id === undefined || OblivionTui.allowed(command.id)),
+    )
     return {
       ...options,
       enabled: enabled() ? options.enabled : false,
@@ -244,7 +249,9 @@ function createLayer(input: () => KeymapLayer) {
           if (typeof command.bind !== "string") return []
           return [{ key: command.bind, cmd: command.id }]
         }),
-        ...(bindings ?? []).flatMap((id) => value.config.keybinds.get(id)),
+        ...(bindings ?? [])
+          .filter((id) => !Oblivion.enabled || OblivionTui.allowed(id))
+          .flatMap((id) => value.config.keybinds.get(id)),
       ],
     }
   })

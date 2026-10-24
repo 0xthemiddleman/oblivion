@@ -32,6 +32,10 @@ COPY docs/oblivion/privacy-evidence.json /usr/lib/oblivion/build-evidence.json
 COPY script/oblivion/vm-chat-probe.py /usr/libexec/oblivion-chat-probe
 RUN python3 -c 'import hashlib,json; from pathlib import Path; assert hashlib.sha256(Path("/usr/bin/oblivion").read_bytes()).hexdigest() == json.loads(Path("/usr/lib/oblivion/build-evidence.json").read_text())["binary_sha256"]'
 
+FROM opencode-guest AS tui-guest
+COPY script/oblivion/vm-tui-guest.py /usr/libexec/oblivion
+RUN chmod 0755 /usr/libexec/oblivion
+
 FROM ${GUEST} AS selected-guest
 
 FROM os AS host
@@ -51,6 +55,11 @@ RUN sh /tmp/setup && rm /tmp/setup
 FROM host AS manager-host
 COPY script/oblivion/vm-manager-test.py /usr/libexec/oblivion-vm-test
 RUN touch /usr/lib/oblivion/vm/manager-lab
+
+FROM manager-host AS tui-host
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pyte python3-pil fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
+COPY script/oblivion/vm-tui-test.py /usr/libexec/oblivion-vm-test
+RUN touch /usr/lib/oblivion/vm/tui-lab
 
 FROM ${HOST} AS selected-host
 

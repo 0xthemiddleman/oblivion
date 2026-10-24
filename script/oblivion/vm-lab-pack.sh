@@ -10,6 +10,7 @@ cp /out/initrd /host/usr/lib/oblivion/vm/initrd
 if [ -f /host/usr/lib/oblivion/vm/manager-lab ]; then
     (cd /host && sha256sum usr/bin/oblivion-manager) > /out/manager.sha256
 fi
+if [ -f /host/usr/lib/oblivion/vm/tui-lab ]; then touch /out/tui-lab; fi
 chmod 0644 /host/usr/lib/oblivion/vm/kernel /host/usr/lib/oblivion/vm/initrd
 if [ -f /guest/usr/bin/oblivion ]; then
     touch /host/usr/lib/oblivion/vm/chat-lab
@@ -45,3 +46,4 @@ cd /out
 sha256sum kernel initrd host.squashfs host-packages.tsv guest-packages.tsv sources.sha256 > SHA256SUMS
 if [ -f opencode.sha256 ]; then sha256sum opencode.sha256 opencode-build.json >> SHA256SUMS; fi
 if [ -f manager.sha256 ]; then sha256sum manager.sha256 >> SHA256SUMS; fi
+if [ -f tui-lab ]; then sha256sum tui-lab >> SHA256SUMS; fi

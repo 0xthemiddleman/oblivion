@@ -12,22 +12,25 @@ import Storybook from "../feature-plugins/system/storybook"
 import Stats from "../feature-plugins/system/stats"
 import Latex from "@opencode/latex/plugin"
 import Merman from "@opencode/merman/plugin"
+import { Oblivion } from "@opencode/util/oblivion"
 
-export const builtins = [
-  HomeFooter,
-  PromptFooter,
-  PromptBtw,
-  SidebarContext,
-  SidebarMcp,
-  SidebarTodo,
-  SidebarFooter,
-  Notifications,
-  Plugins,
-  Stats,
-  Merman,
-  Latex,
-  // The storybook is a development tool; keep its route and palette commands out of
-  // normal launches and register it only for OPENCODE_STORY runs.
-  ...(process.env.OPENCODE_STORY ? [Storybook] : []),
-  DiffViewer,
-]
+export const builtins = Oblivion.enabled
+  ? [PromptFooter, SidebarContext, SidebarTodo, Merman, Latex]
+  : [
+      HomeFooter,
+      PromptFooter,
+      PromptBtw,
+      SidebarContext,
+      SidebarMcp,
+      SidebarTodo,
+      SidebarFooter,
+      Notifications,
+      Plugins,
+      Stats,
+      Merman,
+      Latex,
+      // The storybook is a development tool; keep its route and palette commands out of
+      // normal launches and register it only for OPENCODE_STORY runs.
+      ...(process.env.OPENCODE_STORY ? [Storybook] : []),
+      DiffViewer,
+    ]

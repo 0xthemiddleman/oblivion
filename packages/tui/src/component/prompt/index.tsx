@@ -58,6 +58,7 @@ import { Keymap, type KeymapCommand } from "../../context/keymap"
 import { useInteractivity } from "../../context/interactivity"
 import { abbreviateHome } from "../../runtime"
 import { Slot } from "../../plugin/render"
+import { Oblivion } from "@opencode/util/oblivion"
 import type { SessionInbox } from "@opencode/schema/session-inbox"
 import {
   deduplicatePromptImages,
@@ -317,10 +318,12 @@ export function Prompt(props: PromptProps) {
   function promptModelWarning() {
     toast.show({
       variant: "warning",
-      message: "Connect an integration to send prompts",
+      message: Oblivion.enabled
+        ? "Abliteration non è disponibile per questa sessione"
+        : "Connect an integration to send prompts",
       duration: 3000,
     })
-    if (!connected()) {
+    if (!Oblivion.enabled && !connected()) {
       dialog.replace(() => <DialogIntegration />)
     }
   }
@@ -1142,6 +1145,11 @@ export function Prompt(props: PromptProps) {
       return false
     }
     if (exitWord) {
+      if (Oblivion.enabled) {
+        clearPrompt()
+        keymap.dispatch("app.exit")
+        return true
+      }
       void exit()
       return true
     }

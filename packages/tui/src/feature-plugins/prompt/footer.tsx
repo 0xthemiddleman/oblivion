@@ -1,4 +1,5 @@
 import { Plugin } from "@opencode/plugin/tui"
+import { Oblivion } from "@opencode/util/oblivion"
 import { createMemo, createSignal, Match, Show, Switch } from "solid-js"
 import { contextUsage, formatContextUsage } from "../../util/session"
 import { useTerminalDimensions } from "@opentui/solid"
@@ -96,7 +97,7 @@ export function PromptFooter(props: {
               </Show>
             </box>
           </Match>
-          <Match when={props.showDetails && layout().shortcuts}>
+          <Match when={!Oblivion.enabled && props.showDetails && layout().shortcuts}>
             <text
               fg={interactive() ? props.context.theme.text.base : props.context.theme.text.action.primary.disabled}
               attributes={interactive() ? 0 : TextAttributes.DIM}

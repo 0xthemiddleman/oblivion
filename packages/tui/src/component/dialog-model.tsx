@@ -1,3 +1,4 @@
+import { Oblivion } from "@opencode/util/oblivion"
 import type { ModelInfo } from "@opencode/client"
 import { createMemo, createSignal, Show } from "solid-js"
 import { useLocal } from "../context/local"
@@ -80,7 +81,11 @@ function DialogConnectedModels(props: {
   const providers = createMemo(
     () => new Map((data.location.provider.list(location.ref) ?? []).map((item) => [item.id, item])),
   )
-  const models = createMemo(() => data.location.model.list(location.ref) ?? [])
+  const models = createMemo(() =>
+    (data.location.model.list(location.ref) ?? []).filter(
+      (model) => !Oblivion.enabled || model.providerID === "abliteration-ai",
+    ),
+  )
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
