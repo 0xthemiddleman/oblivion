@@ -81,8 +81,10 @@ def web_model(connection, body):
         assert "OBLIVION_WEB_HTTP" in results["web_http"]
         assert "OBLIVION_WEB_HTTPS" in results["web_https"]
         assert "OBLIVION_SHELL_PROXY_OK" in results["web_shell"]
-        for name in ["web_redirect", "web_unknown", "web_port"]:
-            assert "Unable to fetch" in results[name], name
+        for name, url in [("web_redirect", "http://api.abliteration.ai/redirect"),
+                ("web_unknown", "https://unknown.example.com/tools"),
+                ("web_port", "https://api.abliteration.ai:4443/tools")]:
+            assert f"Transport error (GET {url})" in results[name], name
         with lock:
             web["completed"] += 1
         delta, finish = {"role": "assistant", "content": "OBLIVION_WEB_TOOLS_VERIFIED"}, "stop"

@@ -89,6 +89,20 @@ for command in sys.stdin:
                 'stdout': result.stdout[-6000:], 'stderr': result.stderr[-2000:]}), flush=True)
             raise AssertionError('compiled web tools failed')
         assert 'OBLIVION_WEB_TOOLS_VERIFIED' in result.stdout, result.stdout[-4000:]
+        events = [json.loads(line) for line in result.stdout.splitlines() if line.startswith('{')]
+        fetches = {event['part']['state']['input']['url']: event['part']['state'] for event in events
+            if event.get('part', {}).get('tool') == 'webfetch'}
+        assert set(fetches) == {'http://api.abliteration.ai/tools', 'https://api.abliteration.ai/tools',
+            'http://api.abliteration.ai/redirect', 'https://unknown.example.com/tools',
+            'https://api.abliteration.ai:4443/tools'}
+        for url in ['http://api.abliteration.ai/redirect', 'https://unknown.example.com/tools',
+                'https://api.abliteration.ai:4443/tools']:
+            assert fetches[url]['status'] == 'error', url
+            assert fetches[url]['error'] == f'Transport error (GET {url})', url
+        for scheme in ['http', 'https']:
+            state = fetches[f'{scheme}://api.abliteration.ai/tools']
+            assert state['status'] == 'completed'
+            assert state['output'] == f'OBLIVION_WEB_{scheme.upper()}\n'
         print('OBLIVION_COMPILED_WEBTOOLS_VERIFIED', flush=True)
     elif command.startswith('old '):
         assert request(command[4:], {})[0] == 401

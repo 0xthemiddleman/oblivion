@@ -83,7 +83,9 @@ class StreamFixture(unittest.TestCase):
             self.assertEqual(response.getheader("Location"), "https://denied.example.com/tools")
             self.assertEqual(response.read(), b"")
         results = {"web_http": "OBLIVION_WEB_HTTP", "web_https": "OBLIVION_WEB_HTTPS", "web_shell": "OBLIVION_SHELL_PROXY_OK",
-            "web_redirect": "Unable to fetch", "web_unknown": "Unable to fetch", "web_port": "Unable to fetch"}
+            "web_redirect": "Transport error (GET http://api.abliteration.ai/redirect)",
+            "web_unknown": "Transport error (GET https://unknown.example.com/tools)",
+            "web_port": "Transport error (GET https://api.abliteration.ai:4443/tools)"}
         with connection(443) as client:
             payload = model(client, [initial, *[{"role": "tool", "tool_call_id": name, "content": value} for name, value in results.items()]]).read()
         self.assertIn(b"OBLIVION_WEB_TOOLS_VERIFIED", payload)
