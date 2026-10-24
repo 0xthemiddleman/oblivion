@@ -18,7 +18,9 @@ for role in inside outside; do
     if [ "$role" = outside ]; then octet=02; fi
     printf '[Match]\nMACAddress=52:54:00:6f:00:%s\n\n[Link]\nName=%s0\n' "$octet" "$role" > "/etc/systemd/network/10-oblivion-$role.link"
 done
-printf 'virtio_net\nnf_tables\nnf_conntrack\n' > /etc/modules-load.d/oblivion-gateway.conf
+printf 'virtio_net\nvirtio_console\nnf_tables\nnf_conntrack\n' > /etc/modules-load.d/oblivion-gateway.conf
+mkdir -p /etc/udev/rules.d
+printf '%s\n' 'SUBSYSTEM=="virtio-ports", ATTR{name}=="oblivion.gateway", OWNER="root", GROUP="root", MODE="0600", TAG+="systemd", ENV{SYSTEMD_WANTS}+="oblivion-gateway-control.service"' > /etc/udev/rules.d/70-oblivion-gateway.rules
 # Drivers must also be available while the initramfs sees the NICs, so udev
 # assigns the intended names exactly once using the custom link files.
 printf 'virtio_net\n' >> /etc/initramfs-tools/modules

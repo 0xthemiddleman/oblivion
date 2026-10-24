@@ -2,8 +2,9 @@
 
 Il manager fidato permette di salvare, sostituire e rimuovere la API key
 Abliteration dopo lo sblocco del volume generale, con tutte le sessioni chiuse.
-La consegna della chiave al gateway e la configurazione dell’adapter rimangono
-un passaggio successivo: salvare la credenziale non avvia connessioni di rete.
+Il [ricevitore privato nel gateway](GATEWAY-CONTROL.md) è implementato; il
+collegamento dal controller LUKS e la configurazione dell’adapter rimangono un
+passaggio successivo. Salvare la credenziale non avvia connessioni di rete.
 
 ## Comportamento
 

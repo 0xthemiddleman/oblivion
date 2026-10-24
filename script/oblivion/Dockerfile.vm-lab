@@ -9,8 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY script/oblivion/vm-common-setup.sh /tmp/setup
 RUN sh /tmp/setup && rm /tmp/setup
 
-FROM os AS compiler
+FROM os AS rust-toolchain
 RUN apt-get update && apt-get install -y --no-install-recommends cargo rustc gcc libc6-dev && rm -rf /var/lib/apt/lists/*
+
+FROM rust-toolchain AS compiler
 WORKDIR /build
 COPY packages/oblivion-host/ ./
 RUN cargo test --locked && cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
@@ -91,7 +93,7 @@ COPY --from=pack /out/ /
 
 # Component-only gateway bundle. Reuse the compiler layers without exporting a
 # large development image; run the inherited-FD tests in the swap-free VM.
-FROM compiler AS gateway-compiler
+FROM rust-toolchain AS gateway-compiler
 WORKDIR /gateway
 ENV CARGO_TARGET_DIR=/tmp/target
 COPY packages/oblivion-gateway/Cargo.toml packages/oblivion-gateway/Cargo.lock ./
@@ -105,8 +107,9 @@ RUN --network=none cargo test --locked --offline --lib --features lab-emulation 
     && cp /tmp/target/debug/oblivion-api /gateway-bundle/oblivion-api-lab \
     && cp $(find /tmp/target/debug/deps -type f -name 'oblivion_gateway-*' -executable) /gateway-bundle/gateway-tests \
     && cp $(find /tmp/target/debug/deps -type f -name 'activation-*' -executable) /gateway-bundle/activation-tests \
-    && cargo build --locked --offline --bin oblivion-api \
+    && cargo build --locked --offline --bins \
     && cp /tmp/target/debug/oblivion-api /gateway-bundle/oblivion-api \
+    && cp /tmp/target/debug/oblivion-gateway-control /gateway-bundle/oblivion-gateway-control \
     && strip /gateway-bundle/* \
     && find Cargo.toml Cargo.lock .cargo src tests -type f -print0 | sort -z | xargs -0 sha256sum > /gateway-bundle/sources.sha256 \
     && rustc --version > /gateway-bundle/compiler.txt \
@@ -120,6 +123,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends tor nftables ip
     && rm -rf /var/lib/apt/lists/*
 COPY packages/oblivion-gateway/guest/ /gateway-config/
 COPY --from=gateway-compiler /gateway-bundle/oblivion-api /usr/bin/oblivion-api
+COPY --from=gateway-compiler /gateway-bundle/oblivion-gateway-control /usr/bin/oblivion-gateway-control
 RUN sh /gateway-config/install.sh && rm -rf /gateway-config
 # BuildKit mounts its own resolver read-only during RUN; COPY replaces the
 # image's file without touching that build-time mount.

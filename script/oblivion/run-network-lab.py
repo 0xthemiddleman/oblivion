@@ -32,7 +32,10 @@ class VM:
         if role == "gateway":
             network += ["-netdev", f"user,id=outside,ipv6=off,restrict={'off' if online else 'on'}",
                 "-device", "virtio-net-pci,netdev=outside,mac=52:54:00:6f:00:02",
-                "-object", f"filter-dump,id=outside-capture,netdev=outside,file={output / 'gateway-outside.pcap'}"]
+                "-object", f"filter-dump,id=outside-capture,netdev=outside,file={output / 'gateway-outside.pcap'}",
+                "-device", "virtio-serial-pci",
+                "-chardev", f"socket,id=control,path={wire.parent / 'control.sock'},server=on,wait=off",
+                "-device", "virtserialport,chardev=control,name=oblivion.gateway"]
         self.process = subprocess.Popen([
             "qemu-system-aarch64", "-machine", "virt", "-accel", "hvf",
             "-cpu", "host", "-m", "1024" if role == "gateway" else "512", "-smp", "2",
@@ -71,6 +74,10 @@ class VM:
         self.process.stdin.write((json.dumps(message) + "\n").encode())
         self.process.stdin.flush()
         value = self.receive()
+        if not value.get("ok"):
+            # A failed fixture exits and powers off. Drain its diagnostic before
+            # cleanup can terminate QEMU and lose the actual assertion reason.
+            self.reader.join(timeout=10)
         assert value.get("id") == self.sequence and value.get("ok"), value
         return value.get("result")
 
@@ -83,6 +90,35 @@ class VM:
                 self.process.kill()
                 self.process.wait(timeout=10)
         self.reader.join(timeout=10)
+
+
+class Control:
+    def __init__(self, path):
+        self.socket = socket.socket(socket.AF_UNIX)
+        self.socket.settimeout(15)
+        self.socket.connect(str(path))
+
+    def receive(self):
+        def read(length):
+            chunks = bytearray()
+            while len(chunks) < length:
+                part = self.socket.recv(length - len(chunks))
+                assert part, "private control stream closed"
+                chunks.extend(part)
+            return chunks
+        length = struct.unpack("!I", read(4))[0]
+        assert 0 < length <= 16384
+        return json.loads(read(length))
+
+    def call(self, operation, **fields):
+        body = json.dumps({"operation": operation, **fields}).encode()
+        self.socket.sendall(struct.pack("!I", len(body)) + body)
+        reply = self.receive()
+        assert reply.get("ok"), reply
+        return reply
+
+    def close(self):
+        self.socket.close()
 
 
 def capture(path):
@@ -167,6 +203,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--overlay", action="store_true", help="Development only: load the current fixture and network script in RAM")
     parser.add_argument("--tor-online", action="store_true", help="Allow Tor to bootstrap and check HTTPS via check.torproject.org; no provider requests")
+    parser.add_argument("--control-fault", choices=["disconnect", "shutdown", "malformed", "oversized", "partial", "duplicate-grant", "supervisor-crash", "broker-crash"], default="disconnect")
     args = parser.parse_args()
     assert (platform.system(), platform.machine()) == ("Darwin", "arm64")
     # Linux's dump-guest-core property is unavailable with HVF. Suppress core
@@ -179,6 +216,10 @@ def main():
         digest, name = line.split()
         assert Path(name).name == name and hashlib.sha256((image / name).read_bytes()).hexdigest() == digest
     repository = Path(__file__).resolve().parents[2]
+    for line in (image / "broker-sources.sha256").read_text().splitlines():
+        digest, name = line.split()
+        source = repository / "packages/oblivion-gateway" / name
+        assert hashlib.sha256(source.read_bytes()).hexdigest() == digest, f"rebuild broker: {source}"
     # By default test the exact built image. Development overlays are explicit
     # and cannot hide an old firewall, Tor policy or service configuration.
     for line in (image / "sources.sha256").read_text().splitlines():
@@ -205,6 +246,7 @@ def main():
         "online_tor_requested": args.tor_online, "provider_requests": False, "checks": checks, "passed": False,
         "image_manifest": (image / "SHA256SUMS").read_text(), "fixture_sha256": fixture_hash,
         "runtime_overlays": ["fixture", "network script", "error console"] if args.overlay else [],
+        "control_fault": args.control_fault,
         "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
     summary["runtime_initrd_sha256"] = hashlib.sha256((output / "lab-initrd").read_bytes()).hexdigest()
     summary["runtime_network_script_sha256"] = hashlib.sha256((Path(__file__).resolve().parents[2] / "packages/oblivion-gateway/guest/network.sh").read_bytes()).hexdigest()
@@ -214,23 +256,30 @@ def main():
         print("PASS: " + message, flush=True)
 
     vms = []
+    control = None
     try:
         with tempfile.TemporaryDirectory(prefix="oblivion-net-", dir="/tmp") as temporary:
             wire = Path(temporary) / "inside.sock"
             gateway = VM("gateway", image, output, wire, args.tor_online)
             vms.append(gateway)
             deadline = time.monotonic() + 10
-            while not wire.exists():
+            while not wire.exists() or not (wire.parent / "control.sock").exists():
                 assert gateway.process.poll() is None and time.monotonic() < deadline
                 time.sleep(0.01)
+            control = Control(wire.parent / "control.sock")
             chat = VM("chat", image, output, wire, args.tor_online)
             vms.append(chat)
             gateway.ready(fixture_hash)
             chat.ready(fixture_hash)
+            assert control.receive() == {"ready": True, "version": 1}
+            assert control.call("status") == {"ok": True, "configured": False, "active": False}
             check("separate VMs boot read-only with no shared filesystem; gateway Tor starts disabled")
             key = "synthetic-" + secrets.token_hex(32)
             token = secrets.token_hex(32)
-            gateway.call("start-api", api_key=key, token=token)
+            assert control.call("configure", api_key=key) == {"ok": True, "configured": True, "active": False}
+            assert control.call("grant", token=token) == {"ok": True, "configured": True, "active": True}
+            summary["processes"] = gateway.call("supervisor-info")
+            check("private virtio control configures the production supervisor; API child has UID 1300, no capabilities, no environment and no core dumps")
             assert chat.call("request", token="invalid")["status"] == 401
             assert chat.call("request", token=token)["status"] == 502
             check("chat reaches the production API broker; token checked; disabled Tor fails closed")
@@ -261,13 +310,37 @@ def main():
             gateway.call("tor-crash")
             assert chat.call("request", token=token)["status"] == 502
             check("crashing Tor makes API calls fail without a direct fallback")
-            gateway.call("stop-api")
+            assert not control.call("revoke")["active"]
             assert chat.call("disconnected")["disconnected"]
+            assert not control.call("revoke")["active"]
             next_token = secrets.token_hex(32)
-            gateway.call("start-api", api_key=key, token=next_token)
+            assert control.call("grant", token=next_token)["active"]
             assert chat.call("request", token=token)["status"] == 401
             assert chat.call("request", token=next_token)["status"] == 502
             check("revocation closes the listener and the next API instance rejects the previous token")
+            # Restore a live (offline) Tor process: cleanup must kill it, not
+            # merely observe the earlier deliberate Tor crash.
+            assert gateway.call("tor-restart-disabled") == {"active": True, "network_disabled": True}
+            if args.control_fault == "disconnect":
+                control.close()
+            elif args.control_fault == "shutdown":
+                assert not control.call("shutdown")["active"]
+            elif args.control_fault in ["supervisor-crash", "broker-crash"]:
+                gateway.call(args.control_fault)
+            else:
+                body = json.dumps({"operation": "status", "api_key": key}).encode()
+                if args.control_fault == "duplicate-grant":
+                    body = json.dumps({"operation": "grant", "token": secrets.token_hex(32)}).encode()
+                payload = struct.pack("!I", len(body)) + body
+                if args.control_fault == "oversized":
+                    payload = struct.pack("!I", 16385)
+                if args.control_fault == "partial":
+                    payload = struct.pack("!I", 64) + b"{"
+                control.socket.sendall(payload)
+                assert control.receive() == {"ok": False, "error": "control_failed"}
+            summary["stopped"] = gateway.call("supervisor-stopped")
+            assert chat.call("disconnected")["disconnected"]
+            check("control fault " + args.control_fault + " removes the broker and stops Tor without automatic restart")
             gateway.stop()
             assert chat.call("disconnected")["disconnected"]
             check("gateway termination leaves the chat without an alternative network path")
@@ -284,6 +357,8 @@ def main():
             check("complete external capture contains only TCP after Tor activation and no UDP or IPv6")
             summary["passed"] = True
     finally:
+        if control is not None:
+            control.close()
         for vm in vms:
             vm.stop()
         summary["seconds"] = round(time.monotonic() - started, 2)

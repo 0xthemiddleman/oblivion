@@ -1,0 +1,512 @@
+{
+  "date": "2026-10-24",
+  "scope": "Production Rust supervisor and API broker in separate Debian ARM VMs on macOS/HVF. Synthetic credentials only; no host LUKS lifecycle or OpenCode adapter integration.",
+  "base_commit": "f4c5e84afcfd64c00b4c8a0ad450f80fa6567633",
+  "host": {
+    "system": "Darwin",
+    "architecture": "arm64",
+    "qemu": "QEMU emulator version 10.2.0"
+  },
+  "source_hashes": {
+    "packages/oblivion-gateway/.cargo/config.toml": "aabd2af12e26033cb8de9b63841b54574718406e4479b47e41bc0d92fc6f14e0",
+    "packages/oblivion-gateway/Cargo.lock": "52db2e02e3a398a0111f88ef1c80f1d255d36ef7588938ddf1e151cefa523c9a",
+    "packages/oblivion-gateway/Cargo.toml": "83998d63cb82c71346bca5655a9f18c0249b65057b8f85afcf937e9b2dbe110f",
+    "packages/oblivion-gateway/guest/firewall.nft": "17c1e315f5ae50b8aa53c149da2a7edaaef6001e542f9cf098dd82d30037d4c7",
+    "packages/oblivion-gateway/guest/install.sh": "05464db89026b314d24d9da4a271f6314ef53b87786092bd3b0632dd6703ee4a",
+    "packages/oblivion-gateway/guest/network.sh": "02fe3601dd4692f6c5e5d31178e6ce4463a4edca70b2101c46a13c7f38c374b0",
+    "packages/oblivion-gateway/guest/oblivion-gateway-control.service": "51821a7782b05a4cce8788d63252066a881996e3c8d81eec2380c937d5a7534d",
+    "packages/oblivion-gateway/guest/oblivion-gateway-network.service": "f2420aaa2d444bfcd01d8c7ee2f76298de1a135bfc63341d9604fee9fc5ff456",
+    "packages/oblivion-gateway/guest/oblivion-tor.service": "091365da1d3bf1dff4cdc1dcad5daadb7f526eb01c03fd47db69308e604864db",
+    "packages/oblivion-gateway/guest/resolv.conf": "136f5b898e56a9181e324f0a58641418baa58985462065719551c04adc8441f0",
+    "packages/oblivion-gateway/guest/torrc": "0abe37d46a10919687b34721605c874d109c2dd6e70cf96318cc4d0290c4541e",
+    "packages/oblivion-gateway/src/broker/tests.rs": "c5bf4cdcdbcfbb03f755850316544d52ac882744a3abf56dd5d19facff487be6",
+    "packages/oblivion-gateway/src/broker.rs": "07aa5ef007032add91dc2a12200f4164c62080de45ace048baf45f4018dd3d32",
+    "packages/oblivion-gateway/src/control.rs": "f7981d181d24a0041efb743ce81a460990647f2e0b789b530d8581c8f000f9da",
+    "packages/oblivion-gateway/src/lib.rs": "e05e5159a7f08d0f74b8be9c8e30e5c35a7716c859b84508d2671cdbfd8502ac",
+    "packages/oblivion-gateway/src/main.rs": "d4321f3abc3f3a86a921bba2b07cb83f2d241a2f5c1680bbf794a8512f82168b",
+    "packages/oblivion-gateway/src/request.rs": "b74e8927bd78e8378a164e37f1d5fa2a461bc93bee1075d4a2c896592252c2c0",
+    "packages/oblivion-gateway/src/supervisor.rs": "c28a8e8e4aa0a675a0f260bfb6c63ef2af787414a24e1e84ab6d8e6b3089b938",
+    "packages/oblivion-gateway/tests/activation.rs": "a1dbc53394a45f7142970829f2e4bb4d54b778b58959089158c86a43d1e6d47a",
+    "script/oblivion/Dockerfile.vm-lab": "7d941c69eca16f6d9772671426d9a669167c495cff74603bd76ff1b6984e724f",
+    "script/oblivion/Dockerfile.vm-lab.dockerignore": "13a5b4fa0dc27552dcde95307f5aec37f7c33976a7488caee4ec5c680e86d270",
+    "script/oblivion/run-network-lab.py": "148bf7112c1dbbbebe8d3c635c67f2d062d9b5d263c64ab2c359f63fe2488442",
+    "script/oblivion/vm-network-fixture.py": "f5335b7516c54d01d6431170d214fedf1f2a463ce62d86c473b32f4067c516d6",
+    "script/oblivion/vm-network-setup.sh": "00b888cebdf3aa6f088604d5aaa7f4c9c44fd972aced16971a096a279cd55a41"
+  },
+  "image": {
+    "artifacts": "artifacts/oblivion-supervisor/image-final",
+    "manifest_sha256": "b021a0b1c5685de157f8761b62d45ba1867f1380254491b07aa96349300bd164",
+    "manifest": "cd22a7975cdb4213e3973203130f6ac3d1561f0e1784c99d46cbb9a4bfffed8e  broker-sources.sha256\n3ad19eb110dcce3a0e77bbd39db04713ddb71a4ffbd36da4a90269710201e6b3  gateway-packages.tsv\n93d32328d3f7bddac65d06ccdad2efb35a250a4aee6be47b7f9b5224a14abde8  gateway.squashfs\n11718c4d2d3692d85004c19531afd89ebc360936c6e31105061e5039fa99c607  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nccb33b5e735d7f4d6a656d4ed1495cdb7ca831a6de175d7bc2a9ee9dba62cf6b  lab-packages.tsv\n0fdd30ca0092551da9a491801b34956938104ea9e417a546b554ee14d85d98a5  laboratory.squashfs\nadbdf9d8a5bd9d95513433a9efbefeacfcedd2f55ce5289b54761f7031c27bd5  sources.sha256\n",
+    "broker_sources_sha256": "cd22a7975cdb4213e3973203130f6ac3d1561f0e1784c99d46cbb9a4bfffed8e",
+    "guest_sources_sha256": "adbdf9d8a5bd9d95513433a9efbefeacfcedd2f55ce5289b54761f7031c27bd5",
+    "runtime_overlays": [],
+    "tor_package": "tor\t0.4.9.14-0+deb13u1"
+  },
+  "common_checks": [
+    "separate VMs boot read-only with no shared filesystem; gateway Tor starts disabled",
+    "private virtio control configures the production supervisor; API child has UID 1300, no capabilities, no environment and no core dumps",
+    "chat reaches the production API broker; token checked; disabled Tor fails closed",
+    "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+    "API process UID cannot connect directly to a public IP",
+    "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+    "crashing Tor makes API calls fail without a direct fallback",
+    "revocation closes the listener and the next API instance rejects the previous token",
+    "control fault disconnect removes the broker and stops Tor without automatic restart",
+    "gateway termination leaves the chat without an alternative network path",
+    "synthetic provider credential never appears in either VM console log",
+    "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+  ],
+  "runs": [
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-02",
+      "summary_sha256": "e5c7c11920620436c4772dabd88f09e94f6dbb0b0a9ff13bf9735c607821656f",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 11.57,
+      "control_fault": "disconnect",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 381,
+        "broker_pid": 387,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "1d56b87c85c7fe7b89ca7f89b8ba8f7886a9787abfa2f5379c2bfc9e44775f92",
+        "chat": "4c6e714af041492fcd5f23185cb1a2719edeee0cd6af2ea3eef4fe36c53e82cf"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-03",
+      "summary_sha256": "8f42a2ea089fe3e858a542a0d7cf8d7ffc468d70f4db28c58616afc43358411a",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 11.45,
+      "control_fault": "shutdown",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 378,
+        "broker_pid": 384,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "inactive",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "7374284bcae56964687cc66033e029aaad301739e939a85a1e64df3aabf9aa06",
+        "chat": "45517aa1f1c98c072e71bd346ef519b589d59424aed95b53480cc2125501e909"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-04",
+      "summary_sha256": "a9ef840df37d94c51f59adbb6bbd8833569a404a233ea0c175ea65fa7d2d5f4f",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 12.11,
+      "control_fault": "malformed",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 382,
+        "broker_pid": 388,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "c09a3f1d900c4d22ade0e80748ad87d72ac11df36463e11e3c2c32c3aabe69cb",
+        "chat": "19070e4b3cb77869bd0a9e62757b8a0f90242fdce0b4d7e2e9732f42407a72c6"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-05",
+      "summary_sha256": "d7a26f22cc87df9c33ff2bf947b8d2eacd7b091f2d729bfbadcb6e159c36834e",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 11.38,
+      "control_fault": "oversized",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 376,
+        "broker_pid": 382,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "c80a5d3d0f9b95e49afbd4ffb16083cee6135056217213b26df74c82c145136e",
+        "chat": "3fccdfd67362fd53421a54e07c2436e946a26db21e7065671632955fb121ba8e"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-06",
+      "summary_sha256": "d9f8cd526dcca7ebb030e9103908877ea4f25114ebae5d1bfb366fd54f3c659e",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 16.45,
+      "control_fault": "partial",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 379,
+        "broker_pid": 385,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "3e1b6819b1bb537e50134f077dd9316d6252707bdb6e15d8313ed0d2c4cf2a17",
+        "chat": "b7fe2cbe4e2cc5deec7e4d2205af81c07577f1d66fa854ebd0e32139684e74bc"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-07",
+      "summary_sha256": "f68c04af5a2c87912816b2bf9077abe0bdfc9d13a96353a9a940e273e656f5c5",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 11.45,
+      "control_fault": "duplicate-grant",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 384,
+        "broker_pid": 390,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "a53c372873460d7681c4e6b3f139fd12739bc51cbc498ec9894c35a1ad390385",
+        "chat": "d2a94f3489e03e32ba365e3c4c9a40ed77660dd7eb06befce030dc28b0e7229c"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-08",
+      "summary_sha256": "853ca3eea0c1c0c6bd3479f86485197c395c3444d217614f7ef727b8ab736da3",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 11.38,
+      "control_fault": "supervisor-crash",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 380,
+        "broker_pid": 386,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "46707ca1fdfad53d16cb1a8a956a619cce0c14dec25c7149d5cd8d0209d129b5",
+        "chat": "5728b002334664320bcc45499ff21489e1fd486580e4138502ac1a09464a8ebd"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-09",
+      "summary_sha256": "0396411162c21ecb360d246648895815aad718cd3bb472735fe16e232026aa2c",
+      "runner_sha256": "3b85cb6d88327c80909bec0e683c32a18659f6de43c54cd244118f04197db70d",
+      "passed": true,
+      "seconds": 11.45,
+      "control_fault": "broker-crash",
+      "online_tor_requested": false,
+      "provider_requests": false,
+      "check_count": 12,
+      "processes": {
+        "supervisor_pid": 379,
+        "broker_pid": 385,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "console_sha256": {
+        "gateway": "3f01a2e384548db4d402b69577f20d1c8ecc62864e7412e198a1253623563b60",
+        "chat": "6cc8532a76ff4f6d32cd622ede126d1cd0f31213a736e19dd14f49cb88b4d1e8"
+      }
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-11",
+      "summary_sha256": "45b2db9698c516f0ccd5b8d01368f3203cc0aa4e741751f5a8bb2f136e9ffd96",
+      "runner_sha256": "148bf7112c1dbbbebe8d3c635c67f2d062d9b5d263c64ab2c359f63fe2488442",
+      "passed": true,
+      "seconds": 16.56,
+      "control_fault": "disconnect",
+      "online_tor_requested": true,
+      "provider_requests": false,
+      "check_count": 13,
+      "processes": {
+        "supervisor_pid": 380,
+        "broker_pid": 386,
+        "broker_uid": 1300,
+        "broker_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true
+      },
+      "before_tor": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "outside_capture": {
+        "packets": 6696,
+        "ipv4": 6694,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 6694,
+        "tcp_ports": [443, 9001, 9998, 33954, 44792, 54952],
+        "udp_ports": [],
+        "sha256": "f48c8dfecdfe8ff3a9122d07637d146b9c6a8e5342df2e3bc5a021d4da3ac2b6"
+      },
+      "console_sha256": {
+        "gateway": "59d9637cf0a12f8802f1f206265291d7e00f657d91021589053392dcd2d7d58d",
+        "chat": "c6479294b6b2fc605cf22adfc0646adba7f9b7a2f80cb9df7548e58eb0f1b3f7"
+      }
+    }
+  ],
+  "failed_attempts": [
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-01",
+      "summary_sha256": "14e191761248485538c92bb203deede8bd3a375846bdfb1154292632e6376eeb",
+      "passed": false,
+      "check_count": 1,
+      "seconds": 2.67,
+      "finding": "Initial service explicitly set User=root: systemd removed CAP_SETUID under seccomp/NoNewPrivileges. Traced setuid(1300)=EPERM; fixed unit retains the default root identity without ambient capabilities."
+    },
+    {
+      "artifacts": "artifacts/oblivion-supervisor/run-10",
+      "summary_sha256": "e0897c992596efc227a8217d66ba1f8cc6094849af584607472212317988b8dd",
+      "passed": false,
+      "check_count": 6,
+      "seconds": 16.9,
+      "finding": "Tor reached bootstrap 100%, but the HTTPS Tor Project check failed. Its detailed assertion was lost during immediate QEMU cleanup; the runner now drains diagnostics on fixture failure. No production change was made. Run 11 passed; initial HTTPS failure cause remains undetermined."
+    }
+  ],
+  "validation": {
+    "linux_rust_library_tests": 10,
+    "linux_build_log_sha256": "ccb84c46f524605d702b2e1dbf60866ff0fa1e1babfb89022958e48f00d79e0d",
+    "cargo_fmt_check": "passed",
+    "repository_check": "passed: lint and 34 cached typecheck tasks",
+    "repository_check_log_sha256": "5f2d54f5ed35fee18d3247b116a8968cd5c6fe61061fa103819ff70c43c35345"
+  },
+  "environment": {
+    "build_failures": "Docker stopped twice during low disk space. Old generated image removed and duplicate kernel/initrd artifacts hardlinked after SHA-256 verification. Only identified obsolete Oblivion build caches/history were pruned, reclaiming 17.65 GB; other project images and containers retained. Final build completed after recovery.",
+    "cache_cleanup_log_sha256": "a8dc4ecafbd89f40a6b4ce20fba1f294ffe5d2a354a9c4f21fa233e2d9d6cb83"
+  },
+  "not_covered": [
+    "Credential read/delivery from general LUKS profile and real A-to-B lifecycle",
+    "Tor guard state checkpoint and persistence",
+    "Tool proxy, transfers and OnionShare",
+    "OpenCode streaming/tool compatibility with real Abliteration",
+    "Production host QEMU containment and x86/KVM hardware",
+    "Universal leak absence or all possible failure interleavings"
+  ]
+}

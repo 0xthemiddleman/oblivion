@@ -1,0 +1,41 @@
+[Unit]
+Description=Oblivion private gateway controller
+Requires=oblivion-gateway-network.service
+After=oblivion-gateway-network.service oblivion-tor.service
+
+[Service]
+Type=exec
+ExecStart=/usr/bin/oblivion-gateway-control
+# Stop infrastructure traffic even after abrupt supervisor death. Tor's state
+# handoff must be integrated before enabling production network startup.
+ExecStopPost=-/usr/bin/systemctl kill --kill-whom=all --signal=SIGKILL oblivion-tor.service
+# Keep the default root identity. With User=root, systemd's seccomp setup drops
+# CAP_SETUID before exec under NoNewPrivileges, preventing the broker UID drop.
+# No ambient capabilities are granted to either process.
+Group=root
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_SETUID CAP_SETGID CAP_KILL
+DevicePolicy=closed
+DeviceAllow=/dev/virtio-ports/oblivion.gateway rw
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+LimitCORE=0
+MemorySwapMax=0
+MemoryMax=512M
+TasksMax=64
+StandardInput=null
+StandardOutput=null
+StandardError=null
+Restart=no
+KillMode=control-group
+TimeoutStopSec=15

@@ -3,7 +3,9 @@
 24 ottobre 2026. Componente implementato in `packages/oblivion-gateway`, separato
 dal controller privilegiato. Provato nativamente sul Mac ARM e nel guest Debian
 ARM senza swap, avviato dal Mac con HVF. Il [laboratorio di rete](NETWORK-LAB.md)
-ora esegue il broker nella VM gateway e verifica firewall e Tor reale. La VM
+ora esegue il broker nella VM gateway e verifica firewall e Tor reale. Il
+[supervisore Rust](GATEWAY-CONTROL.md) lo avvia e revoca tramite il controllo
+virtio privato dell’host, senza usare il launcher Python della fixture. La VM
 avviata dal controller mantiene `-nic none`; proxy dei tool, stato Tor e
 integrazione nel ciclo delle sessioni restano da realizzare.
 

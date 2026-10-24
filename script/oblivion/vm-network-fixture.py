@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 """Typed diagnostics in a lab-only image. No user documents or real API keys."""
-import fcntl
 import hashlib
 import json
 import os
@@ -14,7 +13,6 @@ from pathlib import Path
 
 ROLE = sys.argv[1]
 API = ("10.88.0.1", 8111)
-broker = None
 canaries = []
 
 
@@ -42,56 +40,6 @@ def tor(command):
             lines.append(line)
             if line.startswith("250 "):
                 return "\n".join(lines)
-
-
-def start_api(configuration):
-    global broker
-    assert broker is None
-    control, inherited = socket.socketpair()
-    listener = socket.socket()
-    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listener.bind(API)
-    listener.listen()
-    channel = fcntl.fcntl(inherited, fcntl.F_DUPFD_CLOEXEC, 10)
-    incoming = fcntl.fcntl(listener, fcntl.F_DUPFD_CLOEXEC, 10)
-    pid = os.fork()
-    if pid == 0:
-        null = os.open("/dev/null", os.O_RDWR)
-        for fd in (0, 1, 2):
-            os.dup2(null, fd)
-        os.dup2(channel, 3)
-        os.dup2(incoming, 4)
-        os.closerange(5, 1024)
-        os.setgroups([])
-        os.setgid(1300)
-        os.setuid(1300)
-        os.execve("/usr/bin/oblivion-api", ["/usr/bin/oblivion-api"], {})
-    os.close(channel)
-    os.close(incoming)
-    inherited.close()
-    listener.close()
-    broker = (pid, control)
-    control.settimeout(10)
-    control.sendall((json.dumps({"api_key": configuration["api_key"],
-        "session_token": configuration["token"], "socks": "127.0.0.1:9050"}) + "\n").encode())
-    assert control.recv(128) == b'{"ready":true}\n'
-    return {"ready": True, "uid": 1300}
-
-
-def stop_api():
-    global broker
-    assert broker is not None
-    pid, control = broker
-    control.close()
-    deadline = time.monotonic() + 10
-    while time.monotonic() < deadline:
-        result = os.waitpid(pid, os.WNOHANG)
-        if result[0]:
-            assert os.waitstatus_to_exitcode(result[1]) == 0
-            broker = None
-            return {"stopped": True}
-        time.sleep(0.01)
-    raise AssertionError("API revocation did not finish")
 
 
 def request(token):
@@ -133,10 +81,40 @@ def probes():
 
 
 def gateway(operation, configuration):
-    if operation == "start-api":
-        return start_api(configuration)
-    if operation == "stop-api":
-        return stop_api()
+    if operation == "supervisor-info":
+        pid = int(run("systemctl", "show", "oblivion-gateway-control.service", "--property=MainPID", "--value"))
+        children = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
+        assert len(children) == 1
+        child = Path("/proc") / children[0]
+        parent_status = Path(f"/proc/{pid}/status").read_text()
+        status = (child / "status").read_text()
+        assert "CapEff:\t00000000000000e0" in parent_status and "NoNewPrivs:\t1" in parent_status
+        assert "Uid:\t0\t0\t0\t0" in parent_status
+        assert "Uid:\t1300\t1300\t1300\t1300" in status and "CapEff:\t0000000000000000" in status
+        assert all(f"{name}:\t0000000000000000" in status for name in ["CapInh", "CapPrm", "CapAmb"])
+        assert "NoNewPrivs:\t1" in status and (child / "environ").read_bytes() == b""
+        assert (child / "cmdline").read_bytes() == b"/usr/bin/oblivion-api\0"
+        assert next(line.split()[4:6] for line in (child / "limits").read_text().splitlines() if line.startswith("Max core file size")) == ["0", "0"]
+        return {"supervisor_pid": pid, "broker_pid": int(children[0]), "broker_uid": 1300, "broker_caps": 0}
+    if operation in ["supervisor-crash", "broker-crash"]:
+        pid = int(run("systemctl", "show", "oblivion-gateway-control.service", "--property=MainPID", "--value"))
+        if operation == "broker-crash":
+            children = Path(f"/proc/{pid}/task/{pid}/children").read_text().split()
+            assert len(children) == 1
+            pid = int(children[0])
+        os.kill(pid, signal.SIGKILL)
+        return {"signalled": True}
+    if operation == "supervisor-stopped":
+        deadline = time.monotonic() + 20
+        while True:
+            state = run("systemctl", "show", "oblivion-gateway-control.service", "--property=ActiveState", "--value").decode().strip()
+            tor_state = run("systemctl", "show", "oblivion-tor.service", "--property=ActiveState", "--value").decode().strip()
+            if state in ["inactive", "failed"] and tor_state in ["inactive", "failed"]:
+                break
+            assert time.monotonic() < deadline, (state, tor_state)
+            time.sleep(0.01)
+        assert not any(path.read_text().strip() == "oblivion-api" for path in Path("/proc").glob("[0-9]*/comm"))
+        return {"supervisor": state, "tor": tor_state, "broker_absent": True}
     if operation == "rules":
         return json.loads(run("nft", "-j", "list", "ruleset"))
     if operation == "forwarding-on":
@@ -148,6 +126,14 @@ def gateway(operation, configuration):
     if operation == "tor-enable":
         tor("SETCONF DisableNetwork=0")
         return {"enabled": True}
+    if operation == "tor-restart-disabled":
+        run("systemctl", "start", "oblivion-tor.service")
+        deadline = time.monotonic() + 10
+        while not all(Path(path).exists() for path in ["/run/tor/control", "/run/tor/control.authcookie"]):
+            assert time.monotonic() < deadline
+            time.sleep(0.01)
+        assert "DisableNetwork=1" in tor("GETCONF DisableNetwork")
+        return {"active": True, "network_disabled": True}
     if operation == "tor-status":
         return {"bootstrapped": "PROGRESS=100" in tor("GETINFO status/bootstrap-phase")}
     if operation == "tor-check":
@@ -224,5 +210,3 @@ for line in sys.stdin:
     except BaseException as error:
         reply({"id": command["id"], "ok": False, "error": type(error).__name__})
         raise
-if broker:
-    stop_api()

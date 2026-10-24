@@ -15,7 +15,7 @@ rilascio, non un blocco allo sviluppo sul Mac.
 | VM della sessione        | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md); recupero dopo crash manager/controller e VM non responsiva    | KVM/hardware x86, OOM, shutdown completo e power loss                                 |
 | Console e manager        | [Prototipo Rust](MANAGER.md): password nascoste, IPC, console filtrata, TUI interattiva e stato di recupero persistente fra riavvii dei servizi                      | Paste esteso/resize, guasti I/O e console fisica                                      |
 | Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest | Altri download/plugin, credenziale esterna e rifinitura della TUI                     |
-| Rete e provider          | [Broker API](API-BROKER.md) e [due VM su Mac](NETWORK-LAB.md): firewall esterno, Tor reale, catture e guasti sintetici                                               | Lifecycle/adapter, stato Tor, proxy dei tool e provider reale                         |
+| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata                                               | Lifecycle/adapter, stato Tor, proxy dei tool e provider reale                         |
 | Credenziale API          | [Gestione nella TUI fidata](CREDENTIALS.md), file root 0600 nel generale, aggiornamento atomico e blocchi readonly/recupero/sessione aperta                          | Consegna al broker e test end-to-end con provider                                     |
 | Documenti                | Flussi concordati                                                                                                                                                    | USB, copie A→B, OnionShare, quote e annullamento                                      |
 | Effimero                 | Solo sblocco RO del profilo implementato                                                                                                                             | Guest RAM completo e zero scritture end-to-end                                        |
@@ -29,7 +29,8 @@ i temporanei. Il provider rimane una fixture locale al guest. Mancano ancora
 integrazione dei servizi nell'immagine live, guasti I/O, power loss e shutdown,
 rete integrata nelle sessioni e collaudo del prodotto su KVM. Il laboratorio separato ha ora una prova Tor reale, senza richieste ad Abliteration. Il laboratorio usa una console a dimensioni fisse; la TUI è ancora un primo adattamento, con parti della terminologia e del comportamento degli agenti upstream da rifinire.
 
-Il gateway finale è stato ricostruito e provato sul Mac senza correzioni dei
-sorgenti in RAM: 10 controlli offline e 11 con Tor reale. Docker è stato
-ripristinato dopo l’errore di spazio; lint e i 34 task di typecheck passano
-nell’ambiente Debian/Bun fissato dal repository.
+Il gateway ora include il supervisore Rust e la porta virtio privata; la
+fixture Python conserva soltanto diagnostica e iniezione dei guasti. Il
+[report del controllo privato](gateway-control-evidence.json) distingue le prove
+del componente dal collegamento ancora mancante al controller LUKS. Lint e i
+34 task di typecheck passano nell’ambiente Debian/Bun fissato dal repository.

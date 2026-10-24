@@ -5,8 +5,10 @@
 gateway; il client di prova nella VM chat usa soltanto un token locale.
 La VM avviata dal controller delle sessioni mantiene ancora `-nic none`:
 questo laboratorio non è ancora collegato a LUKS, manager e adapter OpenCode.
-L’immagine finale è stata ricostruita dopo il ripristino di Docker e provata
-senza modifiche ai sorgenti caricate in RAM.
+Il [supervisore Rust](GATEWAY-CONTROL.md) riceve la chiave su una porta virtio
+privata e gestisce il broker. La fixture Python non riceve più la chiave e non
+avvia il processo API. L’immagine finale viene provata senza modifiche ai
+sorgenti caricate in RAM.
 
 ## Topologia e confini
 
@@ -59,15 +61,19 @@ sincronizzazione dell'ora e IPv6 non sono gestiti da questo prototipo.
 ```sh
 docker build --platform linux/arm64 \
   --target gateway-network-artifacts \
-  --output type=local,dest=artifacts/oblivion-network/image-final \
+  --output type=local,dest=artifacts/oblivion-supervisor/image-final \
   -f script/oblivion/Dockerfile.vm-lab .
 python3 script/oblivion/run-network-lab.py \
-  --image artifacts/oblivion-network/image-final \
-  --output artifacts/oblivion-network/offline-new
+  --image artifacts/oblivion-supervisor/image-final \
+  --output artifacts/oblivion-supervisor/offline-new
 python3 script/oblivion/run-network-lab.py \
-  --image artifacts/oblivion-network/image-final \
-  --output artifacts/oblivion-network/online-new --tor-online
+  --image artifacts/oblivion-supervisor/image-final \
+  --output artifacts/oblivion-supervisor/online-new --tor-online
 ```
+
+Per ripetere i guasti usare `--control-fault` con `disconnect`, `shutdown`,
+`malformed`, `oversized`, `partial`, `duplicate-grant`, `supervisor-crash` o
+`broker-crash`, scegliendo ogni volta una nuova cartella di output.
 
 Richiede Mac ARM, QEMU con HVF, Python 3 e `bsdtar`. Ogni cartella di output deve
 essere nuova. L'immagine `gateway.squashfs` esclude gli strumenti diagnostici;
@@ -76,8 +82,8 @@ Solo quest'ultima è usata nelle prove descritte qui. I due guest usano 1.5 GiB
 di RAM complessivi. I controlli del laboratorio non equivalgono al confinamento
 del processo QEMU nell'host Linux di produzione.
 
-Il runner verifica i manifest e la corrispondenza di script, firewall, Tor e
-unità di servizio con i sorgenti. Per default avvia l’immagine costruita senza
+Il runner verifica i manifest e la corrispondenza di sorgenti Rust, script,
+firewall, Tor e unità di servizio. Per default avvia l’immagine costruita senza
 modificarla; un file non allineato richiede una nuova build. L’opzione esplicita
 `--overlay`, riservata allo sviluppo, inserisce nell’initrd la fixture e lo script
 di rete correnti e una diagnostica degli errori di boot. Il report distingue
@@ -95,10 +101,10 @@ vengono pubblicati nel repository.
 
 ## Evidenze e limiti
 
-Le [evidenze strutturate](network-evidence.json) riportano i controlli eseguiti,
-gli hash, i pacchetti osservati e i tentativi falliti. La versione finale del
-runner passa 10 controlli offline in 11,31 secondi e 11 controlli con Tor reale
-in 15,37 secondi. Prima di Tor la cattura
+Le [evidenze iniziali](network-evidence.json) conservano la prima prova con
+launcher Python: 10 controlli offline e 11 con Tor reale. Il nuovo
+[report del supervisore](gateway-control-evidence.json) registra le prove con
+il binario Rust, il protocollo virtio e gli otto scenari di arresto. Prima di Tor la cattura
 esterna è vuota anche nella variante online. Dopo l'attivazione contiene TCP,
 senza UDP o IPv6. Questo verifica la matrice sintetica eseguita; non dimostra
 assenza universale di leak né rivela da solo le richieste dentro Tor/TLS.
@@ -111,8 +117,8 @@ termina il processo Tor con SIGKILL e verifica l'errore API senza fallback.
 
 Restano da completare:
 
-1. Lifecycle reale di gateway e broker, IPC ristretto e consegna dei segreti
-   dal generale; revoca e attesa della chiusura prima del passaggio A→B.
+1. Collegare il supervisore al lifecycle della VM gateway e alla consegna dei
+   segreti dal generale; verificare revoca e attesa nel passaggio A→B reale.
 2. Persistenza selettiva dello stato Tor e comportamento dell'avvio effimero.
 3. Proxy dei tool con consenti/blocca/chiedi e revoca dei tunnel.
 4. Adapter OpenCode, streaming e tool calling attraverso questo broker;
