@@ -28,10 +28,25 @@ Le prove hanno corretto tre guasti: backend QMP ancora occupato dopo
 `device_del`, rename impedita da due mount distinti e connect QMP senza
 scadenza quando la VM è congelata. Il blocco non è dichiarato finché la
 pulizia non riesce; la chiusura forzata resta una scelta esplicita.
-La CI precedente `2e5c2f4` completa tutti i 31 job; il nuovo job x86 del
-manager import è predisposto, ma questa evidenza non ne dichiara l’esito.
-Restano export, riconciliazione di copie orfane/esiti incerti, guasti I/O,
+La CI `2e5c2f4` completa tutti i 31 job. La successiva `9331b27` supera il
+job x86 di importazione e 31 job complessivi; il ciclo host/rete è ancora in corso.
+Il recupero nel manager aggiunge ora un elenco delle copie, ricevute private
+persistenti e cancellazione esplicita dei soli tentativi non consegnati.
+Le modifiche successive della chat non vengono ricalcolate né eliminate.
+Restano export, guasti I/O,
 FAT/exFAT, supporti fisici, A→B, OnionShare e immagine live.
+
+La [riconciliazione verificata](import-recovery-evidence.json), commit `9d57eb6`,
+porta il ciclo a 12 controlli in 239,63 secondi. La fixture termina davvero
+il ricevitore con SIGKILL dopo 64 KiB e prima della fine dello stream; il
+manager mostra il tentativo privato e lo elimina solo dopo conferma.
+Una nuova apertura LUKS conserva ricevute, documenti modificati e la pulizia
+confermata. Passano 43 test del motore sul Mac e 46 su entrambe le architetture
+Linux, incluso il recupero dopo una ricevuta finale non letta. Nessuno dei
+15 marcatori cercati compare nel disco scrivibile; la sorgente e il generale
+nel percorso effimero restano invariati. Tutti i sorgenti runtime e le fixture
+corrispondono all’immagine provata; due file di test sono stati rafforzati dopo
+la build e verificati separatamente sulle tre piattaforme.
 
 Verifica precedente di storage e rete: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
 passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,
@@ -168,7 +183,7 @@ separatamente; Tor reale, OOM fisico e verifica dell'intera USB restano da compl
 | Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest          | Altri download/plugin, immagini aggiornate e rifinitura della TUI                     |
 | Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | SOCKS5 globale, provider reale, proxy dei tool e shutdown                             |
 | Credenziali API          | [Chiavi nominate nella TUI fidata](CREDENTIALS.md), archivio root 0600 nel generale, migrazione atomica, selezione in RAM e blocchi readonly/recupero/sessione aperta         | Provider reale, power loss durante migrazione e Wi-Fi                                 |
-| Documenti                | Flussi concordati                                                                                                                                                             | USB, copie A→B, OnionShare, quote e annullamento                                      |
+| Documenti                | [Import USB e riconciliazione nel manager](FILE-COPY.md)                                                                                                                                                             | Export, USB fisica, I/O, FAT/exFAT, copie A→B e OnionShare                                      |
 | Effimero                 | [Manager e VM con disco RAM](EPHEMERAL.md): TUI, seconda chat, gateway, crash e quota insufficiente verificati in Linux                                                      | Tor reale, OOM fisico, credenziali temporanee e zero scritture sull'intera USB          |
 | Live USB                 | Debian minimale scelta                                                                                                                                                        | Immagine x86, provisioning, boot fisico, firmware e periferiche                       |
 | Integrità e manutenzione | Requisiti nel piano                                                                                                                                                           | Firma/catena boot, backup, upgrade/recovery, revisione indipendente, matrice hardware |
