@@ -7,9 +7,9 @@ use hyper::{
     Method, Request, Response, StatusCode,
     body::{Body, Frame, Incoming},
     header::{CONNECTION, HOST, HeaderMap, HeaderName, PROXY_AUTHORIZATION},
+    http::uri::Authority,
     server::conn::http1,
     service::service_fn,
-    uri::Authority,
 };
 use hyper_util::rt::{TokioIo, TokioTimer};
 use oblivion_transport::policy::Destination;
