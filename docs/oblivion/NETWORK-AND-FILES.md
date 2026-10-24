@@ -113,7 +113,7 @@ del SOCKS e stream chiusi alla revoca o al crash. Tutti i 29 job CI passano.
 Il client è Python: la compatibilità Bun/webfetch resta da verificare.
 La revoca dell'intero grant continua a interrompere tutte le sue connessioni.
 
-**Regole nel manager host: implementate, prove Linux pendenti.**
+**Regole nel manager host: implementate e verificate in Linux.**
 `W` apre il menu separato dalla chat: aggiunta/sostituzione per destinazione,
 porta e ambito, rimozione della regola selezionata e ritorno al profilo salvato.
 Il salvataggio persiste tutte le regole attualmente selezionate, incluse
@@ -128,8 +128,11 @@ un profilo esplicito vuoto lo attiva senza autorizzare destinazioni.
 Il formato rifiuta campi sconosciuti e un profilo salvato corrotto non viene
 nascosto da una selezione temporanea. Scrittura atomica e staging privato
 mantengono la versione precedente se il disco è pieno. I 13 test delle regole
-passano sul Mac e in Debian ARM64, e Clippy sul Mac; nuove prove Linux coprono menu, file cifrato,
-staging, disco pieno, readonly e attivazione dal controller, ancora da eseguire.
+passano sul Mac e in Debian ARM/x86, e Clippy sul Mac. Le [prove host](host-policy-evidence.json)
+superano 33 controlli storage/manager e 23 del ciclo completo: menu, file cifrato,
+staging, disco pieno, readonly e attivazione dal controller. Tutti i 29 job CI
+passano. Il probe del grant usa Python per verificare i rifiuti; la nuova prova
+dei tool Bun e delle destinazioni consentite resta separata e pendente.
 Conferme interattive, scadenze e revoca di singoli permessi restano da implementare;
 `ask` continua a bloccare.
 

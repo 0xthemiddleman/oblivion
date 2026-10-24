@@ -51,9 +51,11 @@ supera 56 controlli in una VM ARM senza swap: 28 test di libreria, dieci di
 attivazione, hardening dei binari di produzione e due prove dell'adapter.
 Il [percorso completo dei tool](tools-vm-evidence.json) supera quattro casi
 VM attraverso supervisore e firewall, con client Python. Il controller host
-ora invia `tools` quando esiste una policy salvata o scelta in RAM; la nuova
-integrazione host deve ancora superare le prove Linux. Senza policy il servizio
-rimane spento. Bun/webfetch resta da collegare prima di completare il SOCKS globale.
+ora invia `tools` quando esiste una policy salvata o scelta in RAM. La
+[prova host](host-policy-evidence.json) supera 33 controlli storage/manager e
+23 del ciclo completo, inclusi grant reale e rifiuti dal guest. Senza policy
+il servizio rimane spento. Il launcher ora configura il proxy per Bun/webfetch;
+la prova del client compilato è preparata ma ancora da eseguire.
 Le nuove prove di componente usano socket reali per autorizzazione, indirizzi,
 separazione delle credenziali e revoca. Passano tutti i 28 test di libreria;
 i risultati precedenti non coprono questa aggiunta.

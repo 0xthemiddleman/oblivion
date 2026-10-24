@@ -1,0 +1,244 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "e64268526ffbbaae800ae2c66b59c69ce2da63c2",
+  "status": "trusted-policy-storage-ui-and-host-grant-passed",
+  "scope": "Saved/temporary destination rules in the trusted manager, private IPC, encrypted general profile and production host grant. x86 KVM laboratory host with TCG session/gateway; provider remains synthetic. This commit does not route Bun/webfetch through the tools proxy.",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40110735095",
+    "run_id": 40110735095,
+    "conclusion": "success",
+    "successful_jobs": 29,
+    "host_job": 120922350659,
+    "arm_job": 120922436158,
+    "debian_build_job": 120921717000,
+    "repository_job": 120921716875
+  },
+  "verification": {
+    "policy_native_tests": 13,
+    "policy_debian_arm_tests": 13,
+    "policy_debian_x86_tests": 13,
+    "canonical_check_tasks": 34,
+    "official_typescript_tasks": 34,
+    "storage": {
+      "seconds": 246.93,
+      "checks": [
+        "PASS: interrupted general filesystem formatting retains an unpublished file and retry never overwrites it",
+        "PASS: recovery latches before a busy operation lock and only verified closure clears it",
+        "PASS: systemd waits for controller readiness and runs the confined manager as UID 1000",
+        "PASS: fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request",
+        "PASS: outer disk exhaustion cannot publish a partial general volume; explicit cleanup permits retry",
+        "PASS: trusted setup confirms discard, recreates a complete general volume and protects existing archives",
+        "PASS: trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it",
+        "PASS: trusted network menu saves hidden proxy credentials only in the root-owned encrypted profile; offline policy refuses external proxies",
+        "PASS: temporary transport stays in RAM; saved selection restores it; unknown fields, aliases and corrupt profiles never trigger a fallback",
+        "PASS: full-disk transport update preserves the prior profile; retry replaces the interrupted private staging file",
+        "PASS: trusted web rules menu saves a root-owned policy, cancellation preserves it and temporary removal restores from the encrypted profile",
+        "PASS: unknown fields, reserved destinations, staging aliases and a corrupt saved policy fail closed even with a RAM override",
+        "PASS: full-disk policy replacement preserves both the saved file and RAM selection; retry publishes and clears the override",
+        "PASS: invalid keys and staging aliases are rejected; an interrupted private staging file permits an atomic retry",
+        "PASS: legacy key is read without migration; ENOSPC preserves it and retry publishes the versioned archive before deleting the legacy file",
+        "PASS: full-disk replacement preserves the archive; published archives take precedence over leftover legacy secrets and malformed archives fail closed",
+        "PASS: key persists across lock/unlock; removal requires confirmation and cancellation preserves it",
+        "PASS: trusted manager adds and renames a second hidden key, saves its default and selects another key only in RAM",
+        "PASS: active chat blocks persistent, temporary and saved-profile transport changes",
+        "PASS: an active chat blocks every saved or temporary web policy change",
+        "PASS: key picker chooses the opening credential; an active session blocks key mutations and identity changes",
+        "PASS: removing the selected key never rotates to the remaining account; explicit default and selection restore access",
+        "PASS: read-only web policy overrides use only RAM, clear on lock and leave the encrypted profile byte-identical",
+        "PASS: read-only transport choices use RAM, clear on lock and leave the entire encrypted image byte-identical",
+        "PASS: read-only profile exposes key metadata and permits RAM selection, rejects all key mutations and pending deletion, and remains byte-identical",
+        "PASS: interrupted session formatting survives restart, cannot open, and is discarded only after confirmation",
+        "PASS: disk exhaustion is explicit, preserves existing archives and permits reopening after pending cleanup",
+        "PASS: SIGKILL of manager powers down the VM and closes both LUKS mappings before restarting",
+        "PASS: SIGKILL of controller stops its dependent manager and recovers before both restart",
+        "PASS: unresponsive VM leaves recovery latched and rejects every new opening",
+        "PASS: recovery survives restart; cancelled force-stop preserves VM; explicit confirmation closes both volumes",
+        "PASS: controller stop drains dependent services and leaves no active VM or open volume",
+        "PASS: synthetic passwords, API keys and proxy credentials never appear on the managed console"
+      ],
+      "disk_scan_canaries": [
+        "OBLIVION_VM_A_CANARY_4d02",
+        "OBLIVION_VM_B_CANARY_b0ca",
+        "OBLIVION_VM_TEMP_CANARY_d9ae",
+        "OBLIVION_API_KEY_CANARY_5c91",
+        "OBLIVION_API_NEXT_CANARY_86ab",
+        "OBLIVION_PROXY_USER_CANARY_31d2",
+        "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+        "synthetic-general-password",
+        "synthetic-session-password-a",
+        "synthetic-session-password-b",
+        "OBLIVION_GUEST_CHAT_CANARY_7eaf",
+        "OBLIVION_TUI_CANARY_8ac4"
+      ],
+      "plaintext_markers_on_disk": []
+    },
+    "host_stream": {
+      "seconds": 402.13,
+      "checks": [
+        "PASS: general unlock without an API key leaves gateway services and VM stopped",
+        "PASS: encrypted external SOCKS profile is selected before the key starts the gateway",
+        "PASS: a scoped web policy is saved in the encrypted profile without restarting an idle gateway",
+        "PASS: reselecting the current key records the RAM choice without restarting its gateway or Tor bootstrap",
+        "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and reports the synthetic provider's offline probe",
+        "PASS: the host grant activates the actual tools listener; invalid tokens, denied/unknown targets and private addresses fail closed, and policy changes are blocked while open",
+        "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+        "PASS: compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker",
+        "PASS: active streaming blocks a transport change without interrupting or replacing its gateway",
+        "PASS: controller revocation closes the provider TLS stream and the adapter reports failure while QEMU and its LUKS mapping are still open",
+        "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+        "PASS: explicit key selection replaces the gateway VM; the real compiled adapter sends the alternate key only through the broker",
+        "PASS: session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure",
+        "PASS: B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close",
+        "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+        "PASS: unlock restores the persisted SOCKS route and credentials without reading or changing Tor state",
+        "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+        "PASS: normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes",
+        "PASS: SOCKS-to-Tor imports its saved guard and replaces the gateway; absent bootstrap still rejects opening before any session mapping or VM, with no SOCKS fallback",
+        "PASS: restoring the saved SOCKS profile closes the Tor gateway and completes its selective state checkpoint before replacement",
+        "PASS: restored SOCKS serves a fresh-token client stream, rejects the prior token and revokes without mutating the saved Tor checkpoint",
+        "PASS: fragmented private requests expire despite continued progress; the owner destroys its gateway VM and leaves storage state explicit",
+        "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+      ],
+      "disk_scan_canaries": [
+        "OBLIVION_VM_A_CANARY_4d02",
+        "OBLIVION_VM_B_CANARY_b0ca",
+        "OBLIVION_VM_TEMP_CANARY_d9ae",
+        "OBLIVION_API_KEY_CANARY_5c91",
+        "OBLIVION_API_NEXT_CANARY_86ab",
+        "OBLIVION_PROXY_USER_CANARY_31d2",
+        "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+        "synthetic-general-password",
+        "synthetic-session-password-a",
+        "synthetic-session-password-b",
+        "OBLIVION_STREAM_REQUEST",
+        "Synthetic open stream",
+        "OBLIVION_GUEST_CHAT_CANARY_7eaf",
+        "OBLIVION_TUI_CANARY_8ac4"
+      ],
+      "plaintext_markers_on_disk": []
+    },
+    "arm_gateway_checks": 56,
+    "arm_gateway_seconds": 166.5,
+    "network_matrix_cases_passed": 25
+  },
+  "contract": {
+    "profile": "general LUKS2/profile/network-policy.json, root 0600",
+    "temporary": "RAM until general lock; not one-shot or time-limited",
+    "edits": "trusted manager/controller only; no session open",
+    "save": "all currently selected rules, then clear the RAM override",
+    "scope": "global or opaque session ID",
+    "default": "no policy: tools listener off; explicit empty policy: all destinations blocked",
+    "ask": "blocked; no interactive approval queue yet"
+  },
+  "limits": [
+    "The new compiled Bun/webfetch/shell probe is prepared in 7a6275a and is not covered by this report.",
+    "The scoped host probe checks denial and private activation, not a permitted request from the compiled client or differing A/B allowed results.",
+    "Per-request approvals, expiry, individual-permission revocation and Tor tools circuit isolation are not verified.",
+    "A previous console reopening failure did not recur in this 33-check suite; its cause remains undiagnosed.",
+    "Hardware isolation, physical USB boot, remote provider behavior and power loss remain release gates."
+  ],
+  "source_sha256": {
+    "packages/oblivion-host/src/network.rs": "a26a4761d6600daf8150fd8c840d5042bb51ee4a662632bb6076462f3e41e954",
+    "packages/oblivion-host/src/storage.rs": "43af28186df487ddd55cf0a74b70b175be584f466a8a78e8a1cc249513b8a82a",
+    "packages/oblivion-host/src/manager.rs": "31cc3e9dbaf175d6358d5763f1e1bfbe0c39f6c36c5c1e2a60c1932e9bef1b36",
+    "packages/oblivion-host/src/gateway.rs": "06e31ee060b640bdf116385a0369963986c7aedb30688bf86affb0d9eb2e276b",
+    "packages/oblivion-host/src/ipc.rs": "6f4636c52c76454cca1c6eb803b8321a31ce94f43ec24f3fc32fb48e0960a521",
+    "packages/oblivion-host/src/vm.rs": "fcbfc5d7a4a3c82ded32f47e9042abfa006fcd09e120b112e33855113efa100f",
+    "packages/oblivion-host/tests/network-policy.rs": "d66174758abfab95566ad128ea638ca9f62f3018c69478e4b122922721c4c445",
+    "packages/oblivion-transport/src/policy.rs": "2a0623b0e7b5f2d5a15581f8008e0dcf3cfdd752ccfc8edca60970f3ff510209",
+    "packages/oblivion-gateway/src/egress.rs": "2e34c713075616a0021bab91915af37ece2b10df59588638d663c36f3d73cf5e",
+    "script/oblivion/vm-services-test.py": "52bcdf9f374686ccc5e96a9b833141506678a6759d8c4f26d7dc360ad149273e",
+    "script/oblivion/vm-session-network-test.py": "3e00bc14d5ce2e0974d01edae843025cb5a5477c496eb40893a916a33ef4ad2d",
+    "script/oblivion/vm-session-network-guest.py": "5152a48a010c8eb97c4355521e3a6315d22473534cc71132c13dc1a712526f31"
+  },
+  "retained_evidence": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/arm-evidence/ci/gateway/SHA256SUMS",
+      "sha256": "a4f9ca6e303524ce9a6904aa3450fc4bb9f2f6fce0709dba0b00b92772418020"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/arm-evidence/ci/gateway/sources.sha256",
+      "sha256": "f018bb50630445f93d162c4d2e3e0a31cc386cfb1c222f53977f1c969f6c7f80"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/arm-evidence/ci/gateway-results/summary.json",
+      "sha256": "d8ce1d30b935fffb3bdffa1424a8330dff9e2bb16a380ff16848208cea4e4410"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/arm-evidence/ci/host-image/SHA256SUMS",
+      "sha256": "05b84952bdf526d3ecdd1580b29804b1c060abe49e02d5fe79074b099f485dba"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/arm-evidence/ci/host-image/sources.sha256",
+      "sha256": "e7b1a351e4294ffe9f9793cae1c98779066bba84e9928917c402fbf477f846d7"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/arm-evidence/ci/tui-boot/summary.json",
+      "sha256": "e216b286316faf43d6f58786603e5bc143bde3729a11fb9bc4ba573ee087a02e"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/arm-evidence/oblivion-build/build-evidence.json",
+      "sha256": "eefedc39d16591370daaf716ab8b0cafb287f0aea11f7baeea2ad4b9e39354f5"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/host-job.log",
+      "sha256": "8d23da5038bdec3c90821c9f0b2e86fbe132de5d8ca294f65014955be2183c10"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/jobs.json",
+      "sha256": "d80bee7efd71045afef2b1dca9b50a669498791ed0d7a92c5bee4f112fd3d1b5"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/linux-job.log",
+      "sha256": "60fd3176cb07fae751187bfae62f2039caa520d99dea2814967ff28a523855f7"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/repository-job.log",
+      "sha256": "62839d435b761c3a3e4f8f17e21bd2c9e1b3ca7c7685b4d2f283a3e75b1dba71"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/host/SHA256SUMS",
+      "sha256": "8721934aa968a5487e48e8d0c66823cb89e415f5633f5021f8e3520e27862ec9"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/host/sources.sha256",
+      "sha256": "278e80ab869f2d106efd526172c66319d6807cd8a6ca0cb1d9fb3773c8187aba"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/host-image/SHA256SUMS",
+      "sha256": "7c7662f428cffacbfe0b9222017eeb20149f8a5bca65948eca848072fc421933"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/host-image/sources.sha256",
+      "sha256": "e7b1a351e4294ffe9f9793cae1c98779066bba84e9928917c402fbf477f846d7"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/host-results/summary.json",
+      "sha256": "0621a96017264329fab27b8ffbd996137b5a5ae70d1f89a770884417f64cce63"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/stream-images/gateway/SHA256SUMS",
+      "sha256": "d446c3fd26567b5011b57519087968f44bf8d7c1ab2ea34564535c1ab37d6604"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/stream-images/session/SHA256SUMS",
+      "sha256": "7bb78d5d3a7099b0bf2dc98e22b20a73a2a8efb46d72e1b03783b3df438a3461"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/stream-images/session/build-evidence.json",
+      "sha256": "bf8d5bc3f3412d62d64b1499150a8dd4e0a87d5325d2198ebb750876531e8492"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/stream-results/summary.json",
+      "sha256": "0c66b48bcdcd86d3d1fc22d2a057d978c3bb529bf08505bc61fc1a1e4e99339b"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/ci/tui-boot/summary.json",
+      "sha256": "768686897a7719f0b752bf7c9769cd6fb99eb1b56bb5a18d73377c8615f9b68e"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-e642685/x64-evidence/oblivion-build/build-evidence.json",
+      "sha256": "bf8d5bc3f3412d62d64b1499150a8dd4e0a87d5325d2198ebb750876531e8492"
+    }
+  ]
+}

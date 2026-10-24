@@ -66,8 +66,12 @@ passano con 13 controlli ciascuno, inclusi HTTP e CONNECT/TLS, firewall e chiusu
 degli stream su revoca o crash. La CI termina con tutti i 29 job verdi.
 Il manager ora modifica regole globali o per sessione, salvate nel generale
 o temporanee in RAM fino al blocco; il controller le include nel grant privato.
-Passano 13 test delle regole sul Mac e in Debian ARM64, oltre a Clippy sul Mac. Menu, persistenza, ENOSPC,
-readonly e grant host hanno nuove prove Linux ancora da eseguire.
+Passano 13 test delle regole sul Mac e in Debian ARM/x86, oltre a Clippy sul Mac.
+La [prova delle regole host](host-policy-evidence.json) supera 33 controlli
+storage/manager e 23 del ciclo completo: menu, persistenza, ENOSPC, readonly,
+attivazione del proxy tool e rifiuti dal guest. Nessuno dei 14 marcatori cercati
+compare sul disco del ciclo host. Tutti i 29 job CI sono verdi, inclusi 56
+controlli del gateway ARM.
 Senza profilo il servizio tool resta spento. `ask` blocca; conferme interattive,
 scadenze e revoca dei singoli permessi restano da collegare. Le variabili proxy
 sono ora nel launcher del guest, con il solo token locale. Due test nativi

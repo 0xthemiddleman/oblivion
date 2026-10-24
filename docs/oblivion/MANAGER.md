@@ -55,8 +55,10 @@ S salva tutte le regole attuali nel generale cifrato, incluse modifiche già
 selezionate in RAM; T le applica fino al blocco del generale. In readonly è
 disponibile solo T. `Blocca` prevale su `Chiedi`, che prevale su `Consenti`.
 `Chiedi` e le destinazioni sconosciute restano bloccate: la coda di conferme
-interattive non è ancora implementata. Le nuove prove Linux del menu e della
-persistenza sono in corso; i 13 test delle regole passano sul Mac e in Debian ARM.
+interattive non è ancora implementata. Le [prove Linux delle regole](host-policy-evidence.json)
+superano 33 controlli storage/manager e 23 del ciclo host completo; i 13 test
+delle regole passano sul Mac e in Debian ARM/x86. Sono verificati anche
+salvataggio atomico, ENOSPC, selezione RAM e readonly con immagine cifrata identica.
 
 Le password si inseriscono fuori dalla VM, senza eco né history; i buffer
 posseduti dal manager sono azzerati e il processo Linux disabilita i core dump

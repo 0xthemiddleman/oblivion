@@ -1,110 +1,46 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.45 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
-basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
-Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
-la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
-fine imprevista del processo QEMU. Lo stato selettivo di Tor viene importato
-e salvato nel generale; le nuove sessioni online attendono il bootstrap.
+Versione 0.46 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
+Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
+le verifiche del prodotto su hardware reale.
 
-L'[audit iniziale](docs/oblivion/phase-0/AUDIT.md) distingue inventario, analisi
-statica e prove sintetiche. Il [profilo privacy](docs/oblivion/PRIVACY-PROFILE.md),
-la [rete delle sessioni](docs/oblivion/SESSION-NETWORK.md) e lo
-[stato Tor](docs/oblivion/TOR-STATE.md) hanno evidenze riproducibili nel laboratorio
-Mac/Debian ARM. I [canali privati host](docs/oblivion/CHANNEL-DEADLINES.md)
-applicano scadenze complessive anche ai messaggi frammentati.
-L'[adapter compilato attraverso il broker](docs/oblivion/ADAPTER-BROKER.md)
-è verificato con streaming, strumento, ripresa e revoca sintetici; il profilo
-Oblivion disabilita i retry di `ModelRetry` dopo errori di rete o del provider.
-La [revoca di stream attivi](docs/oblivion/STREAM-LIFECYCLE.md) è ora verificata
-anche attraverso controller LUKS e due VM, con provider sintetico.
-Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md)
-raccoglie i risultati e i gate aperti.
+Sono implementati il generale LUKS2 e i volumi indipendenti delle sessioni,
+il controller Linux, una VM nuova per apertura, il manager fidato e il profilo
+privacy compilato di OpenCode. Le chiavi Abliteration nominate rimangono nel
+generale: il gateway riceve solo quella selezionata e la chat un token revocabile.
+Tor è predefinito; un SOCKS5 esterno richiede una scelta esplicita, senza fallback.
+Si conservano grafica, componenti e interazioni della chat TUI upstream.
 
-Le [API key multiple](docs/oblivion/CREDENTIALS.md) sono ora salvabili e
-selezionabili nel manager fidato, con migrazione del formato precedente e
-nessuna rotazione automatica. Il [proxy SOCKS5 globale alternativo](docs/oblivion/KEYS-AND-EGRESS.md)
-ha un [connettore verificato separatamente](docs/oblivion/EGRESS-CONNECTOR.md).
-L'integrazione con supervisore e firewall è ora compilata in Debian ARM64
-dalla [CI del fork](docs/oblivion/linux-ci-evidence.json), che supera anche
-il controllo canonico e il compilatore TypeScript ufficiale. La
-[matrice VM](docs/oblivion/transport-vm-evidence.json) supera 12 casi SOCKS e
-9 casi Tor offline, con catture esterne e guasti durante gli stream.
-Anche storage, IPC e scelta nel manager sono ora scritti: profilo salvato nel
-generale e scelta temporanea in RAM, con cambio consentito soltanto a chat
-chiuse. Passano 19 test host sul Mac e in Debian ARM/x86. La
-[suite host in CI](docs/oblivion/host-lifecycle-ci-evidence.json) supera ora
-**28 controlli**: menu reale, chiavi multiple, profilo SOCKS, disco pieno,
-blocco delle modifiche a chat aperta, readonly con immagine cifrata identica
-e recupero dopo crash. Nessun marcatore sintetico di password, chiavi API o
-credenziali SOCKS viene trovato sul disco o nella console. L'host x86 usa KVM,
-la VM di sessione TCG di laboratorio; passano anche gli avvii diretti della
-TUI ARM e x86. Tutti i 25 job CI sono verdi. I
-[precedenti tentativi ARM annidati](docs/oblivion/host-transport-ci-evidence.json)
-rimangono documentati come fallimenti, senza attribuire loro copertura.
-La suite storage non contiene un gateway. La successiva
-[prova SOCKS completa](docs/oblivion/host-socks-stream-ci-evidence.json)
-supera **18 controlli** con profilo cifrato, client del commit corrente,
-gateway e proxy/provider sintetico esterno alla VM gateway. Conferma cambio
-esplicito della chiave, token nuovi, revoca degli stream prima della chiusura
-del volume, ripristino del profilo dopo lock/unlock e mancata modifica dello
-stato Tor. Sono verdi tutti i 25 job della relativa CI. Il cambio effettivo
-Tor↔SOCKS è ora verificato nella [suite successiva](docs/oblivion/host-transport-transition-evidence.json):
-**21 controlli**, con importazione della guardia Tor salvata, rifiuto prima
-di aprire il volume quando manca il bootstrap, ritorno esplicito a SOCKS e
-nuovo stream revocabile. Nessuno dei 14 marcatori sintetici cercati sul disco,
-inclusi prompt e risposta, viene trovato. Passano i quattro job eseguiti;
-la matrice di rete invariata è esclusa in questa esecuzione. La chat reale via
-Tor e l'isolamento KVM della sessione restano da collaudare.
+| Parte | Evidenza disponibile | Lavoro ancora aperto |
+| --- | --- | --- |
+| Audit e profilo privacy | [Audit v2](docs/oblivion/phase-0/AUDIT.md), [profilo compilato](docs/oblivion/PRIVACY-PROFILE.md): scritture censite, log persistenti e discovery disabilitati, prove sintetiche del client | Provider reale, collaudo completo dei download e plugin residui |
+| Volumi, manager e chiavi | [33 controlli LUKS/manager](docs/oblivion/host-policy-evidence.json): chiavi multiple, regole web, readonly, ENOSPC, blocchi a chat aperta e recupero | Power loss, guasti I/O, header, cambio password, USB fisica |
+| Sessioni e rete API | [23 controlli del ciclo host](docs/oblivion/host-policy-evidence.json): profilo cifrato, token nuovi, revoca, grant tool, Tor↔SOCKS e guardie Tor preservate | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale |
+| Proxy degli strumenti | [Quattro scenari completi](docs/oblivion/tools-vm-evidence.json), 13 controlli ciascuno: HTTP, CONNECT/TLS, firewall, revoca e crash; tutti i 29 job CI passati | Client Bun/OpenCode e isolamento Tor dei flussi tool |
+| Regole amministrate | [Menu, persistenza e grant host verificati](docs/oblivion/host-policy-evidence.json); 13 test delle regole sul Mac e in Debian ARM/x86 | Conferme interattive, scadenze e revoca di singoli permessi |
+| Documenti, effimero e live | [Flussi concordati](docs/oblivion/NETWORK-AND-FILES.md); generale readonly già implementato | Import/export USB, copie A→B, OnionShare, guest effimero completo e immagine Debian Live |
 
-Il [motore delle regole](docs/oblivion/NETWORK-AND-FILES.md) ora valida domini,
-IP, porte e ambiti, con nove test passati sul Mac e in Debian ARM/x86:
-divieti prioritari e destinazioni sconosciute senza autorizzazione implicita.
-La [CI successiva](docs/oblivion/network-policy-ci-evidence.json) supera tutti
-i 25 job, ripetendo anche i 18 controlli SOCKS. Il collegamento delle regole al connettore e il proxy HTTP/CONNECT superano
-28 test di libreria in Debian ARM64, di cui otto del proxy, come documentato
-nelle [evidenze di componente](docs/oblivion/tools-proxy-component-evidence.json).
-La CI delle VM è conclusa: passano tutti i 21 scenari di rete; l'avvio del
-laboratorio gateway ARM è fallito per la scelta errata di HVF, ora corretta in
-TCG. La suite host x86 si è fermata dopo 23 controlli sulla riapertura della
-console dopo il crash del manager; la causa resta da accertare e lo stream
-host completo non è stato eseguito in questo tentativo.
-Il nuovo servizio `oblivion-tools`, il suo avvio opzionale dal supervisore e
-l'ingresso firewall 8112 sono ora compilati. La [nuova prova ARM in VM](docs/oblivion/tools-service-evidence.json)
-supera 56 controlli, inclusi 28 test di libreria, 10 di attivazione e due
-dell'adapter compilato. Il comando TCG corretto funziona. Tutti i 25 job sono
-verdi, inclusi 28 controlli storage x86 e 21 dello stream host completo.
-Nessuno dei 14 marcatori sintetici cercati compare sul disco dello stream.
-Il precedente problema di riapertura non si è ripresentato, ma la causa resta
-da chiarire.
-I [quattro scenari VM del percorso tool completo](docs/oblivion/tools-vm-evidence.json)
-passano, con 13 controlli ciascuno: HTTP e CONNECT/TLS, credenziali separate,
-regole, firewall, revoca e crash. Tutti i 29 job di questa CI sono verdi.
-Il client di questi casi è Python; Bun/webfetch resta da collegare.
-Il manager host ora permette regole globali o per sessione, salvate nel
-generale cifrato oppure applicate in RAM fino al blocco generale. Il controller
-le passa al gateway solo all'apertura della sessione; senza profilo il servizio
-tool resta spento. Passano 13 test delle regole sul Mac e in Debian ARM64,
-oltre a Clippy sul Mac. Sono aggiunte
-prove Linux di menu, persistenza, disco pieno, readonly e grant reale, ancora
-da eseguire. `ask` resta bloccato; conferme interattive, scadenze e revoca di
-singoli permessi restano aperti.
-Il launcher ora prepara le variabili HTTP/HTTPS proxy con il solo token locale,
-escludendo loopback e broker API. La prova con OpenCode compilato è preparata:
-`webfetch` HTTP/HTTPS, redirect vietato, dominio e porta non autorizzati,
-shell e separazione delle regole A/B. I due test locali della fixture passano;
-questa nuova prova nelle VM non è ancora eseguita.
-La CI permette di proseguire
-mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
-Nessuna modifica ai componenti della chat TUI.
+La CI del commit `e642685` termina con **29 job passati**: compilazione Debian,
+controlli canonici e TypeScript ufficiali, 33 controlli del manager con LUKS,
+23 del ciclo host e 56 del gateway ARM. Nessuno dei 14 marcatori sintetici
+cercati viene trovato sul disco del ciclo host.
+Le regole possono essere globali o per sessione, persistenti oppure temporanee
+fino al blocco generale. Senza profilo il servizio tool rimane spento;
+`ask` blocca finché non esiste una conferma fidata.
 
-Restano da completare collaudo Abliteration reale e shutdown globale, proxy dei tool,
-trasferimenti USB e OnionShare, sessione effimera completa, rifinitura della TUI,
-gestione dei guasti e immagine live verificata. KVM e hardware x86 sono gate di
-rilascio, senza bloccare lo sviluppo sul Mac. **Non esiste ancora una live
-Oblivion pronta all'uso.** Questo piano conserva le decisioni di prodotto e
-l'intera roadmap; lo [studio di rete e trasferimenti](docs/oblivion/NETWORK-AND-FILES.md)
-distingue le proposte da verificare dai requisiti concordati.
+Il launcher prepara ora le variabili proxy con il solo token locale, escludendo
+loopback e broker API. È pronta una prova con OpenCode compilato: `webfetch`
+HTTP/HTTPS, redirect vietato, dominio e porta non autorizzati, shell e regole
+separate A/B. I due test nativi della fixture passano; la nuova prova nelle VM
+non è ancora eseguita. La CI permette di proseguire mentre il Docker locale
+rimane fermo per spazio insufficiente ed errori I/O.
+
+Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
+limiti e incidenti precedenti, incluso il guasto di riapertura della console non
+ancora diagnosticato. Firma e catena di boot, manutenzione, backup e recovery,
+revisione indipendente e matrice hardware restano gate di rilascio. L'hardware
+x86/KVM richiesto per il prodotto non blocca lo sviluppo sul Mac.
 
 Oblivion è un ambiente personale per conversazioni private con un agente, con file e cartelle come contesto. È un fork di OpenCode: conserva il motore e i suoi strumenti, inclusa la shell, e conserva grafica, componenti e interazioni della chat TUI upstream, con rimozioni mirate e branding leggero. L'uso principale è conversare, leggere, cercare, elaborare e, quando richiesto, modificare documenti. L'intervento centrale riguarda isolamento, persistenza, rete e ciclo di vita delle sessioni.
 
