@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.36 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.37 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -32,17 +32,18 @@ il controllo canonico e il compilatore TypeScript ufficiale. La
 9 casi Tor offline, con catture esterne e guasti durante gli stream.
 Anche storage, IPC e scelta nel manager sono ora scritti: profilo salvato nel
 generale e scelta temporanea in RAM, con cambio consentito soltanto a chat
-chiuse. Passano 19 test host sia sul Mac sia in Debian. La
-[verifica host in CI](docs/oblivion/host-transport-ci-evidence.json)
-supera 15 controlli, inclusi menu reale, chiavi multiple, profilo SOCKS e disco
-pieno, ma fallisce aspettando la chat nella VM. Il lifecycle completo, i casi
-readonly e il blocco delle modifiche a chat aperta restano da verificare con
-questa build. La prova separata avvia la stessa TUI ARM in 63,5 secondi;
-il percorso annidato riproduce il timeout. Passa anche l'avvio diretto della
-TUI x86/KVM in 5,7 secondi. La suite host x86 è predisposta, mantenendo TCG
-nella VM interna, ma il primo avvio viene rifiutato dal controllo dei permessi
-KVM del runner. Correzione CI in verifica; nessuna attestazione di lifecycle
-completo, isolamento o avvio USB su hardware fisico.
+chiuse. Passano 19 test host sul Mac e in Debian ARM/x86. La
+[suite host in CI](docs/oblivion/host-lifecycle-ci-evidence.json) supera ora
+**28 controlli**: menu reale, chiavi multiple, profilo SOCKS, disco pieno,
+blocco delle modifiche a chat aperta, readonly con immagine cifrata identica
+e recupero dopo crash. Nessun marcatore sintetico di password, chiavi API o
+credenziali SOCKS viene trovato sul disco o nella console. L'host x86 usa KVM,
+la VM di sessione TCG di laboratorio; passano anche gli avvii diretti della
+TUI ARM e x86. Tutti i 25 job CI sono verdi. I
+[precedenti tentativi ARM annidati](docs/oblivion/host-transport-ci-evidence.json)
+rimangono documentati come fallimenti, senza attribuire loro copertura.
+La suite host non contiene un gateway: il cambio effettivo Tor↔SOCKS,
+provider reale e isolamento KVM della sessione restano da collaudare.
 La CI permette di proseguire
 mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
 Nessuna modifica ai componenti della chat TUI.

@@ -19,17 +19,16 @@ e 9 casi Tor offline, con due VM nuove per caso e catture esterne.
 Passano anche `bun run check` e il compilatore TypeScript ufficiale, 34 task
 ciascuno. Questo supera il blocco delle build locali dovuto agli errori I/O di
 Docker, senza riparare il disco del Mac. Configurazione host e selezione nel
-manager sono compilate anche per Linux. Le nuove prove LUKS/manager hanno un
-[esito parziale](host-transport-ci-evidence.json): 15 controlli superati su menu,
-chiavi, profili e disco pieno, poi timeout aspettando la chat nella VM. La causa
-è in verifica; il lifecycle completo e i casi readonly non sono ancora superati
-da questa build.
-La prova diretta della stessa TUI ARM passa in 63,5 secondi. La ripetizione
-annidata fallisce con QEMU ancora attivo; la causa resta aperta. Il workflow
-ora conserva la prova ARM e predispone il ciclo completo su host x86/KVM,
-con guest TCG di laboratorio e senza fallback automatico dell'acceleratore.
-La TUI x86/KVM passa l'avvio diretto in 5,7 secondi; il ciclo host non è ancora
-eseguito per un errore di permessi del runner, la cui correzione è in verifica.
+manager sono compilate anche per Linux. La nuova
+[suite LUKS/manager](host-lifecycle-ci-evidence.json) supera 28 controlli su
+host x86/KVM con sessione TCG: profili, chiavi, readonly, disco pieno,
+blocco dei cambi a chat aperta e recupero dopo crash. Nessun marcatore
+sintetico di password, API key o credenziali proxy compare sul disco o nella
+console. Passano tutti i 25 job CI, compresi gli avvii diretti della TUI ARM
+e x86. I [tentativi precedenti](host-transport-ci-evidence.json) conservano
+i fallimenti del laboratorio ARM annidato e la diagnosi. Questa suite host
+non avvia un gateway: cambi effettivi Tor↔SOCKS, provider reale e KVM della
+sessione rimangono gate distinti.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

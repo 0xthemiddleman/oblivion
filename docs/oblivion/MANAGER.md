@@ -41,10 +41,11 @@ gateway esclusivamente quella selezionata.
 Il nuovo codice aggiunge **R** per il [percorso Tor/SOCKS](KEYS-AND-EGRESS.md):
 profilo salvato nel generale oppure scelta temporanea fino al suo blocco,
 con credenziali nascoste. Il cambio richiede chat chiusa. Questa schermata è
-compilata sul Mac e in [Debian ARM64 tramite CI](linux-ci-evidence.json);
-le nuove prove interattive Debian sono preparate ma ancora ineseguite.
-Le evidenze precedenti del manager
-non coprono il nuovo menu. Nessuna modifica alla chat TUI upstream.
+compilata sul Mac e in Debian ARM/x86. La
+[suite interattiva con LUKS](host-lifecycle-ci-evidence.json) supera 28
+controlli, inclusi nuovo menu, credenziali nascoste, selezione RAM, readonly,
+disco pieno e crash. Usa host x86/KVM e sessione TCG; non verifica ancora
+il cambio effettivo della VM gateway. Nessuna modifica alla chat TUI upstream.
 
 Le password si inseriscono fuori dalla VM, senza eco né history; i buffer
 posseduti dal manager sono azzerati e il processo Linux disabilita i core dump

@@ -5,9 +5,9 @@ scegliere tra Tor, predefinito, e un proxy SOCKS5 globale per Oblivion.
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager e nel
 controller. Il [connettore](EGRESS-CONNECTOR.md), supervisore e firewall ora
 superano anche la [matrice con due VM](transport-vm-evidence.json): 12 casi
-SOCKS e 9 Tor offline. Storage e manager sono collegati e compilati in
-[Debian ARM64 tramite CI](linux-ci-evidence.json), in attesa del collaudo
-completo dei nuovi profili con LUKS. Il Docker del Mac restituisce ancora
+SOCKS e 9 Tor offline. Storage e manager superano ora
+[28 controlli con LUKS in CI](host-lifecycle-ci-evidence.json), su host
+x86/KVM e sessione TCG di laboratorio. Il Docker del Mac restituisce ancora
 errori I/O; la CI usa un runner indipendente.
 
 ## Chiavi salvate
@@ -117,10 +117,11 @@ compresi sei casi del profilo, più Clippy su tutti i target nativi. Non sono
 prove dei rami Linux esclusi da `cfg`. La suite `vm-services-test.py` include
 ora menu reale, LUKS, permessi, staging, ENOSPC, blocco a chat aperta e
 readonly con confronto byte per byte del volume. La
-[verifica Linux](host-transport-ci-evidence.json) supera 15 controlli,
-compresi menu, credenziali nascoste, selezione RAM e disco pieno, poi fallisce
-aspettando la chat nella VM. I casi readonly e a chat aperta non sono ancora
-raggiunti. Restano inoltre da provare il cambio effettivo di gateway
+[verifica Linux completa](host-lifecycle-ci-evidence.json) supera 28 controlli,
+compresi menu, credenziali nascoste, selezione RAM, disco pieno, readonly con
+immagine cifrata identica, rifiuto dei cambi a chat aperta e recupero dopo crash.
+La scansione del disco include anche i marcatori delle credenziali SOCKS,
+senza ritrovarli in chiaro. Restano inoltre da provare il cambio effettivo di gateway
 Tor↔SOCKS, stream, persistenza delle guardie e tutte le catture esterne. Il
 proxy dei tool rimane da realizzare prima di dichiarare il trasporto globale.
 
@@ -160,23 +161,27 @@ SOCKS verrà mostrato come non disponibile, senza avviare Tor di nascosto.
    **Implementato**; le evidenze e i limiti sono nella pagina delle credenziali.
 2. Consegnare al supervisore la sola chiave scelta e un profilo di trasporto
    tipizzato. Mantenere immutabile la coppia chiave/percorso durante l'apertura.
-   La consegna della chiave selezionata è implementata; il profilo di trasporto
-   configurabile resta da realizzare.
+   **Implementato** per chiave e profilo; il cambio è rifiutato a chat aperta
+   nella suite host. Il cambio effettivo di gateway nel ciclo completo resta da provare.
 3. Inserire un connettore locale del gateway per Tor o SOCKS esterno, riusabile
    dal broker e dal futuro proxy dei tool. Separare il token locale e le
    credenziali di isolamento Tor dall'autenticazione del SOCKS esterno.
    Le credenziali esterne non devono essere trasmesse al guest o in argv/log.
-   **Componente implementato e verificato separatamente** per il solo origin API;
-   integrazione operativa e canale del futuro proxy dei tool ancora aperti.
+   **Implementato e verificato** per il solo origin API, anche con supervisore
+   e firewall nelle 21 prove VM. Canale del futuro proxy dei tool ancora aperto.
 4. Applicare firewall e lifecycle per modalità: nessuna uscita Tor in SOCKS,
    nessun accesso al SOCKS esterno in Tor, revoca delle connessioni già aperte,
    recupero dopo crash e salvataggio dello stato Tor solo dove pertinente.
-5. Provare sul Mac con Debian ARM, LUKS reale e fixture: due chiavi distinguibili,
+   Firewall e revoca sono verificati nella matrice VM; rimangono transizioni
+   host Tor↔SOCKS e verifica congiunta dei checkpoint nel ciclo completo.
+5. Provare nel laboratorio Mac/Debian ARM e nella CI x86, con LUKS reale e fixture: due chiavi distinguibili,
    selezione e riapertura, errori e assenza di rotazione, migrazione interrotta,
    ENOSPC, readonly, proxy autenticato e non autenticato, auth errata, risoluzione
    per dominio, proxy caduto, cambio percorso e revoca durante lo stream.
    Combinare catture e tracing per dimostrare assenza di fallback, DNS diretto
-   e bypass dai sottoprocessi. Confermare poi su KVM e con provider reale.
+   e bypass dai sottoprocessi. I 28 controlli host e le 21 prove di rete sono
+   ora superati separatamente. Collegarli al percorso completo del client,
+   quindi confermare con VM di sessione KVM e provider reale.
 
 Questi passi precedono l'estensione del proxy dei tool: quest'ultimo deve
 applicare la stessa policy indipendentemente dal trasporto selezionato.
