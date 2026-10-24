@@ -16,6 +16,7 @@ const RUN: &str = "/run/oblivion";
 const RECOVERY: &str = "/run/oblivion/recovery-required";
 const MOUNT: &str = "/run/oblivion/general";
 const PROFILE: &str = "/run/oblivion/general/profile";
+const EPHEMERAL: &str = "/run/oblivion/ephemeral.luks";
 const MIB: u64 = 1024 * 1024;
 
 pub struct Error(pub &'static str);
@@ -114,6 +115,7 @@ pub fn main() -> Result<()> {
             | "create"
             | "open"
             | "enter"
+            | "enter-ephemeral"
             | "discard-general-pending"
             | "discard-session-pending"
             | "set-api-key"
@@ -228,24 +230,33 @@ pub fn main() -> Result<()> {
             config.change_network_policy(command)
         }
         "open" => config.open(&args[3], &password(false)?),
-        "enter" => {
+        "enter" | "enter-ephemeral" => {
             let vm = config.vm.as_ref().ok_or(Error("vm_not_configured"))?;
             vm.validate()?;
             require(crate::vm::stopped()?, "vm_already_running")?;
             if config.gateway.is_some() {
                 crate::gateway::ready()?;
             }
+            let id = if op == "enter-ephemeral" {
+                random_id()?
+            } else {
+                args[3].clone()
+            };
             let tools = if config.gateway.is_some() {
                 let (saved, selected) = policy_profiles()?;
                 selected
                     .or(saved)
-                    .map(|policy| Session::new(&args[3]).map(|session| Tools { session, policy }))
+                    .map(|policy| Session::new(&id).map(|session| Tools { session, policy }))
                     .transpose()
                     .map_err(Error)?
             } else {
                 None
             };
-            config.open(&args[3], &password(false)?)?;
+            if op == "enter-ephemeral" {
+                config.open_ephemeral()?;
+            } else {
+                config.open(&id, &password(false)?)?;
+            }
             // Failed startup keeps the vault interlocked until explicit leave/lock.
             let result = (|| {
                 let token = if config.gateway.is_some() {
@@ -643,26 +654,33 @@ impl Config {
         create_image(&path, self.session_mib)?;
         self.format(&path, secret)?;
         crypt_open(&path, "oblivion-session", secret, false)?;
-        // Formatting is a block operation. The session filesystem is NEVER mounted
-        // by the controller; only its VM will mount it.
-        let formatted = run(
-            "/usr/sbin/mkfs.ext4",
-            &[
-                "-q",
-                "-m",
-                "0",
-                "-E",
-                "lazy_itable_init=0,lazy_journal_init=0",
-                SESSION,
-            ],
-            None,
-        );
+        let formatted = format_session();
         let closed = crypt_close("oblivion-session");
         formatted?;
         closed?;
         publish(&path, &PathBuf::from(format!("{MOUNT}/sessions/{id}.luks")))?;
         println!("{id}");
         Ok(())
+    }
+
+    fn open_ephemeral(&self) -> Result<()> {
+        require(
+            mount_mode()? == MountMode::ReadOnly && mapping_open("oblivion-general")?,
+            "ephemeral_boot_required",
+        )?;
+        require(!mapping_open("oblivion-session")?, "session_already_open")?;
+        // runtime() checks tmpfs; secure_process() rejects swap. Reuse the same
+        // block mapping/interlock, with a new random secret that is never saved.
+        runtime()?;
+        let mut secret = Zeroizing::new(vec![0; 64]);
+        File::open("/dev/urandom")
+            .and_then(|mut random| random.read_exact(&mut secret))
+            .map_err(|_| Error("random_failed"))?;
+        create_image(Path::new(EPHEMERAL), self.session_mib)?;
+        self.format(Path::new(EPHEMERAL), &secret)?;
+        crypt_open(Path::new(EPHEMERAL), "oblivion-session", &secret, false)?;
+        drop(secret);
+        format_session()
     }
 
     fn open(&self, id: &str, secret: &[u8]) -> Result<()> {
@@ -1079,13 +1097,35 @@ fn save_api_keys(archive: &keys::Archive) -> Result<()> {
 }
 
 fn close_session() -> Result<()> {
-    if !mapping_open("oblivion-session")? {
-        return Ok(());
+    if mapping_open("oblivion-session")? {
+        // No deferred removal: a live guest/block handle keeps the interlock.
+        crypt_close("oblivion-session")?;
     }
-    // No deferred removal and no lazy unmount: an attached guest/block handle must
-    // cause an error, preserving the interlock until the real user is gone.
-    crypt_close("oblivion-session")?;
-    require(!mapping_open("oblivion-session")?, "session_still_open")
+    require(!mapping_open("oblivion-session")?, "session_still_open")?;
+    if Path::new(EPHEMERAL)
+        .try_exists()
+        .map_err(|_| Error("ephemeral_check_failed"))?
+    {
+        trusted_file(Path::new(EPHEMERAL))?;
+        fs::remove_file(EPHEMERAL).map_err(|_| Error("ephemeral_cleanup_failed"))?;
+    }
+    Ok(())
+}
+
+fn format_session() -> Result<()> {
+    // The host formats the block device but never mounts a session filesystem.
+    run(
+        "/usr/sbin/mkfs.ext4",
+        &[
+            "-q",
+            "-m",
+            "0",
+            "-E",
+            "lazy_itable_init=0,lazy_journal_init=0",
+            SESSION,
+        ],
+        None,
+    )
 }
 
 fn close_general() -> Result<()> {

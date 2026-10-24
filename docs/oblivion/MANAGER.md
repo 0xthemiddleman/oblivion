@@ -231,7 +231,7 @@ Linux del laboratorio. Tutte le credenziali e i dati di prova sono sintetici.
 - Integrare le unità di sistema nella live e completare guasti I/O/pubblicazione,
   OOM, shutdown completo e power loss. Il laboratorio copre ora i crash dei
   processi di manager/controller e il recupero con VM non responsiva.
-- Aggiungere effimero completo, impostazioni, broker/rete e trasferimenti.
+- Collaudare l'[avvio effimero E e la chat con disco RAM](EPHEMERAL.md), ora implementati; completare credenziali temporanee, impostazioni e trasferimenti.
 - Completare animazione opzionale, accessibilità e flusso di prima preparazione.
 
 Le prove non dichiarano invulnerabilità del parser o del manager, non coprono

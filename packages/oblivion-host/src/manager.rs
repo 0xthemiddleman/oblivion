@@ -101,7 +101,7 @@ fn run(preview: bool) -> Result<()> {
             } else if !status.general_present {
                 " Prima preparazione di Oblivion\r\n\r\n [Invio] Crea il volume generale cifrato\r\n"
             } else {
-                " Archivio generale bloccato\r\n\r\n [Invio] Sblocca\r\n"
+                " Archivio generale bloccato\r\n\r\n [Invio] Sblocca  [E] Avvio effimero\r\n"
             });
         } else if status.session_open
             || !matches!(
@@ -109,9 +109,13 @@ fn run(preview: bool) -> Result<()> {
                 None | Some("inactive" | "failed")
             )
         {
-            view.push_str(" SESSIONE ANCORA APERTA\r\n\r\n [Invio] Console   [C] Chiudi e blocca\r\n [F] Chiusura forzata\r\n");
+            view.push_str(if status.general_readonly {
+                " SESSIONE EFFIMERA APERTA - dati solo in RAM\r\n Chiudere distrugge la conversazione.\r\n\r\n [Invio] Console   [C] Chiudi e distruggi\r\n [F] Chiusura forzata\r\n"
+            } else {
+                " SESSIONE ANCORA APERTA\r\n\r\n [Invio] Console   [C] Chiudi e blocca\r\n [F] Chiusura forzata\r\n"
+            });
         } else if status.general_readonly {
-            view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [G] Scegli chiave API  [R] Rete  [W] Regole web  [B] Blocca\r\n");
+            view.push_str(&format!(" Avvio effimero - profilo in sola lettura\r\n Sessioni solo in RAM: {} MiB ciascuna.\r\n La chiusura distrugge conversazione e documenti.\r\n\r\n [N/Invio] Nuova sessione effimera\r\n [G] Scegli chiave API  [R] Rete  [W] Regole web  [B] Blocca\r\n", status.session_bytes / 1048576));
         } else {
             view.push_str(if incomplete {
                 " Creazioni interrotte - mai aperte come chat\r\n\r\n"
@@ -232,8 +236,14 @@ fn run(preview: bool) -> Result<()> {
                 control::request("lock", None, &[])?;
                 return Ok(());
             }
-            if !status.recovery_required && !status.general_open && matches!(key, b'\r' | b'\n') {
+            if !status.recovery_required
+                && !status.general_open
+                && matches!(key, b'\r' | b'\n' | b'e')
+            {
                 if !status.general_present {
+                    if key == b'e' {
+                        return Ok(());
+                    }
                     if !status.general_incomplete {
                         if let Some(secret) = new_password(
                             &mut terminal,
@@ -246,9 +256,21 @@ fn run(preview: bool) -> Result<()> {
                     }
                     return Ok(());
                 }
-                if let Some(secret) = terminal.password("Password del volume generale")? {
+                if let Some(secret) = terminal.password(if key == b'e' {
+                    "Password del volume generale - avvio effimero, sola lettura"
+                } else {
+                    "Password del volume generale"
+                })? {
                     busy(&mut terminal, "Sblocco del volume generale")?;
-                    control::request("unlock", None, &secret)?;
+                    control::request(
+                        if key == b'e' {
+                            "unlock-ephemeral"
+                        } else {
+                            "unlock"
+                        },
+                        None,
+                        &secret,
+                    )?;
                 }
                 return Ok(());
             }
@@ -307,6 +329,19 @@ fn run(preview: bool) -> Result<()> {
                 return Ok(());
             }
             if status.general_readonly {
+                if matches!(key, b'n' | b'\r' | b'\n') {
+                    if status
+                        .api_keys
+                        .as_ref()
+                        .is_some_and(|keys| keys.entries.len() > 1)
+                        && !key_menu(&mut terminal, true)?
+                    {
+                        return Ok(());
+                    }
+                    busy(&mut terminal, "Preparazione della sessione effimera in RAM")?;
+                    control::request("open-ephemeral", None, &[])?;
+                    requested_new = enter_console(&mut terminal)?;
+                }
                 return Ok(());
             }
             if key == b'a' {
@@ -411,6 +446,12 @@ fn run(preview: bool) -> Result<()> {
                 "network_rule_missing" => "La regola non esiste più. Riapri il menu delle regole web.",
                 "session_must_be_closed" => "Chiudi la sessione prima di cambiare chiave o percorso di rete.",
                 "session_channel_failed" | "invalid_session_ready" => "La sessione non ha completato l'avvio protetto. Chiudila prima di riprovare.",
+                "insufficient_space" if status.general_readonly => {
+                    "RAM insufficiente per il disco della sessione. Blocca per eliminare la preparazione incompleta."
+                }
+                "image_exists_or_unavailable" if status.general_readonly => {
+                    "Preparazione effimera non disponibile. Blocca per completare la pulizia prima di riprovare."
+                }
                 "insufficient_space" => {
                     "Spazio insufficiente. Controlla le creazioni interrotte prima di riprovare."
                 }

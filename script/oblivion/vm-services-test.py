@@ -675,8 +675,53 @@ with socket.socket(socket.AF_UNIX) as client:
     os.kill(manager_pid, signal.SIGKILL)
     manager_pid = wait_restart(MANAGER, manager_pid)
     wait_screen("Archivio generale bloccato")
+    send(b"e", "avvio effimero, sola lettura")
+    send(GENERAL + b"\r", "Nuova sessione effimera")
+    assert status()["general_readonly"] and status()["sessions"] == []
+    assert command("enter", session_id, secret=PASSWORD, success=False) == "general_not_writable"
+    ephemeral = Path("/run/oblivion/ephemeral.luks")
+    # A failed preparation cannot overwrite an existing path. Cleanup occurs
+    # only after the kernel mapping and its VM have really stopped.
+    ephemeral.symlink_to(archive)
+    assert command("enter-ephemeral", success=False) == "image_exists_or_unavailable"
+    assert file_digest(archive) == before
+    ephemeral.unlink()
+    send(b"n", "Conversazioni e documenti")
+    wait_screen("/exit blocca")
+    assert status()["session_open"] and status()["general_readonly"]
+    assert command("enter-ephemeral", success=False) == "vm_already_running"
+    assert ephemeral.stat().st_uid == 0 and ephemeral.stat().st_mode & 0o777 == 0o600
+    assert ephemeral.stat().st_size == status()["session_bytes"]
+    assert ephemeral.stat().st_blocks * 512 >= ephemeral.stat().st_size
+    assert subprocess.check_output(["stat", "-f", "-c", "%T", str(ephemeral)]).strip() == b"tmpfs"
+    first_ephemeral = subprocess.check_output(["cryptsetup", "luksUUID", str(ephemeral)]).strip()
+    assert str(ephemeral).encode() in subprocess.check_output(["cryptsetup", "status", "oblivion-session"])
+    assert subprocess.run(["findmnt", "--noheadings", "--source", "/dev/mapper/oblivion-session"], capture_output=True).returncode == 1
+    send(b"OBLIVION_TUI_A_REQUEST", "OBLIVION_TUI_A_REQUEST")
+    send(b"\r", "OBLIVION_TUI_A_REPLY")
+    check("trusted ephemeral boot opens a read-only profile and a fresh RAM-backed LUKS VM; the compiled TUI executes the real document-writing shell tool")
+    send(b"\x1d", "Nuova sessione effimera")
+    assert not status()["session_open"] and not ephemeral.exists()
+    assert str(ephemeral).encode() not in subprocess.check_output(["losetup", "--list", "--output", "BACK-FILE"])
+    assert property("oblivion-session.service", "ActiveState") in ["inactive", "failed"]
+    assert file_digest("/data/general.luks") == encrypted_before
+    send(b"n", "Conversazioni e documenti")
+    wait_screen("/exit blocca")
+    assert subprocess.check_output(["cryptsetup", "luksUUID", str(ephemeral)]).strip() != first_ephemeral
+    send(b"OBLIVION_TUI_B_REQUEST", "OBLIVION_TUI_B_REQUEST")
+    send(b"\r", "OBLIVION_TUI_B_REPLY")
+    check("closing an ephemeral chat removes its RAM disk; the next VM has a distinct LUKS identity, no prior document, temporary files or conversation")
+    terminal.reset()
+    os.kill(manager_pid, signal.SIGKILL)
+    manager_pid = wait_restart(MANAGER, manager_pid)
+    wait_screen("Archivio generale bloccato")
+    locked()
+    assert not ephemeral.exists() and file_digest("/data/general.luks") == encrypted_before
+    assert str(ephemeral).encode() not in subprocess.check_output(["losetup", "--list", "--output", "BACK-FILE"])
+    check("manager death destroys the ephemeral VM and RAM disk before restart, closes both mappings and leaves the complete encrypted general image byte-identical")
     send(b"\r", "Password del volume generale")
     send(GENERAL + b"\r", "Sessioni protette")
+    assert command("enter-ephemeral", success=False) == "ephemeral_boot_required"
     current = status()
     assert current["sessions"] == [session_id] and len(current["incomplete_sessions"]) == 1
     pending_id = current["incomplete_sessions"][0]

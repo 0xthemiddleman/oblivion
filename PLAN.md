@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.47 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.48 — 24 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
@@ -19,7 +19,7 @@ Si conservano grafica, componenti e interazioni della chat TUI upstream.
 | Sessioni e rete API | [23 controlli del ciclo host](docs/oblivion/host-policy-evidence.json): profilo cifrato, token nuovi, revoca, grant tool, Tor↔SOCKS e guardie Tor preservate | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale |
 | Proxy degli strumenti | [Quattro scenari completi](docs/oblivion/tools-vm-evidence.json), 13 controlli ciascuno: HTTP, CONNECT/TLS, firewall, revoca e crash; tutti i 29 job CI passati | Client Bun/OpenCode e isolamento Tor dei flussi tool |
 | Regole amministrate | [Menu, persistenza e grant host verificati](docs/oblivion/host-policy-evidence.json); 13 test delle regole sul Mac e in Debian ARM/x86 | Conferme interattive, scadenze e revoca di singoli permessi |
-| Documenti, effimero e live | [Flussi concordati](docs/oblivion/NETWORK-AND-FILES.md); generale readonly già implementato | Import/export USB, copie A→B, OnionShare, guest effimero completo e immagine Debian Live |
+| Documenti, effimero e live | [Flussi concordati](docs/oblivion/NETWORK-AND-FILES.md); [percorso effimero RAM implementato, prova VM preparata](docs/oblivion/EPHEMERAL.md) | Collaudo effimero completo, import/export USB, copie A→B, OnionShare e immagine Debian Live |
 
 La CI del commit `e642685` termina con **29 job passati**: compilazione Debian,
 controlli canonici e TypeScript ufficiali, 33 controlli del manager con LUKS,
@@ -44,6 +44,14 @@ rimane fermo per spazio insufficiente ed errori I/O.
 attivazione esclusivamente nel laboratorio, controllo del percorso SOCKS e
 assenza di chiave API/token locali in chiaro. Il filtro QMP è provato sul Mac;
 la cattura con il client nelle VM resta pendente.
+
+Il manager aggiunge E prima dello sblocco e N per una chat effimera. Il disco
+LUKS2 temporaneo sta solo in tmpfs, con segreto casuale non salvato, stessa
+VM e stessi interlock delle sessioni persistenti; viene rimosso dopo la chiusura.
+Passano 32 test nativi host e Clippy sul Mac. Sono preparati tre controlli VM
+aggiuntivi con scritture dalla TUI reale, nuova chat senza dati precedenti e
+recupero dopo crash; non sono ancora eseguiti. La verifica dell'intera USB
+invariata e del gateway nell'effimero rimane distinta.
 
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
 limiti e incidenti precedenti, incluso il guasto di riapertura della console non
@@ -198,7 +206,7 @@ Password dimenticata: nessun recupero implicito. La password generale non è una
 
 Per l'MVP, avviso di inattività e blocco globale dopo intervallo configurabile, blocco manuale sempre disponibile e sospensione/ibernazione disabilitate. «Chiudi sessione» riporta al selettore lasciando il generale sbloccato; «Blocca Oblivion» protegge anche Wi-Fi, API key e impostazioni chiudendo il generale dopo tutti i suoi utilizzatori. La chiusura del coperchio deve seguire un comportamento testato di blocco globale o spegnimento, senza assumere che equivalga a uno shutdown sicuro. Non promettere azzeramento fisico completo della RAM o resistenza a cold boot.
 
-L'avvio effimero viene selezionato prima di montare il profilo. Richiede la password generale, ma apre quel volume e il relativo dispositivo in sola lettura, senza replay del journal che scriva sul supporto. Può leggere le impostazioni già salvate, mentre sessione, nuove credenziali e modifiche restano in RAM. Nessuna apertura di sessioni persistenti in tale modalità. Se il volume richiede un recupero in scrittura, non convertirlo automaticamente in scrivibile: segnalare la necessità di un avvio normale per il recupero. La prova di USB invariata riguarda l'intero avvio effimero; una chat temporanea aperta durante un avvio normale non autorizza a dichiarare che l'infrastruttura non abbia scritto nulla.
+L'avvio effimero viene selezionato prima di montare il profilo. Richiede la password generale, ma apre quel volume e il relativo dispositivo in sola lettura, senza replay del journal che scriva sul supporto. Può leggere le impostazioni già salvate, mentre sessione, nuove credenziali e modifiche restano in RAM. Nessuna apertura di sessioni persistenti in tale modalità. Il [percorso host implementato](docs/oblivion/EPHEMERAL.md) usa un file di blocchi LUKS2 esclusivamente in tmpfs e non salva un contenitore sulla USB; il collaudo Linux e le nuove credenziali temporanee restano aperti. Se il volume richiede un recupero in scrittura, non convertirlo automaticamente in scrivibile: segnalare la necessità di un avvio normale per il recupero. La prova di USB invariata riguarda l'intero avvio effimero; una chat temporanea aperta durante un avvio normale non autorizza a dichiarare che l'infrastruttura non abbia scritto nulla.
 
 **File e cartelle come contesto**
 

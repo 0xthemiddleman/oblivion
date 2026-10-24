@@ -91,6 +91,15 @@ Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
 OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;
 le nuove schermate amministrative rimangono nel manager host separato.
 
+Il [percorso effimero](EPHEMERAL.md) collega ora E prima dello sblocco, generale
+readonly e nuova VM con disco LUKS2 solo in RAM. Il segreto viene generato per
+apertura e non salvato; la chiusura rimuove il file dopo VM e mapping. Passano
+32 test host nativi e Clippy sul Mac. La suite servizi prepara tre controlli
+aggiuntivi con TUI reale, scritture, seconda chat pulita e recupero dopo crash.
+Questi controlli Linux non sono ancora eseguiti; non sono coperti dai report
+storici da 33 controlli. Gateway nell'effimero, credenziali temporanee, OOM e
+verifica dell'intera USB restano da completare.
+
 | Area                     | Stato ed evidenza                                                                                                                                                             | Gate ancora aperto                                                                    |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | Audit iniziale v2        | Inventario, revisione e prove sintetiche in [fase 0](phase-0/AUDIT.md)                                                                                                        | TUI completa e Abliteration/Tor reali                                                 |
@@ -102,7 +111,7 @@ le nuove schermate amministrative rimangono nel manager host separato.
 | Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | SOCKS5 globale, provider reale, proxy dei tool e shutdown                             |
 | Credenziali API          | [Chiavi nominate nella TUI fidata](CREDENTIALS.md), archivio root 0600 nel generale, migrazione atomica, selezione in RAM e blocchi readonly/recupero/sessione aperta         | Provider reale, power loss durante migrazione e Wi-Fi                                 |
 | Documenti                | Flussi concordati                                                                                                                                                             | USB, copie A→B, OnionShare, quote e annullamento                                      |
-| Effimero                 | Solo sblocco RO del profilo implementato                                                                                                                                      | Guest RAM completo e zero scritture end-to-end                                        |
+| Effimero                 | [Manager e VM con disco RAM](EPHEMERAL.md) implementati; prova Linux preparata                                                                                               | Collaudo VM, gateway, credenziali temporanee e zero scritture sull'intera USB          |
 | Live USB                 | Debian minimale scelta                                                                                                                                                        | Immagine x86, provisioning, boot fisico, firmware e periferiche                       |
 | Integrità e manutenzione | Requisiti nel piano                                                                                                                                                           | Firma/catena boot, backup, upgrade/recovery, revisione indipendente, matrice hardware |
 
