@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.42 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.43 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -70,8 +70,13 @@ TCG. La suite host x86 si è fermata dopo 23 controlli sulla riapertura della
 console dopo il crash del manager; la causa resta da accertare e lo stream
 host completo non è stato eseguito in questo tentativo.
 Il nuovo servizio `oblivion-tools`, il suo avvio opzionale dal supervisore e
-l'ingresso firewall 8112 sono ora scritti e attendono la verifica CI. Il
-controller host non invia ancora una policy, quindi nel normale ciclo della
+l'ingresso firewall 8112 sono ora compilati. La [nuova prova ARM in VM](docs/oblivion/tools-service-evidence.json)
+supera 56 controlli, inclusi 28 test di libreria, 10 di attivazione e due
+dell'adapter compilato. Il comando TCG corretto funziona. Il test x86 di
+storage passa; lo stream host completo è ancora in corso. Il precedente
+problema di riapertura non si è ripresentato, ma la causa resta da chiarire.
+Sono pronti quattro scenari VM del percorso tool completo, ancora da eseguire.
+Il controller host non invia una policy, quindi nel normale ciclo della
 sessione il servizio rimane spento. `ask` resta bloccato. Client Bun,
 integrazione nel manager, persistenza, conferme e scadenze sono ancora aperti.
 La CI permette di proseguire

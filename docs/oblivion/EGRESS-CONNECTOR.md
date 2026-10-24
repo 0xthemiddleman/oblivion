@@ -46,9 +46,11 @@ ora accetta `tools` come campo opzionale del grant privato e avvia
 privati il token locale e l'indirizzo del connettore, senza chiave API o
 credenziali SOCKS. Il connettore riceve la policy. La fine di qualsiasi processo
 del grant chiude l'intera autorizzazione. Avvio parziale, EOF, byte sul canale
-e segnali devono rimuovere listener e connessioni. Questa integrazione è
-scritta e attende verifica CI; il componente HTTP/CONNECT ha già otto test
-passati. Il controller host non invia ancora `tools`, quindi il servizio non
+e segnali devono rimuovere listener e connessioni. La [prova del servizio](tools-service-evidence.json)
+supera 56 controlli in una VM ARM senza swap: 28 test di libreria, dieci di
+attivazione, hardening dei binari di produzione e due prove dell'adapter.
+Il percorso completo dei tool attraverso supervisore e firewall deve ancora
+essere eseguito. Il controller host non invia ancora `tools`, quindi il servizio non
 si attiva nel normale ciclo delle sessioni. Questa aggiunta non completa il
 SOCKS globale.
 Le nuove prove di componente usano socket reali per autorizzazione, indirizzi,
@@ -59,11 +61,10 @@ e due di attivazione del processo: un
 profilo privato con 128 regole oltre il precedente limite di 4 KiB e il rifiuto
 di frame oltre 128 KiB. La CI ARM ora esegue anche il laboratorio gateway
 senza swap e le due prove dell'adapter compilato, oltre a costruire i binari.
-Le otto prove precedenti di attivazione sono compilate. Due nuove prove del
-servizio tool portano il totale previsto a dieci; attendono compilazione ed
-esecuzione insieme ai controlli di hardening del binario di produzione. La prima esecuzione CI è stata
-rifiutata prima del boot per la scelta di HVF sul runner Linux; il comando
-ora seleziona TCG esplicitamente e attende una nuova prova.
+Le otto prove precedenti di attivazione e le due nuove del servizio tool ora
+passano insieme ai controlli di hardening del binario di produzione. La prima
+esecuzione CI era stata rifiutata prima del boot per la scelta di HVF sul
+runner Linux; la ripetizione con TCG esplicito è passata.
 
 Il tipo condiviso `oblivion-transport::Transport` distingue:
 

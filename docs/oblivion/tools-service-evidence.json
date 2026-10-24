@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "09e494b85beb2f3f04e0fae0ed21cf3c46aba9f4",
+  "status": "service-component-vm-passed-host-stream-suite-running",
+  "scope": "Tools service binary, private activation and optional supervisor role compiled in Debian ARM64. Component and production-binary hardening checks executed in a swap-free ARM64 TCG VM. The integrated tools grant through supervisor and firewall is not exercised by this run.",
+  "ci": {
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40107027093",
+    "run_id": 40107027093,
+    "debian_build_job": 120910728214,
+    "repository_job": 120910728401,
+    "arm_vm_job": 120911373535,
+    "arm_vm_conclusion": "success",
+    "x86_host_job": 120911283356,
+    "overall": "in_progress_at_recording"
+  },
+  "verification": {
+    "gateway_vm_checks": 56,
+    "gateway_library_tests_passed": 28,
+    "activation_tests_passed": 10,
+    "compiled_adapter_tests_passed": 2,
+    "gateway_vm_seconds": 165.63,
+    "direct_arm_chat_boot_seconds": 61.69,
+    "canonical_check_tasks": 34,
+    "official_typescript_tasks": 34,
+    "adapter_capture": {
+      "dropped": 0,
+      "ipv4": 872,
+      "ipv6": 0,
+      "kernel_packets": 872,
+      "non_loopback": 0,
+      "other": 0,
+      "packets": 872,
+      "tcp": 872,
+      "truncated": 0,
+      "udp": 0
+    },
+    "x86_storage_step": "passed; report pending job completion",
+    "host_stream_step": "pending completion"
+  },
+  "service_contract": {
+    "uid": 1301,
+    "listener": "10.88.0.1:8112",
+    "requires_explicit_tools_policy": true,
+    "normal_host_controller_enables_tools": false,
+    "private_fds": [
+      3,
+      4
+    ],
+    "holds_api_key": false,
+    "holds_external_socks_credentials": false,
+    "unexpected_child_exit_revokes_grant": true
+  },
+  "source_sha256": {
+    "packages/oblivion-gateway/src/tools_main.rs": "3d7c5957c10d7a9bbc4d2871454334bac1eb6d65535dce5ee2ece2efbe09fbb2",
+    "packages/oblivion-gateway/src/tools.rs": "ce09d782ec92df99cd1accf0ab4c252a5113a0c8d0304f62377998d650757b80",
+    "packages/oblivion-gateway/src/supervisor.rs": "ff305acad1300dfecd40fb3f8ccdf28f94676991ec90f16525c58ff65bcc05b5",
+    "packages/oblivion-gateway/src/egress.rs": "c904755d7fd8ca251feb4125d7b56e20a3df34cbcc4960b559fce659a7c6ba59",
+    "packages/oblivion-gateway/tests/activation.rs": "0456367c382f1dfaa17da6db24f65418a610a6098121372a0310b1d1a29f69ca",
+    "packages/oblivion-gateway/guest/firewall.nft": "598e5cbcbcc8a1ca59206e163570b42d80c925a8e3bf3506ad52feaa55ed8677",
+    "packages/oblivion-transport/src/policy.rs": "dc41483f27e6107821735924f733a1dc1b5e5bd20ad50c87734e6626a3dbcb84",
+    "script/oblivion/vm-gateway-test.py": "3fe83ef38b75d96b224c572e1d1d602d244c89014864dfc0796fceeecc09c6a4",
+    "script/oblivion/Dockerfile.vm-lab": "ac0c61ed8d3bb0328b7da5feff38d920bc8b55f53f47bb01931be4472eb91f08",
+    ".github/workflows/oblivion-check.yml": "60abd3d37b84382cf15ff8e8590c8b5947b75964ef485bc5cdc9a93a6b9c75a2"
+  },
+  "retained_evidence": [
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/linux-job.log",
+      "sha256": "ce97ec2f2e250e0867afccb5b39a097b1657570d5cd30479498064dc8b205471"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/repository-job.log",
+      "sha256": "e7e990e5587973657dff7f6aaba56910f13667a018e0233b931d01d7233c3e1c"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/arm-job.log",
+      "sha256": "5de5b990334fd10610f2bc44530171059625fe57376d094108a85d010f64de92"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/arm-evidence/ci/gateway-results/summary.json",
+      "sha256": "66d3ae55d04afea3e4473119aee343b167fde79d4347105420dda66c99f5cd2f"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/arm-evidence/ci/gateway-results/serial.log",
+      "sha256": "d69303cbea6a48cdbf1052f5a16a30d31b395e6e2cb9004eeae1019a68ffeadf"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/arm-evidence/ci/gateway/SHA256SUMS",
+      "sha256": "44361be52938c714799f57762178f8e9aa592665c98a2c70c56bda2dddac1ff4"
+    },
+    {
+      "path": "artifacts/oblivion-linux-ci/run-09e494b/arm-evidence/oblivion-build/build-evidence.json",
+      "sha256": "7e08461616c2d053d5908e9c298ee187fe6329d3928f9c91c172ad7a7135a3f7"
+    }
+  ],
+  "previous_attempt": "tools-proxy-component-evidence.json",
+  "limits": [
+    "The tools role is not yet enabled by the normal host controller; trusted policy editing, saved policy, approvals and expiry are pending.",
+    "Four integrated tools VM scenarios are prepared in commit 0f76f89 and have not run yet. Their Python peer is not Bun/OpenCode.",
+    "No production hardware isolation or real provider request is demonstrated by this TCG component laboratory.",
+    "No Tor tools circuit-isolation claim is made.",
+    "An earlier x86 console reopening failure did not recur in the current storage step; its cause remains undiagnosed."
+  ]
+}
