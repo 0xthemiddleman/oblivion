@@ -67,14 +67,17 @@ non ha una scheda di rete.
 
 ## Riproduzione
 
-Serve la CLI Linux ARM della [prova adapter](ADAPTER-BROKER.md), nella posizione
-indicata dal Dockerfile e con l'hash del relativo report.
+La build corrente usa la CLI indicata da `OPENCODE_BINARY` e la provenienza
+`OPENCODE_BUILD_EVIDENCE`, verificandone l'hash. Non sostituisce più il client
+con il binario ARM storico della prova adapter. Il guest comunica anche l'hash
+del client realmente presente prima di accettare i comandi del laboratorio.
 
 ```sh
 docker build --platform linux/arm64 --target host-artifacts \
   --output type=local,dest=artifacts/oblivion-stream-lifecycle/bundle-new \
   -f script/oblivion/Dockerfile.vm-lab .
 docker build --platform linux/arm64 --target stream-artifacts \
+  --build-arg OPENCODE_BUILD_EVIDENCE=artifacts/oblivion-build/build-evidence.json \
   --output type=local,dest=artifacts/oblivion-stream-lifecycle/images-new \
   -f script/oblivion/Dockerfile.vm-lab .
 python3 script/oblivion/run-vm-lab.py \
@@ -86,9 +89,36 @@ python3 script/oblivion/run-vm-lab.py \
 ```
 
 Il [report](stream-lifecycle-evidence.json) conserva hash, controlli e limiti.
+Si riferisce alla prova storica; le modifiche al runner non aggiornano da sole
+la sua copertura o la versione del binario verificato.
 Il campo `opencode_sha256` del riepilogo grezzo del runner descrive la vecchia
 immagine host; il report distingue il binario realmente contenuto nella nuova
 immagine della sessione, coperto dal suo manifest e dall'hash della build CLI.
+
+## Percorso SOCKS salvato: nuova prova CI
+
+La suite x86 aggiunge `--stream --stream-socks`, un host `stream-host` e un
+gateway `STREAM_GATEWAY=stream-gateway-base`. Questa variante conserva Tor
+offline e non avvia il provider dentro il gateway. Il provider/proxy sintetico
+vive nel loopback dell'host Debian di laboratorio, raggiunto dal gateway
+tramite l'alias QEMU `10.0.2.2:9050`. L'host esterno non ha una scheda di rete;
+la prova non contatta Internet e non usa credenziali reali.
+
+Il controller salva endpoint e credenziali SOCKS nel generale prima di
+aggiungere la chiave API. La suite attraversa il client compilato dal commit
+CI, la VM di sessione, il broker, il connettore e il proxy esterno. Verifica
+stream interrotti dalla revoca e dalla morte della VM, cambio esplicito della
+chiave, token nuovi per ogni apertura, rifiuto del cambio trasporto a stream
+aperto e ripristino del profilo dopo lock/unlock. Uno stato Tor volutamente
+invalido deve rimanere ignorato e invariato durante il percorso SOCKS.
+
+Gli esiti devono risultare negli artefatti `stream-results` del job x86 prima
+di considerare verificata questa estensione. I controlli già superati delle
+suite host e trasporto rimangono evidenze distinte. KVM accelera l'host di
+laboratorio; gateway e sessione continuano a usare TCG, senza attestazione
+dell'isolamento KVM di produzione. La variante esterna verifica il manifest
+dell'immagine gateway e l'hash della fixture avviata sull'host; non legge un
+hash del broker in esecuzione attraverso la console gateway.
 
 Restano aperti provider remoto con Tor reale, shutdown globale durante uno
 stream, guasti I/O, limiti della risposta e client lento nel ciclo completo,

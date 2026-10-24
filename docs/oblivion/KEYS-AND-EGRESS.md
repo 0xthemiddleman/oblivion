@@ -69,7 +69,7 @@ l'endpoint configurato, senza l'uscita generale oggi attribuita a Tor.
 Un proxy su LAN richiede un'eccezione limitata al suo IP e porta, non l'apertura
 della rete locale all'agente.
 
-## Profilo host e manager: codice disponibile, collaudo Linux pendente
+## Profilo host e manager verificati; integrazione di rete in corso
 
 Il nuovo profilo versionato `profile/transport.json` contiene modalità,
 endpoint IPv4 letterale e autenticazione opzionale, nel generale cifrato.
