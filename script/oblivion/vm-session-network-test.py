@@ -20,6 +20,7 @@ KEY = b"OBLIVION_API_KEY_CANARY_5c91"
 NEXT = b"OBLIVION_API_NEXT_CANARY_86ab"
 OWNER = "oblivion-gateway-host.service"
 VM = "oblivion-gateway-vm.service"
+STREAM = Path("/run/oblivion-stream-lab").exists()
 
 
 def run(*args, **kwargs):
@@ -81,6 +82,44 @@ def ready():
 def digest(path):
     with Path(path).open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def stream_status():
+    expected = json.loads(Path("/run/oblivion-gateway-image/stream.json").read_text())
+    identifier = time.monotonic_ns()
+    with socket.socket(socket.AF_UNIX) as client:
+        client.settimeout(10)
+        client.connect("/run/oblivion-gateway-vm/console.sock")
+        assert struct.unpack("3i", client.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))[1] == 1101
+        client.sendall(json.dumps({"operation": "status", "id": identifier}).encode() + b"\n")
+        data = b""
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            chunk = client.recv(65536)
+            assert chunk and len(data) + len(chunk) <= 65536
+            data += chunk
+            while b"\n" in data:
+                line, data = data.split(b"\n", 1)
+                if b"OBLIVION_STREAM " not in line:
+                    continue
+                value = json.loads(line.split(b"OBLIVION_STREAM ", 1)[1])
+                if value["id"] != identifier:
+                    continue
+                assert value["fixture_sha256"] == expected["provider_sha256"]
+                assert value["api_sha256"] == expected["api_sha256"]
+                assert not value["errors"], value
+                return value
+    raise AssertionError("provider observation deadline")
+
+
+def stream_closed(identifier):
+    deadline = time.monotonic() + 20
+    while time.monotonic() < deadline:
+        value = stream_status()
+        if identifier in value["closed"] and not value["active"]:
+            return
+        time.sleep(0.05)
+    raise AssertionError("upstream TLS stream survived revocation")
 
 
 print("OBLIVION_SESSION_NETWORK_FIXTURE_SHA256 " + digest(__file__), flush=True)
@@ -251,9 +290,22 @@ client.sendall(b"adapter\n")
 receive(client, b"OBLIVION_ADAPTER_AUTHENTICATED")
 check("compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error")
 
+if STREAM:
+    assert stream_status()["active"] == []
+    client.sendall(b"stream\n")
+    receive(client, b"OBLIVION_STREAM_STARTED")
+    assert stream_status()["active"] == [1]
+    check("compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker")
+
 # Keep the old guest alive while requesting close: the VM interlock rejects
 # closing its disk, but revocation must already have removed its API listener.
 assert command("close", success=False) == "operation_failed"
+if STREAM:
+    stream_closed(1)
+    assert status()["session_open"] and Path(f"/proc/{chat}").exists()
+    client.sendall(b"stream-ended\n")
+    receive(client, b"OBLIVION_STREAM_FAILED")
+    check("controller revocation closes the provider TLS stream and the adapter reports failure while QEMU and its LUKS mapping are still open")
 client.sendall(b"revoked\n")
 receive(client, b"OBLIVION_SESSION_REVOKED")
 command("force-leave")
@@ -270,9 +322,17 @@ receive(client, b"OBLIVION_OLD_TOKEN_DENIED")
 _, owner = ready()
 chat = int(property("oblivion-session.service", "MainPID"))
 assert watched_pids(owner) == [chat] and gateway_status()["active"]
+if STREAM:
+    client.sendall(b"stream\n")
+    receive(client, b"OBLIVION_STREAM_STARTED")
+    assert stream_status()["active"] == [2]
 os.kill(chat, signal.SIGKILL)
 client.close()
 await_revocation(owner)
+if STREAM:
+    stream_closed(2)
+    assert status()["session_open"]
+    check("session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure")
 assert command("enter", a, secret=PASSWORD, success=False) == "session_already_open"
 command("close")
 assert not status()["session_open"]

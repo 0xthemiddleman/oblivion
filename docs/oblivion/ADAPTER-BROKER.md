@@ -52,9 +52,9 @@ chiamate successive per eseguire strumenti o continuare una risposta rimangono
 parte del lavoro richiesto. Il comportamento upstream fuori dal profilo resta
 coperto dai test esistenti.
 
-La prova revoca direttamente l'istanza reale del broker. Non sostituisce il
-gate ancora aperto sulla revoca di uno stream attivo attraverso controller
-LUKS, supervisore e due VM separate, né quello sul provider remoto reale.
+Questa prova revoca direttamente l'istanza reale del broker. La successiva
+[suite del ciclo VM](STREAM-LIFECYCLE.md) verifica ora anche controller LUKS,
+supervisore e due VM separate. Il provider remoto reale resta da collaudare.
 
 ## Laboratorio Mac e cattura
 

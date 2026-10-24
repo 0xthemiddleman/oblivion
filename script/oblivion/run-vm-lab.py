@@ -72,8 +72,11 @@ parser.add_argument("--gateway-image", type=Path,
 parser.add_argument("--session-image", type=Path,
     help="With --gateway-image, exercise a networked session and grant rotation")
 parser.add_argument("--tor-state", action="store_true", help="Exercise selective Tor state persistence in real LUKS")
+parser.add_argument("--stream", action="store_true", help="With laboratory gateway/session images, verify active streams through real storage revocation")
 parser.add_argument("--tor-online", action="store_true", help="With --tor-state, allow Tor bootstrap and capture the outer uplink")
 args = parser.parse_args()
+if args.stream and (not args.session_image or args.tor_state):
+    parser.error("--stream requires --session-image and excludes --tor-state")
 if args.adapter_binary and not args.gateway_bundle:
     parser.error("--adapter-binary requires --gateway-bundle")
 adapter = args.adapter_binary.resolve() if args.adapter_binary else None
@@ -170,6 +173,8 @@ if args.refresh_tui_test or bundle:
             (root / ("scripts/" + role + "-image")).mkdir()
             for name in ["kernel", "initrd"]:
                 shutil.copy2(source / name, root / ("scripts/" + role + "-image") / name)
+            if args.stream and role == "gateway":
+                shutil.copy2(source / "stream.json", root / "scripts/gateway-image/stream.json")
             metadata = {name: {"sha256": hashlib.sha256((source / name).read_bytes()).hexdigest(),
                 "bytes": (source / name).stat().st_size} for name in ["kernel", "initrd", role + ".squashfs"]}
             (root / ("scripts/" + role + "-image/manifest.json")).write_text(json.dumps(metadata))
@@ -178,6 +183,8 @@ if args.refresh_tui_test or bundle:
                 f'cp -a /scripts/{role}-image/. /run/oblivion-{role}-image/\n')
         if args.tor_online:
             bundle_hook += "touch /run/oblivion-tor-online\n"
+        if args.stream:
+            bundle_hook += "touch /run/oblivion-stream-lab\n"
         if adapter_manifest:
             (root / "scripts/adapter.json").write_text(json.dumps(adapter_manifest))
             bundle_hook += ('mkdir /run/oblivion-adapter\n'
@@ -280,6 +287,7 @@ summary = {
     "gateway_image_manifest": gateway_manifest,
     "session_image_manifest": session_manifest,
     "tor_online": args.tor_online,
+    "synthetic_streams": args.stream,
     "captures": captures,
 }
 (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")

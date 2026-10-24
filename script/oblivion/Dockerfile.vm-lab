@@ -184,3 +184,53 @@ RUN --mount=type=bind,from=gateway-system,source=/,target=/gateway,ro \
 
 FROM scratch AS gateway-network-artifacts
 COPY --from=gateway-network-pack /out/ /
+
+# Lab-only trust overlay. Retain the exact diff; neither production stage above
+# uses this binary or certificate. Runtime activation/hardening stay unchanged.
+FROM gateway-compiler AS stream-compiler
+COPY script/oblivion/vm-stream-cert.pem /fixture/cert.pem
+RUN test "$(grep -cF '.https_only(true)' src/broker.rs)" = 1 \
+    && cp src/broker.rs /tmp/production-broker.rs \
+    && sed -i '/\.https_only(true)/a\            .add_root_certificate(reqwest::Certificate::from_pem(include_bytes!("/fixture/cert.pem")).expect("laboratory certificate"))' src/broker.rs \
+    && mkdir /stream-bundle \
+    && (diff -u /tmp/production-broker.rs src/broker.rs > /stream-bundle/trust.diff; test "$?" = 1) \
+    && cargo build --locked --offline --bin oblivion-api \
+    && cp /tmp/target/debug/oblivion-api /stream-bundle/oblivion-api \
+    && strip /stream-bundle/oblivion-api
+
+FROM gateway-network-lab AS stream-gateway
+COPY --from=stream-compiler /stream-bundle/oblivion-api /usr/bin/oblivion-api
+COPY --from=stream-compiler /stream-bundle/trust.diff /usr/lib/oblivion-stream-fixture/trust.diff
+COPY script/oblivion/vm-stream-cert.pem /usr/lib/oblivion-stream-fixture/cert.pem
+COPY script/oblivion/vm-stream-key.pem /usr/lib/oblivion-stream-fixture/key.pem
+COPY script/oblivion/vm-stream-provider.py /usr/lib/oblivion-stream-fixture/provider.py
+COPY script/oblivion/vm-stream-provider.service /etc/systemd/system/oblivion-stream-provider.service
+RUN sed -i 's/^SocksPort .*/SocksPort 0/' /etc/oblivion/torrc \
+    && mkdir -p /etc/systemd/system/oblivion-gateway.target.wants \
+    && ln -s /etc/systemd/system/oblivion-stream-provider.service /etc/systemd/system/oblivion-gateway.target.wants/
+
+FROM session-network-guest AS stream-session
+COPY artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/bin/opencode /usr/bin/oblivion
+COPY docs/oblivion/adapter-broker-evidence.json /usr/lib/oblivion/adapter-evidence.json
+RUN python3 -c 'import hashlib,json; from pathlib import Path; assert hashlib.sha256(Path("/usr/bin/oblivion").read_bytes()).hexdigest() == json.loads(Path("/usr/lib/oblivion/adapter-evidence.json").read_text())["cli_build"]["sha256"]'
+
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS stream-pack
+RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools && rm -rf /var/lib/apt/lists/*
+RUN --mount=type=bind,from=stream-gateway,source=/,target=/gateway,ro \
+    --mount=type=bind,from=stream-session,source=/,target=/session,ro \
+    mkdir -p /stream-out/gateway /stream-out/session \
+    && cp /gateway/boot/vmlinuz-* /stream-out/gateway/kernel \
+    && cp /gateway/boot/initrd.img-* /stream-out/gateway/initrd \
+    && cp /session/boot/vmlinuz-* /stream-out/session/kernel \
+    && cp /session/boot/initrd.img-* /stream-out/session/initrd \
+    && mksquashfs /gateway /stream-out/gateway/gateway.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
+    && mksquashfs /session /stream-out/session/session.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*' \
+    && chroot /gateway python3 -c 'import hashlib,json; from pathlib import Path; print(json.dumps({key:hashlib.sha256(Path(path).read_bytes()).hexdigest() for key,path in {"provider_sha256":"/usr/lib/oblivion-stream-fixture/provider.py","api_sha256":"/usr/bin/oblivion-api","certificate_sha256":"/usr/lib/oblivion-stream-fixture/cert.pem","trust_diff_sha256":"/usr/lib/oblivion-stream-fixture/trust.diff"}.items()}))' > /stream-out/gateway/stream.json \
+    && cp /gateway/usr/lib/oblivion-stream-fixture/trust.diff /stream-out/gateway/ \
+    && cp /session/usr/lib/oblivion/adapter-evidence.json /stream-out/session/ \
+    && sha256sum /session/usr/bin/oblivion > /stream-out/session/opencode.sha256 \
+    && cd /stream-out/gateway && sha256sum * > SHA256SUMS \
+    && cd /stream-out/session && sha256sum * > SHA256SUMS
+
+FROM scratch AS stream-artifacts
+COPY --from=stream-pack /stream-out/ /

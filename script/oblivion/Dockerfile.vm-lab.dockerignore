@@ -41,6 +41,8 @@ script/oblivion/*
 !script/oblivion/packet_capture.py
 !script/oblivion/vm-*.sh
 !script/oblivion/vm-*.py
+!script/oblivion/vm-stream-*.pem
+!script/oblivion/vm-stream-provider.service
 !script/oblivion/Dockerfile.vm-lab
 !script/oblivion/Dockerfile.vm-lab.dockerignore
 !artifacts/
@@ -52,8 +54,18 @@ artifacts/oblivion-build/cli-linux-arm64/*
 !artifacts/oblivion-build/cli-linux-arm64/bin/
 artifacts/oblivion-build/cli-linux-arm64/bin/*
 !artifacts/oblivion-build/cli-linux-arm64/bin/opencode
+!artifacts/oblivion-adapter-broker/
+artifacts/oblivion-adapter-broker/*
+!artifacts/oblivion-adapter-broker/cli-01/
+artifacts/oblivion-adapter-broker/cli-01/*
+!artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/
+artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/*
+!artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/bin/
+artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/bin/*
+!artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/bin/opencode
 !docs/
 docs/*
 !docs/oblivion/
 docs/oblivion/*
 !docs/oblivion/privacy-evidence.json
+!docs/oblivion/adapter-broker-evidence.json

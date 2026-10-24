@@ -3,9 +3,11 @@
 import http.client
 import json
 import os
+import select
 import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 assert os.getuid() == 1000
@@ -28,6 +30,8 @@ def request(bearer, body):
 
 
 print('OBLIVION_SESSION_READY', flush=True)
+stream_child = None
+stream_output = b''
 for command in sys.stdin:
     command = command.strip()
     if command == 'probe':
@@ -57,6 +61,33 @@ for command in sys.stdin:
         except OSError:
             pass
         print('OBLIVION_SESSION_REVOKED', flush=True)
+    elif command == 'stream':
+        assert stream_child is None
+        stream_child = subprocess.Popen(['/usr/lib/oblivion/guest/conversation.sh', 'run', '--format', 'json',
+            'OBLIVION_STREAM_REQUEST'], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stream_output = b''
+        deadline = time.monotonic() + 180
+        while time.monotonic() < deadline:
+            if not select.select([stream_child.stdout], [], [], 1)[0]:
+                continue
+            chunk = os.read(stream_child.stdout.fileno(), 65536)
+            assert chunk, 'adapter exited before stream start'
+            stream_output += chunk
+            assert len(stream_output) <= 1024 * 1024 and token.encode() not in stream_output
+            if any(json.loads(line).get('type') == 'step_start' for line in stream_output.split(b'\n')[:-1] if line):
+                break
+        else:
+            raise AssertionError('adapter stream deadline')
+        print('OBLIVION_STREAM_STARTED', flush=True)
+    elif command == 'stream-ended':
+        assert stream_child is not None
+        output, errors = stream_child.communicate(timeout=60)
+        stream_output += output
+        assert token.encode() not in stream_output + errors
+        events = [json.loads(line) for line in stream_output.splitlines() if line]
+        assert any(event.get('type') == 'error' for event in events)
+        stream_child = None
+        print('OBLIVION_STREAM_FAILED', flush=True)
     elif command == 'adapter':
         result = subprocess.run(['/usr/lib/oblivion/guest/conversation.sh', 'run', '--format', 'json',
             'Synthetic adapter connectivity check'], stdin=subprocess.DEVNULL, capture_output=True,

@@ -142,3 +142,8 @@ e verifica la revoca senza invocare prima `close`. Verifica anche l'uscita
 normale del processo tramite QMP `quit`, la chiusura del pidfd e il mantenimento
 dell'interblocco del volume. Sono prove offline con lo stesso broker reale;
 streaming del provider e shutdown hardware restano separati.
+
+La [prova degli stream attivi](STREAM-LIFECYCLE.md) estende questa suite con
+un provider SOCKS/TLS sintetico nella VM gateway e il vero client compilato.
+Verifica la fine della connessione prima della chiusura LUKS e dopo SIGKILL
+della VM della chat, insieme alla revoca del grant e al blocco del volume.

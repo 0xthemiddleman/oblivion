@@ -15,7 +15,7 @@ rilascio, non un blocco allo sviluppo sul Mac.
 | VM della sessione        | Controller systemd/QEMU, guest readonly e disco dedicato; ciclo A→B→A nel [laboratorio VM](VM-LAB.md); recupero dopo crash manager/controller e VM non responsiva             | KVM/hardware x86, OOM, shutdown completo e power loss                                 |
 | Console e manager        | [Prototipo Rust](MANAGER.md): password nascoste, IPC, console filtrata, TUI interattiva e stato di recupero persistente fra riavvii dei servizi                               | Paste esteso/resize, guasti I/O e console fisica                                      |
 | Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest          | Altri download/plugin, immagini aggiornate e rifinitura della TUI                     |
-| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | Provider reale, revoca stream nel ciclo VM, proxy e shutdown                          |
+| Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | Provider reale, proxy e shutdown                                                      |
 | Credenziale API          | [Gestione nella TUI fidata](CREDENTIALS.md), file root 0600 nel generale, aggiornamento atomico e blocchi readonly/recupero/sessione aperta                                   | Provider reale e configurazione Wi-Fi                                                 |
 | Documenti                | Flussi concordati                                                                                                                                                             | USB, copie A→B, OnionShare, quote e annullamento                                      |
 | Effimero                 | Solo sblocco RO del profilo implementato                                                                                                                                      | Guest RAM completo e zero scritture end-to-end                                        |
@@ -27,7 +27,7 @@ con la sua VM, far lavorare OpenCode su documenti e temporanei, chiudere tutto,
 aprire B senza i dati di A, riaprire A e riprendere la stessa conversazione senza
 i temporanei. Il provider rimane una fixture locale al guest. Mancano ancora
 integrazione dei servizi nell'immagine live, guasti I/O, power loss e shutdown,
-streaming del provider nel ciclo delle sessioni e collaudo del prodotto su KVM. Il laboratorio separato ha ora una prova Tor reale, senza richieste ad Abliteration. Il laboratorio usa una console a dimensioni fisse; la TUI è ancora un primo adattamento, con parti della terminologia e del comportamento degli agenti upstream da rifinire.
+provider remoto reale e collaudo del prodotto su KVM. Il laboratorio separato ha ora una prova Tor reale, senza richieste ad Abliteration. Il laboratorio usa una console a dimensioni fisse; la TUI è ancora un primo adattamento, con parti della terminologia e del comportamento degli agenti upstream da rifinire.
 
 Il controller LUKS ora avvia il gateway dal profilo salvato, con UID host
 1101 separato dalla chat, e ne verifica la fine prima del blocco. Le
@@ -55,5 +55,7 @@ L'[adapter compilato](ADAPTER-BROKER.md) completa ora streaming, strumento e
 ripresa attraverso il broker reale con SOCKS/TLS sintetici. La revoca durante
 lo stream chiude la connessione del provider e termina il client con errore;
 il profilo Oblivion disabilita i retry automatici di `ModelRetry`. Questa prova
-gira nella singola VM di laboratorio: la revoca di stream attivi attraverso
-controller e due VM, oltre al provider remoto reale, rimane un gate distinto.
+gira nella singola VM di laboratorio. La successiva [suite del ciclo VM](STREAM-LIFECYCLE.md)
+verifica ora la revoca di stream attivi attraverso controller LUKS, supervisore
+e due VM separate: chiusura prima del volume e arresto improvviso di QEMU.
+Il provider remoto reale e lo shutdown globale rimangono gate distinti.

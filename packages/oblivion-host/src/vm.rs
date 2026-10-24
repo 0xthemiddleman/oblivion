@@ -286,7 +286,9 @@ impl Config {
             "-device".to_owned(), "virtio-rng-pci,rng=rng".to_owned(),
             "-sandbox".to_owned(), "on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny".to_owned(),
             "-qmp".to_owned(), format!("unix:{}/qmp.sock,server=on,wait=off", role.runtime()),
-            "-serial".to_owned(), if matches!(role, Role::Session) { format!("unix:{}/console.sock,server=on,wait=off", role.runtime()) } else { "null".to_owned() },
+            // Gateway diagnostics are available only in the separate laboratory
+            // binary; the production gateway never exposes a serial console.
+            "-serial".to_owned(), if matches!(role, Role::Session) || cfg!(feature = "lab-emulation") { format!("unix:{}/console.sock,server=on,wait=off", role.runtime()) } else { "null".to_owned() },
             "-kernel".to_owned(), "/kernel".to_owned(), "-initrd".to_owned(), "/initrd".to_owned(),
             "-append".to_owned(), format!("root=/dev/vda ro rootfstype=squashfs console={console} quiet loglevel=0 systemd.show_status=false panic=-1{}", if network { " oblivion.network=1" } else { "" }),
             "-drive".to_owned(), "file=/root.squashfs,format=raw,if=none,id=root,readonly=on".to_owned(),

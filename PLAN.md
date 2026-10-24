@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.25 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.26 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -16,10 +16,12 @@ applicano scadenze complessive anche ai messaggi frammentati.
 L'[adapter compilato attraverso il broker](docs/oblivion/ADAPTER-BROKER.md)
 è verificato con streaming, strumento, ripresa e revoca sintetici; il profilo
 Oblivion disabilita i retry di `ModelRetry` dopo errori di rete o del provider.
+La [revoca di stream attivi](docs/oblivion/STREAM-LIFECYCLE.md) è ora verificata
+anche attraverso controller LUKS e due VM, con provider sintetico.
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md)
 raccoglie i risultati e i gate aperti.
 
-Restano da completare collaudo Abliteration reale e revoca nel ciclo VM, proxy dei tool,
+Restano da completare collaudo Abliteration reale e shutdown globale, proxy dei tool,
 trasferimenti USB e OnionShare, sessione effimera completa, rifinitura della TUI,
 gestione dei guasti e immagine live verificata. KVM e hardware x86 sono gate di
 rilascio, senza bloccare lo sviluppo sul Mac. **Non esiste ancora una live

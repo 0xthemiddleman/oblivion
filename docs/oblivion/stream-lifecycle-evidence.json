@@ -1,0 +1,129 @@
+{
+  "scope": "Active stream revocation through the real LUKS controller, host owner, session VM, gateway supervisor and broker; Mac ARM/HVF, nested TCG, synthetic SOCKS/TLS provider inside gateway VM.",
+  "production_kvm_tested": false,
+  "network": "Outer Debian VM has no NIC. Tor is offline; a lab-only SOCKS/TLS service runs on gateway loopback. No real provider request, API key, or packet capture in this run.",
+  "upstream_base": "68bc26b7 (OpenCode v2.1.4)",
+  "repository_parent": "8740cbf",
+  "boundaries": {
+    "storage": "Real general and per-session LUKS2 volumes, one open session, normal controller close interlocks.",
+    "controller_close": "An active stream exists before close. Revoke closes its exact TLS connection and CLI reports error while session QEMU and LUKS mapping still exist; force-leave closes them afterward.",
+    "qemu_exit": "SIGKILL during a second stream is followed by grant/pidfd removal and closure of its TLS connection. Another session remains forbidden until explicit storage closure.",
+    "trust_overlay": "Only the laboratory Docker stage inserts one additional root certificate into the broker build. Exact diff retained. Repository broker source and production build retain fixed origin and public CA trust.",
+    "diagnostics": "Gateway private serial is enabled only in host lab-emulation build; production gateway keeps serial null. Status contains progressive stream IDs, errors and binary/fixture hashes, never payloads or credentials.",
+    "synthetic_material": "Committed certificate/private key are public fixture materials, used only by stream-* image stages."
+  },
+  "host_bundle": {
+    "directory": "artifacts/oblivion-stream-lifecycle/bundle-01",
+    "manifest_sha256": "d0bed31aacb77a5bb27902fb4ddbdeb45a5086ea440a050c7af9733d6ab1c946",
+    "files": {
+      "oblivion-control": "83b83f09cf6b28c47321df285be7b43114db1a6c394a256c5f17fbf8cbd9163c",
+      "oblivion-controller.service": "ac6d1f90fad2f7f4501c599f5cb02bfa07e35e1f310291751b3af5203553c4fd",
+      "oblivion-gateway-host.service": "7e83f9066402ed97f3c3fc297da15e16a93aa214e68b3ecf73df07b67a38c015",
+      "oblivion-manager": "f7123fb7cd6a0f4471d5fb39a0edddbf03bfa8fc74c8d3e3e3d8e17c79028106",
+      "oblivion-manager.service": "0b706edf91b52297f95006f1177e14df2027e2732a2468d03c8150abdb4a7327",
+      "oblivion-recover.service": "8b47ae3397a446db91b7e7dcb1ed70d556dad2dde46bc59e1dc83ba11434cc4b",
+      "oblivion-storage": "21a5bd5440aa633cdd7c2c9fb427840f00821a35dcfa8c8c27cb4e5b9a919d48",
+      "oblivion-storage-lab": "50a3407e84c9156ce12d832577448aba93264e20a4897aa768e298de81aa7b27",
+      "sources.sha256": "9ceb0bd15cc723e2f6d70675bc539bb66d29edc316aeeb06eb20c899af7799eb"
+    }
+  },
+  "gateway_image": {
+    "directory": "artifacts/oblivion-stream-lifecycle/images-02/gateway",
+    "manifest_sha256": "11129e15d636ed13d103606e6ee8648dacb08a633e81a457d885fba534b0bfb8",
+    "files": {
+      "gateway.squashfs": "ed962aa35ab95b5504c0b74d773ae550945b0abe85df9b0e27da4f52c2d7394f",
+      "initrd": "5cd145a69f3b59b43e458881c1920c2851fe7769689381a27d03ffac23c3d82d",
+      "kernel": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e",
+      "stream.json": "baa885a5a9656d5e2204488b622104a9b3e2927159eb4ab69af990011f5717ee",
+      "trust.diff": "69fba2a6d04b313f0a83e8a01c250016d834ca30e3442d6ab38a8ffb255eebc4"
+    }
+  },
+  "session_image": {
+    "directory": "artifacts/oblivion-stream-lifecycle/images-02/session",
+    "manifest_sha256": "5c9bbe9519d41a85695c969f9f274cb5fc1fd5ec6f27bdd61acfc5587c54b064",
+    "files": {
+      "adapter-evidence.json": "0c6d017b97ee996755c6d2a51ea9cb56181199e74c5fdd783f45e9c241600339",
+      "initrd": "cb59c5d16ac846b0234f96c3e9163d1ab7c9d85ace6253c51c349781c8a1b794",
+      "kernel": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e",
+      "opencode.sha256": "f444ec9fcc03a333182d96c1b5e0b35e846544e352deeef1e2ab1df26c4dff07",
+      "session.squashfs": "1246356329046789fc5452f940b2e0154e11ee6a468b7ddc17a73a6cf9d578b5"
+    }
+  },
+  "runtime_provider": {
+    "provider_sha256": "faf1442b806a9d0fab8a961fefad7bb95b0974672d7259c375214aeafb6b0047",
+    "api_sha256": "ce55a8344e00b1a8bce5b7c2f20f4a1ae28d50dabe90631edf01d13cd1eceab8",
+    "certificate_sha256": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+    "trust_diff_sha256": "69fba2a6d04b313f0a83e8a01c250016d834ca30e3442d6ab38a8ffb255eebc4"
+  },
+  "trust_overlay_diff": "--- /tmp/production-broker.rs\t2026-10-24 09:01:41.131475012 +0000\n+++ src/broker.rs\t2026-10-24 09:01:41.134475012 +0000\n@@ -83,6 +83,7 @@\n             .proxy(proxy)\n             .dns_resolver(Arc::new(NoDns))\n             .https_only(true)\n+            .add_root_certificate(reqwest::Certificate::from_pem(include_bytes!(\"/fixture/cert.pem\")).expect(\"laboratory certificate\"))\n             .http1_only()\n             .redirect(reqwest::redirect::Policy::none())\n             .retry(reqwest::retry::never())\n",
+  "session_cli": {
+    "path": "artifacts/oblivion-adapter-broker/cli-01/cli-linux-arm64/bin/opencode",
+    "sha256": "4b701ecfa2fd2eaec592b1ef2aa4b68448dbb4c6ec2676628f8e10d613351398",
+    "build_evidence": "docs/oblivion/adapter-broker-evidence.json",
+    "note": "The raw runner summary opencode_sha256 describes the old base host image. This is the CLI actually installed in the new manifest-verified session image."
+  },
+  "run": {
+    "directory": "artifacts/oblivion-stream-lifecycle/run-01",
+    "summary_sha256": "b5c39c71c5abf365fe1f634fd67db605c067c80873a5c0dd6fb21ad8ae104241",
+    "serial_sha256": "ca11296b1dcb1efdfc3c3b62eafb23750c749f16b2fa00b90e730f304d7db263",
+    "guest_pass": true,
+    "seconds": 246.21,
+    "qemu_exit": 0,
+    "plaintext_markers_on_disk": [],
+    "disk_sha256": "594532b53e9f006c31660cd2d3ae9ab4e6cca079ce240c5ae51f56f2a77d107d",
+    "fixture_verified": true,
+    "synthetic_streams": true,
+    "checks": [
+      "PASS: general unlock without an API key leaves gateway services and VM stopped",
+      "PASS: A receives a RAM token privately; real broker authenticates it, rejects bad tokens and cannot reach provider while Tor is disabled",
+      "PASS: compiled OpenCode uses the production launcher and local token; the broker accepts its payload and returns the disabled-provider error",
+      "PASS: compiled adapter receives SSE through the real session VM, private grant, supervisor and gateway broker",
+      "PASS: controller revocation closes the provider TLS stream and the adapter reports failure while QEMU and its LUKS mapping are still open",
+      "PASS: revocation precedes vault closure and removes broker access even while the old guest remains running",
+      "PASS: session QEMU death revokes its active upstream stream through the pidfd observer before explicit volume closure",
+      "PASS: B rejects A's token; SIGKILL of its QEMU automatically revokes the broker and closes the matching pidfd while the volume remains interlocked until explicit close",
+      "PASS: reopened A gets a third token; owner death destroys its gateway access and explicit closure removes both LUKS mappings",
+      "PASS: a frozen host owner cannot acknowledge revoke; closure instead destroys the gateway before releasing the session volume",
+      "PASS: normal QEMU exit also revokes automatically; repeated opens bind fresh process handles and global lock closes both volumes",
+      "PASS: fragmented private requests expire despite continued progress; the owner destroys its gateway VM and leaves storage state explicit",
+      "PASS: runtime regular files contain none of the synthetic provider keys or session tokens after closure"
+    ]
+  },
+  "validation": {
+    "native_host": "cargo test --all-targets: 5 absolute-channel tests + 4 console tests passed on macOS; cargo clippy --all-targets --features lab-emulation -- -D warnings passed.",
+    "linux_build": "host-artifacts and stream-artifacts exported for Linux ARM64; all artifact manifests and current host source manifest verified.",
+    "python": "ast.parse passed for the four changed Python fixtures/runners.",
+    "repository": "bun run check in pinned oblivion-tui-tests:v2.1.4 container: 34/34 typecheck tasks, 34 cached; lint 1225 existing warnings, zero errors.",
+    "logs": {
+      "artifacts/oblivion-stream-lifecycle/host-tests.log": "df7bbf7f8895784e2757206b4ec4ed3c4e51c8924077a906e2d69ed4988b851d",
+      "artifacts/oblivion-stream-lifecycle/host-clippy.log": "4c2c5926a130221eb6e559bcddb5fbdceb4e87e60603baa131269767be33cacb",
+      "artifacts/oblivion-stream-lifecycle/root-check.log": "5659979ac3f2e0f0956c272d0d4e2fd805b84dfcc701d2bd24659cd5e0357f72",
+      "artifacts/oblivion-stream-lifecycle/build-bundle-01.log": "f9a04b52f2ed7a7611f29bc702288acab32aaa68c38b71bd7259439ece584353",
+      "artifacts/oblivion-stream-lifecycle/build-images-02.log": "7f7bf510f91531f6f86a5dd9d49bf3797801eb332d1e7640c30b4829950c1432"
+    }
+  },
+  "source_hashes": {
+    "packages/oblivion-host/src/vm.rs": "d1979bcac8b8c7e685c42d301c082363f0383b6177b08e9db975ccae6be94269",
+    "script/oblivion/Dockerfile.vm-lab": "3c7625e4459539a3c87d1bdd6697ad4fa598694f2330773477405a0b2b32a951",
+    "script/oblivion/Dockerfile.vm-lab.dockerignore": "c8e5030ddd31234f7c57fe55b6aac79fd36f9317f7a45e555566041f5e439df6",
+    "script/oblivion/run-vm-lab.py": "28d4629296c0d3e807fb495952d36959869c4248577016bbeb6c45bc9b121187",
+    "script/oblivion/vm-session-network-test.py": "aad9c6d28965a0773d0d2485c463c84a8c0d732a9e740baa71312300af2e98d9",
+    "script/oblivion/vm-session-network-guest.py": "ae7eb9ef8b779a663766d96b48ab010d072f02335600f4efd4f40c570031cd92",
+    "script/oblivion/vm-stream-provider.py": "faf1442b806a9d0fab8a961fefad7bb95b0974672d7259c375214aeafb6b0047",
+    "script/oblivion/vm-stream-provider.service": "79b12f91537b954961ce5da9f982caa76ad49b5f548f2a184292c44838eb1b41",
+    "script/oblivion/vm-stream-cert.pem": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+    "script/oblivion/vm-stream-key.pem": "3394aa44f08626578bb7a4366b32edd77823f99611072153ac5c85e8df2fdaeb"
+  },
+  "artifact_retention": {
+    "log": "artifacts/oblivion-stream-lifecycle/retention.json",
+    "sha256": "0fdfdb0dbd9d1191bb1eec73ab621a41c7a22cdbe7cbd08c5451141dda052a6d",
+    "note": "First image export was incomplete when host ENOSPC stopped Docker. Its failed build log and manifests remain; invalid squashfs exports and verified superseded synthetic artifacts were removed. images-02 export and all manifests verified."
+  },
+  "remaining": [
+    "Real Abliteration through Tor, titles/compaction/attachments as dedicated cases.",
+    "Global shutdown during an active stream and storage I/O failures.",
+    "Oversized responses, slow clients and complete end-to-end error matrix.",
+    "Tool proxy, explicit transfers, full ephemeral guest and live-image integration.",
+    "KVM and physical hardware validation; nested TCG is not production isolation."
+  ]
+}

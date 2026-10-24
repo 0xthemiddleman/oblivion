@@ -51,7 +51,8 @@ Le prove iniziali del componente costruiscono richieste di quel formato. La
 attraverso il broker, verificando autenticazione e ammissione del payload con
 Tor disabilitato. La nuova [prova dell'adapter compilato](ADAPTER-BROKER.md)
 verifica anche risposte SSE, chiamata allo strumento, ripresa e revoca con SOCKS/TLS
-sintetici. Reasoning strutturato, cache control e altre estensioni non incluse
+sintetici. La [revoca di stream attivi](STREAM-LIFECYCLE.md) è ora provata
+anche nel ciclo del controller e delle due VM. Reasoning strutturato, cache control e altre estensioni non incluse
 vengono rifiutati: provider reale, titoli e compaction come casi dedicati restano
 da verificare.
 
@@ -144,13 +145,13 @@ di `/proc/PID/limits`; la fixture ora interpreta i campi anziché gli spazi fina
 
 1. Verificare indirizzi interni e rebinding via Tor nel percorso completo;
    [persistenza e bootstrap](TOR-STATE.md) sono integrati nel ciclo del generale.
-2. Estendere il collaudo della revoca nel controller reale a stream attivi,
-   shutdown globale e guasti I/O; la fine del processo della VM ora revoca
+2. Estendere il collaudo della revoca nel controller reale a shutdown globale
+   e guasti I/O; gli [stream attivi](STREAM-LIFECYCLE.md) sono ora coperti e la fine del processo della VM revoca
    automaticamente tramite il [riferimento al processo](SESSION-NETWORK.md).
 3. Proxy dei tool con allow/deny/ask, quote e revoca dei tunnel; nessun traffico
    o DNS prima dell'autorizzazione.
-4. Estendere la [prova dell'adapter compilato](ADAPTER-BROKER.md) al ciclo delle VM,
-   catture PCAP/tracing e guasti end-to-end, inclusi risposta
+4. Estendere le prove dell'[adapter](ADAPTER-BROKER.md) e del [ciclo VM](STREAM-LIFECYCLE.md)
+   a catture PCAP/tracing e guasti end-to-end, inclusi risposta
    eccessiva, TLS con hostname errato, client lento, cancellazione e cambio A→B.
 5. Abliteration via Tor con una credenziale autorizzata e dati sintetici, poi
    collaudo della live e dell'isolamento su hardware di destinazione.
