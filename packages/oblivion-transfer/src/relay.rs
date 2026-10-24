@@ -1,0 +1,117 @@
+use crate::channel::Channel;
+use crate::endpoint::{Approval, OfferRequest, ReceiveRequest, read_message, write_message};
+use crate::{END, Entry, Manifest, Receipt, copy_hash, require, validate_id};
+use std::fs::File;
+use std::io::{self, Read, Write};
+use std::os::fd::OwnedFd;
+use std::time::{Duration, Instant};
+
+/// One operation through already authorized private ports. The controller owns
+/// VM selection and the user decision; this relay cannot issue an authorization.
+/// Cancelling control or observing either VM's death closes both data channels.
+pub fn run(
+    source: File,
+    destination: File,
+    control: File,
+    owners: Vec<OwnedFd>,
+    budget: Duration,
+) -> io::Result<()> {
+    let deadline = Instant::now()
+        .checked_add(budget)
+        .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidInput))?;
+    require(owners.len() == 2, "missing_vm_owners")?;
+    let mut source = Channel::until(source, deadline)?;
+    let mut destination = Channel::until(destination, deadline)?;
+    source.watch(control.try_clone()?.into());
+    destination.watch(control.try_clone()?.into());
+    let mut control = Channel::until(control, deadline)?;
+    for owner in owners {
+        source.watch(owner.try_clone()?);
+        destination.watch(owner.try_clone()?);
+        control.watch(owner);
+    }
+    let result = exchange(&mut source, &mut destination, &mut control);
+    // Release both VM ports before returning a receipt or closing the control
+    // connection. The controller must still reap this worker before teardown.
+    drop(source);
+    drop(destination);
+    write_message(&mut control, &result?)
+}
+
+fn exchange(
+    source: &mut Channel,
+    destination: &mut Channel,
+    control: &mut Channel,
+) -> io::Result<Receipt> {
+    let request: OfferRequest = read_message(control, 64 * 1024)?;
+    validate_id(&request.id)?;
+    write_message(source, &request)?;
+    let manifest = Manifest::read(source, request.limits)?;
+    manifest.write(control)?;
+    let approval: Approval = read_message(control, 1024)?;
+    require(
+        approval.id == request.id && approval.manifest_sha256 == manifest.sha256(),
+        "offer_not_approved",
+    )?;
+    let grant = ReceiveRequest {
+        approval,
+        limits: request.limits,
+    };
+    write_message(destination, &grant)?;
+    manifest.write(destination)?;
+    let mut ready = [0; 8];
+    destination.read_exact(&mut ready)?;
+    require(&ready == b"receive\n", "receiver_not_ready")?;
+    write_message(source, &grant.approval)?;
+    for entry in manifest.entries() {
+        if let Entry::File { size, sha256, .. } = entry {
+            require(
+                copy_hash(source, destination, *size)? == *sha256,
+                "content_changed",
+            )?;
+        }
+    }
+    let mut end = [0; 8];
+    source.read_exact(&mut end)?;
+    require(&end == END, "invalid_transfer_end")?;
+    // The receiver cannot publish until every offered file has also passed
+    // validation at the relay. There is no payload buffering on the host disk.
+    destination.write_all(END)?;
+    let receipt: Receipt = read_message(destination, 1024)?;
+    require(
+        receipt.id == request.id
+            && receipt.manifest_sha256 == grant.approval.manifest_sha256
+            && receipt.entries == manifest.entries().len()
+            && receipt.bytes == manifest.bytes(),
+        "invalid_receipt",
+    )?;
+    write_message(source, &receipt)?;
+    let mut done = [0; 7];
+    source.read_exact(&mut done)?;
+    require(&done == b"copied\n", "sender_not_complete")?;
+    Ok(receipt)
+}
+
+/// Linux 6.5+ pins the process that established this private Unix connection.
+/// No numeric PID lookup, PID reuse window or socket-path reopening is involved.
+#[cfg(target_os = "linux")]
+pub fn peer_process(socket: &File) -> io::Result<OwnedFd> {
+    use std::os::fd::{AsRawFd, FromRawFd};
+    let mut fd = -1;
+    let mut size = size_of::<libc::c_int>() as libc::socklen_t;
+    // SO_PEERPIDFD is 77 on the supported x86_64/aarch64 Linux ABI. The pinned
+    // libc does not expose it yet; the host gateway uses this same boundary.
+    if unsafe {
+        libc::getsockopt(
+            socket.as_raw_fd(),
+            libc::SOL_SOCKET,
+            77,
+            (&mut fd as *mut libc::c_int).cast(),
+            &mut size,
+        )
+    } != 0
+    {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(unsafe { OwnedFd::from_raw_fd(fd) })
+}

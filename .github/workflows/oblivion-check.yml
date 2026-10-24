@@ -59,7 +59,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-system-arm qemu-system-x86
-      - name: Copy through private VM ports into LUKS and cancel a partial copy
+      - name: Copy through private VM ports and revoke on cancellation or VM death
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: >-

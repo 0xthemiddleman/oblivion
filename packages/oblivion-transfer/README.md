@@ -10,9 +10,17 @@ transport deadline, approval bound to the offered manifest and a verified
 receipt. Separate send/receive processes have been exercised through VM
 virtio-serial ports with a readonly source and LUKS destination.
 
+The Linux `oblivion-copy-relay` forwards one approved offer through inherited
+source/destination ports (FD3/4) and a trusted control connection (FD5). It pins
+both peer processes with `SO_PEERPIDFD`, uses one absolute deadline, and stops
+on owner death or controller cancellation. It verifies content and receipts;
+only metadata reaches the controller. It has no listener or retry loop.
+
 This is not the completed USB integration. The controller still owns
 authorization, isolated source/destination environments, storage placement,
-revocation, filesystem-stall recovery and release to the chat.
+close/lock integration, filesystem-stall recovery and release to the chat.
+The relay binary requires Linux; Mac tests exercise its library with explicit
+lifetime channels, while Linux tests and the VM laboratory exercise real pidfds.
 
 See [the protocol and integration boundary](../../docs/oblivion/FILE-COPY.md).
 

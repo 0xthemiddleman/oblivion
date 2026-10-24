@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Copy synthetic documents between two networkless VMs through private ports."""
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -121,6 +122,46 @@ class VM:
         self.log.close()
 
 
+class Relay:
+    """Run the Linux product relay with private QEMU ports and a control socket."""
+    def __init__(self, args, sender, receiver, case):
+        self.peer, controller = socket.socketpair()
+        self.peer.settimeout(30)
+        self.log = (args.output / ("relay-" + case + ".log")).open("xb")
+        fds = [fcntl.fcntl(peer.fileno(), fcntl.F_DUPFD_CLOEXEC, 10) for peer in (sender.peer, receiver.peer, controller)]
+        # The shell only duplicates numeric descriptors; it never sees selected
+        # filenames, approval or content. Close the originals before exec so
+        # relay exit really disconnects both ports. No preexec_fn/FD-order race.
+        script = f'exec 3<&{fds[0]} 4<&{fds[1]} 5<&{fds[2]}; exec {fds[0]}<&- {fds[1]}<&- {fds[2]}<&-; exec "$@"'
+        try:
+            self.process = subprocess.Popen(["/bin/bash", "-c", script, "oblivion-relay", str(args.bundle / "oblivion-copy-relay"), "30000"],
+                pass_fds=fds, env={}, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=self.log)
+        finally:
+            for fd in fds:
+                os.close(fd)
+            controller.close()
+        sender.peer.close()
+        sender.peer = None
+        receiver.peer.close()
+        receiver.peer = None
+
+    def finish(self, success):
+        assert self.process.wait(timeout=10) == (0 if success else 1)
+        self.log.flush()
+        assert Path(self.log.name).read_bytes() == (b"" if success else b"transfer_failed\n")
+
+    def close(self):
+        self.peer.close()
+        if self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+        self.log.close()
+
+
 def run(args, checks):
     original = digest(args.image / "source.raw")
     with ExitStack() as resources:
@@ -131,31 +172,40 @@ def run(args, checks):
         resources.callback(receiver.close)
         sender.peer.sendall(b"G")
         receiver.peer.sendall(b"G")
+        relay = Relay(args, sender, receiver, "success") if platform.system() == "Linux" else None
+        if relay:
+            resources.callback(relay.close)
+        offer = relay.peer if relay else sender.peer
         limits = {"entries": 64, "bytes": 1024 * 1024}
-        write_message(sender.peer, {"id": ID, "limits": limits, "paths": ["documents"]})
-        assert read_exact(sender.peer, 8) == b"OBLVCP01"
-        length = struct.unpack(">I", read_exact(sender.peer, 4))[0]
+        write_message(offer, {"id": ID, "limits": limits, "paths": ["documents"]})
+        assert read_exact(offer, 8) == b"OBLVCP01"
+        length = struct.unpack(">I", read_exact(offer, 4))[0]
         assert 0 < length <= 1024 * 1024
-        encoded = read_exact(sender.peer, length)
+        encoded = read_exact(offer, length)
         manifest = json.loads(encoded)
         files = {item["path"]: item for item in manifest if item["kind"] == "file"}
         assert set(files) == set(FILES)
         for name, data in FILES.items():
             assert files[name]["size"] == len(data) and files[name]["sha256"] == hashlib.sha256(data).hexdigest()
         approval = {"id": ID, "manifest_sha256": hashlib.sha256(encoded).hexdigest()}
-        write_message(receiver.peer, {"approval": approval, "limits": limits})
-        receiver.peer.sendall(b"OBLVCP01" + struct.pack(">I", len(encoded)) + encoded)
-        assert read_exact(receiver.peer, 8) == b"receive\n"
-        write_message(sender.peer, approval)
-        remaining = sum(map(len, FILES.values())) + 8
-        while remaining:
-            data = read_exact(sender.peer, min(65536, remaining))
-            receiver.peer.sendall(data)
-            remaining -= len(data)
-        receipt = read_message(receiver.peer)
+        if relay:
+            write_message(relay.peer, approval)
+            receipt = read_message(relay.peer)
+            relay.finish(True)
+        else:
+            write_message(receiver.peer, {"approval": approval, "limits": limits})
+            receiver.peer.sendall(b"OBLVCP01" + struct.pack(">I", len(encoded)) + encoded)
+            assert read_exact(receiver.peer, 8) == b"receive\n"
+            write_message(sender.peer, approval)
+            remaining = sum(map(len, FILES.values())) + 8
+            while remaining:
+                data = read_exact(sender.peer, min(65536, remaining))
+                receiver.peer.sendall(data)
+                remaining -= len(data)
+            receipt = read_message(receiver.peer)
+            write_message(sender.peer, receipt)
+            assert read_exact(sender.peer, 7) == b"copied\n"
         assert receipt == {"id": ID, "manifest_sha256": approval["manifest_sha256"], "entries": len(manifest), "bytes": sum(map(len, FILES.values()))}
-        write_message(sender.peer, receipt)
-        assert read_exact(sender.peer, 7) == b"copied\n"
         sender.finish()
         receiver.finish()
         checks.append("Real compiled endpoints copy only selected files through separate virtio-serial ports and a bounded host relay; the receiver verifies bytes and the sender verifies its receipt.")
@@ -176,6 +226,34 @@ def run(args, checks):
         cancelled.finish()
         checks.append("Disconnecting a real virtio-serial transfer leaves no partial transaction; the receiver closes its encrypted volume and powers down.")
 
+        if relay:
+            for case in ("control-cancel", "owner-death"):
+                sender = VM(args, sockets, "send", case)
+                resources.callback(sender.close)
+                receiver = VM(args, sockets, "receive", case)
+                resources.callback(receiver.close)
+                sender.peer.sendall(b"G")
+                receiver.peer.sendall(b"G")
+                worker = Relay(args, sender, receiver, case)
+                resources.callback(worker.close)
+                write_message(worker.peer, {"id": ID, "limits": limits, "paths": ["documents"]})
+                assert read_exact(worker.peer, 8) == b"OBLVCP01"
+                size = struct.unpack(">I", read_exact(worker.peer, 4))[0]
+                assert size == len(encoded) and read_exact(worker.peer, size) == encoded
+                if case == "control-cancel":
+                    worker.peer.shutdown(socket.SHUT_WR)
+                if case == "owner-death":
+                    receiver.process.kill()
+                    receiver.process.wait(timeout=5)
+                assert worker.peer.recv(1) == b""
+                worker.finish(False)
+                sender.finish()
+                if case == "control-cancel":
+                    receiver.finish()
+            checks.append("The compiled Linux relay transfers only metadata on its control channel and verifies hashes and receipts before reporting success.")
+            checks.append("Closing the control connection before approval disconnects both real VM ports; neither endpoint reports a completed copy.")
+            checks.append("SIGKILL of the destination QEMU revokes the relay through its socket-bound pidfd while the source VM remains live; the source endpoint fails and shuts down normally.")
+
     for path in args.output.glob("*.luks"):
         with path.open("rb") as file:
             assert file.read(6) == b"LUKS\xba\xbe"
@@ -184,7 +262,7 @@ def run(args, checks):
             while chunk := file.read(8 * 1024 * 1024):
                 assert CANARY not in tail + chunk, path.name
                 tail = chunk[-len(CANARY):]
-    checks.append("The synthetic document canary is absent from both closed recipient disk images; the source copy intentionally remains on its original plaintext fixture disk.")
+    checks.append("The synthetic document canary is absent from every recipient disk image after its VM exits; the source fixture intentionally retains its plaintext original.")
 
 
 def main():
@@ -214,6 +292,7 @@ def main():
     summary = {"passed": False, "architecture": args.architecture, "accelerator": args.accelerator,
                "scope": "Synthetic virtual disks and separate VM endpoints; no physical USB, trusted manager, production controller grant or chat delivery tested.",
                "endpoint_sha256": endpoint, "bundle_manifest": bundle, "image_manifest": manifest,
+               "relay": {"kind": "compiled-linux", "sha256": digest(args.bundle / "oblivion-copy-relay")} if platform.system() == "Linux" else {"kind": "python-laboratory"},
                "source_manifest": (args.bundle / "sources.sha256").read_text(),
                "runner_sha256": digest(Path(__file__)), "checks": checks}
     try:

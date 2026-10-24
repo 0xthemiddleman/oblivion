@@ -14,7 +14,7 @@ def run():
     parameters = dict(part.split("=", 1) for part in Path("/proc/cmdline").read_text().split() if "=" in part)
     role = parameters["oblivion.copy"]
     case = parameters.get("oblivion.case", "success")
-    assert role in ("send", "receive") and case in ("success", "cancel")
+    assert role in ("send", "receive") and case in ("success", "cancel", "control-cancel", "owner-death")
     assert len(Path("/proc/swaps").read_text().splitlines()) == 1
     assert sorted(p.name for p in Path("/sys/class/net").iterdir()) == ["lo"]
     mounts = Path("/proc/mounts").read_text()

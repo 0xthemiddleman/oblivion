@@ -71,6 +71,14 @@ artifacts/oblivion-transfer-endpoints/linux-arm64/*
 !artifacts/oblivion-transfer-endpoints/linux-amd64/
 artifacts/oblivion-transfer-endpoints/linux-amd64/*
 !artifacts/oblivion-transfer-endpoints/linux-amd64/oblivion-copy
+!artifacts/oblivion-transfer-relay/
+artifacts/oblivion-transfer-relay/*
+!artifacts/oblivion-transfer-relay/linux-arm64/
+artifacts/oblivion-transfer-relay/linux-arm64/*
+!artifacts/oblivion-transfer-relay/linux-arm64/oblivion-copy
+!artifacts/oblivion-transfer-relay/linux-amd64/
+artifacts/oblivion-transfer-relay/linux-amd64/*
+!artifacts/oblivion-transfer-relay/linux-amd64/oblivion-copy
 !artifacts/oblivion-build/cli-linux-arm64/
 artifacts/oblivion-build/cli-linux-arm64/*
 !artifacts/oblivion-build/cli-linux-arm64/bin/

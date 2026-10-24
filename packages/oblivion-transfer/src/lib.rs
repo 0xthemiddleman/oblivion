@@ -1,6 +1,7 @@
 pub mod channel;
 mod directory;
 pub mod endpoint;
+pub mod relay;
 
 use directory::Directory;
 use serde::{Deserialize, Serialize};

@@ -121,3 +121,47 @@ fn inherited_pipes_work_and_regular_storage_files_are_not_channels() {
     assert_eq!(bytes, b"pipe");
     assert!(Channel::new(File::open("Cargo.toml").unwrap(), Duration::from_secs(5)).is_err());
 }
+
+#[test]
+fn revocation_wins_over_buffered_data_and_ready_writes() {
+    for close in [false, true] {
+        let (stream, mut peer) = UnixStream::pair().unwrap();
+        let (watch, mut owner) = UnixStream::pair().unwrap();
+        let mut stream = channel(stream, Duration::from_secs(5));
+        stream.watch(watch.into());
+        peer.write_all(b"data").unwrap();
+        if !close {
+            owner.write_all(b"cancel").unwrap();
+        }
+        drop(owner);
+        assert_eq!(
+            stream.read(&mut [0; 1]).unwrap_err().kind(),
+            ErrorKind::ConnectionAborted
+        );
+        assert_eq!(
+            stream.write(b"data").unwrap_err().kind(),
+            ErrorKind::ConnectionAborted
+        );
+        assert_eq!(
+            stream.flush().unwrap_err().kind(),
+            ErrorKind::ConnectionAborted
+        );
+    }
+}
+
+#[test]
+fn owner_closure_interrupts_a_blocked_writer() {
+    let (stream, mut peer) = UnixStream::pair().unwrap();
+    let (watch, owner) = UnixStream::pair().unwrap();
+    let mut stream = channel(stream, Duration::from_secs(5));
+    stream.watch(watch.into());
+    let worker = std::thread::spawn(move || stream.write_all(&vec![0; 4 * 1024 * 1024]));
+    // Observing actual data establishes that the operation started. No timing
+    // sleep or speed assertion is needed to trigger the cancellation.
+    peer.read_exact(&mut [0; 1]).unwrap();
+    drop(owner);
+    assert_eq!(
+        worker.join().unwrap().unwrap_err().kind(),
+        ErrorKind::ConnectionAborted
+    );
+}

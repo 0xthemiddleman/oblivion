@@ -13,6 +13,10 @@ path = "src/lib.rs"
 name = "oblivion-copy"
 path = "src/main.rs"
 
+[[bin]]
+name = "oblivion-copy-relay"
+path = "src/relay-main.rs"
+
 [dependencies]
 libc = "0.2"
 serde = { version = "1", features = ["derive"] }
