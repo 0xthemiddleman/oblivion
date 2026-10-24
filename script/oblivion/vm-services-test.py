@@ -686,6 +686,25 @@ with socket.socket(socket.AF_UNIX) as client:
     assert command("enter-ephemeral", success=False) == "image_exists_or_unavailable"
     assert file_digest(archive) == before
     ephemeral.unlink()
+    # Lower only the disposable VM's tmpfs quota, without exhausting physical
+    # memory or relying on OOM timing. Allocation must never fall back to disk.
+    runtime_space = os.statvfs("/run")
+    runtime_limit = runtime_space.f_blocks * runtime_space.f_frsize
+    runtime_used = (runtime_space.f_blocks - runtime_space.f_bfree) * runtime_space.f_frsize
+    subprocess.run(["mount", "-o", f"remount,size={runtime_used + 32 * 1024 * 1024}", "/run"], check=True)
+    try:
+        assert command("enter-ephemeral", success=False) == "insufficient_space"
+        assert ephemeral.exists() and not status()["session_open"]
+        assert not Path("/dev/mapper/oblivion-session").exists()
+        assert property("oblivion-session.service", "ActiveState") in ["inactive", "failed"]
+        assert command("enter-ephemeral", success=False) == "image_exists_or_unavailable"
+    finally:
+        subprocess.run(["mount", "-o", f"remount,size={runtime_limit}", "/run"], check=True)
+    send(b"b", "Archivio generale bloccato")
+    assert not ephemeral.exists() and file_digest("/data/general.luks") == encrypted_before
+    send(b"e", "avvio effimero, sola lettura")
+    send(GENERAL + b"\r", "Nuova sessione effimera")
+    check("exhausted RAM filesystem quota refuses ephemeral allocation without a disk fallback or VM; lock removes the partial RAM file and leaves the general image unchanged")
     send(b"n", "Conversazioni e documenti")
     wait_screen("/exit blocca")
     assert status()["session_open"] and status()["general_readonly"]
