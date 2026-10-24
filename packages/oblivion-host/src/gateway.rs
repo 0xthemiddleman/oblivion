@@ -1,6 +1,7 @@
 use crate::storage::{Error, Result, lock_named, require};
 use crate::vm::{self, Role};
 use oblivion_host::channel::Channel;
+use oblivion_transport::Transport;
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -59,7 +60,7 @@ pub fn stop() -> Result<()> {
         Ok(())
     };
     destroy()?;
-    checkpoint.map_err(|_| Error("tor_state_not_saved"))
+    checkpoint.map_err(|_| Error("gateway_shutdown_unconfirmed"))
 }
 
 fn destroy() -> Result<()> {
@@ -137,17 +138,27 @@ fn request(request: &Request<'_>, active: bool) -> Result<()> {
     configured(&mut channel, active)
 }
 
-pub fn serve(config: &vm::Config, key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
+pub fn serve(
+    config: &vm::Config,
+    key: Zeroizing<Vec<u8>>,
+    transport: Transport,
+    network: bool,
+) -> Result<()> {
+    require(
+        network || matches!(transport, Transport::Tor {}),
+        "external_proxy_requires_network",
+    )?;
     let _lock = lock_named("gateway.lock")?;
     config.validate()?;
     config.start_role(Role::Gateway)?;
-    let result = connected(key, network);
+    let result = connected(key, transport, network);
     let stopped = vm::stop_role(Role::Gateway, true);
     result?;
     stopped
 }
 
-fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
+fn connected(key: Zeroizing<Vec<u8>>, transport: Transport, network: bool) -> Result<()> {
+    let tor = matches!(transport, Transport::Tor {});
     let stream = UnixStream::connect(format!("{}/control.sock", Role::Gateway.runtime()))
         .map_err(|_| Error("gateway_channel_unavailable"))?;
     peer(&stream, vm::GATEWAY_UID)?;
@@ -160,10 +171,12 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
     struct Configure<'a> {
         operation: &'static str,
         api_key: &'a str,
+        transport: &'a Transport,
     }
     let request = Zeroizing::new(
         serde_json::to_vec(&Configure {
             operation: "configure",
+            transport: &transport,
             api_key: std::str::from_utf8(&key).map_err(|_| Error("invalid_api_key"))?,
         })
         .map_err(|_| Error("gateway_encode_failed"))?,
@@ -172,23 +185,33 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
     send(&mut channel, &request)?;
     drop(request);
     drop(key);
+    drop(transport);
     configured(&mut channel, false)?;
-    let mut saved = crate::storage::tor_state()?;
-    let writable = crate::storage::tor_state_writable()?;
-    #[derive(Serialize)]
-    struct Initialize<'a> {
-        operation: &'static str,
-        state: Option<&'a str>,
-    }
-    let initial = serde_json::to_vec(&Initialize {
-        operation: "tor-initialize",
-        state: saved.as_ref().map(oblivion_tor_state::State::as_str),
-    })
-    .map_err(|_| Error("gateway_encode_failed"))?;
-    exchange(&stream, &initial, false)?;
-    let bootstrapped = checkpoint(&stream, &mut saved, writable, false)?;
+    // SOCKS does not read, import, checkpoint or mutate Tor's saved guards.
+    let mut saved = if tor {
+        crate::storage::tor_state()?
+    } else {
+        None
+    };
+    let writable = tor && crate::storage::tor_state_writable()?;
+    let bootstrapped = if tor {
+        #[derive(Serialize)]
+        struct Initialize<'a> {
+            operation: &'static str,
+            state: Option<&'a str>,
+        }
+        let initial = serde_json::to_vec(&Initialize {
+            operation: "tor-initialize",
+            state: saved.as_ref().map(oblivion_tor_state::State::as_str),
+        })
+        .map_err(|_| Error("gateway_encode_failed"))?;
+        exchange(&stream, &initial, false)?;
+        checkpoint(&stream, &mut saved, writable, false)?
+    } else {
+        true
+    };
     let mut network_ready = !network || bootstrapped;
-    if network {
+    if network && tor {
         exchange(&stream, b"{\"operation\":\"tor-enable\"}", false)?;
     }
     if let Ok(meta) = fs::symlink_metadata(SOCKET) {
@@ -226,7 +249,11 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
                     continue;
                 }
                 if matches!(request, Request::Stop {}) {
-                    checkpoint(&stream, &mut saved, writable, true)?;
+                    if tor {
+                        checkpoint(&stream, &mut saved, writable, true)?;
+                    } else {
+                        exchange(&stream, b"{\"operation\":\"shutdown\"}", false)?;
+                    }
                     send(
                         &mut Channel::new(&client, Duration::from_secs(5)),
                         b"{\"ok\":true,\"configured\":true,\"active\":false}",
@@ -277,7 +304,7 @@ fn connected(key: Zeroizing<Vec<u8>>, network: bool) -> Result<()> {
         }
         std::thread::sleep(Duration::from_millis(250));
         exchange(&stream, b"{\"operation\":\"status\"}", active)?;
-        if checked.elapsed() >= Duration::from_secs(5) {
+        if tor && checked.elapsed() >= Duration::from_secs(5) {
             let bootstrapped = checkpoint(&stream, &mut saved, writable, false)?;
             network_ready = !network || bootstrapped;
             checked = Instant::now();

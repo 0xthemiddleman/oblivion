@@ -3,8 +3,10 @@
 `oblivion-egress` è il nuovo componente di trasporto, compilato e verificato
 separatamente. Il collegamento a supervisore e firewall è ora scritto, ma
 **attende compilazione e collaudo Linux**. Le immagini già verificate usano
-ancora il percorso precedente; il manager non permette ancora di scegliere
-SOCKS. Restano storage host, IPC e integrazione nel lifecycle dei volumi.
+ancora il percorso precedente. Il nuovo codice host comprende ora
+[storage, IPC e selezione nel manager](KEYS-AND-EGRESS.md), compilati soltanto
+nei target nativi disponibili sul Mac. Il lifecycle Linux dei volumi e il
+cambio effettivo di percorso rimangono da collaudare.
 I componenti della chat OpenCode non cambiano.
 
 ## Confini implementati
@@ -149,10 +151,10 @@ questi gate restano aperti non è dichiarato il supporto SOCKS globale.
 
 ## Integrazione successiva
 
-1. Salvare modalità, endpoint e autenticazione nel generale cifrato; mostrare
-   soltanto metadati nel manager e permettere la scelta temporanea in readonly.
-2. Trasmettere il profilo dall'host al supervisore; avviare Tor solo in modalità Tor.
-   In SOCKS non importare, acquisire o salvare stato Tor.
+1. Collaudare il salvataggio nel generale cifrato, i soli metadati nel manager
+   e la scelta temporanea in readonly, ora implementati nel sorgente host.
+2. Collaudare il passaggio del profilo dall'host e l'avvio Tor condizionale.
+   Verificare che SOCKS non importi, acquisisca o salvi stato Tor.
 3. Collaudare l'avvio del connettore con UID separato per grant e i soli segreti
    del trasporto. Il broker continua a ricevere chiave API e token locale.
 4. Collaudare il firewall per modalità: API e tool soltanto al connettore locale,

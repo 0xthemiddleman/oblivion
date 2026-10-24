@@ -33,6 +33,7 @@ enum Operation {
     SetApiKey,
     ClearApiKey,
     ApiKeys,
+    Egress,
 }
 
 #[derive(Deserialize)]
@@ -126,7 +127,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
     let request: Request = serde_json::from_slice(&header).map_err(|_| Error("invalid_request"))?;
     require(
         request.secret_len
-            <= if matches!(request.operation, Operation::ApiKeys) {
+            <= if matches!(request.operation, Operation::ApiKeys | Operation::Egress) {
                 4096
             } else {
                 1024
@@ -158,6 +159,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
             | Operation::Open
             | Operation::SetApiKey
             | Operation::ApiKeys
+            | Operation::Egress
     );
     require(
         needs_secret == (request.secret_len > 0),
@@ -194,6 +196,7 @@ fn handle(stream: &mut UnixStream, config: &Path, uid: u32) -> Result<Response> 
         Operation::SetApiKey => "set-api-key",
         Operation::ClearApiKey => "clear-api-key",
         Operation::ApiKeys => "api-keys",
+        Operation::Egress => "egress",
         Operation::Console => unreachable!(),
     };
     let mut command =

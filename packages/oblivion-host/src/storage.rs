@@ -1,4 +1,4 @@
-use oblivion_host::keys;
+use oblivion_host::{egress, keys};
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::fs::{self, File, OpenOptions};
@@ -51,6 +51,7 @@ struct Status {
     recovery_required: bool,
     api_key_present: Option<bool>,
     api_keys: Option<keys::Status>,
+    egress: Option<egress::Status>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
@@ -72,7 +73,13 @@ pub fn main() -> Result<()> {
             .gateway
             .as_ref()
             .ok_or(Error("gateway_not_configured"))?;
-        return crate::gateway::serve(gateway, read_api_key()?, config.gateway_network);
+        let (saved, selected) = transport_profiles()?;
+        return crate::gateway::serve(
+            gateway,
+            read_api_key()?,
+            selected.unwrap_or(saved).into_transport(),
+            config.gateway_network,
+        );
     }
     require(
         args.len()
@@ -110,6 +117,7 @@ pub fn main() -> Result<()> {
             | "set-api-key"
             | "clear-api-key"
             | "api-keys"
+            | "egress"
     ) {
         require(!recovery_required()?, "recovery_required")?;
     }
@@ -143,6 +151,7 @@ pub fn main() -> Result<()> {
         "unlock" | "unlock-ephemeral" => {
             config.unlock(&password(false)?, op == "unlock-ephemeral")?;
             clear_key_selection()?;
+            clear_transport_selection()?;
             config.start_gateway()
         }
         "create" => config.create(&password(true)?),
@@ -192,6 +201,17 @@ pub fn main() -> Result<()> {
                 serde_json::from_slice(&bytes).map_err(|_| Error("invalid_key_command"))?;
             config.change_keys(command)
         }
+        "egress" => {
+            let mut bytes = Zeroizing::new(Vec::new());
+            std::io::stdin()
+                .take(egress::LIMIT as u64 + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|_| Error("secret_read_failed"))?;
+            require(bytes.len() <= egress::LIMIT, "invalid_secret_length")?;
+            let command =
+                serde_json::from_slice(&bytes).map_err(|_| Error("invalid_transport_command"))?;
+            config.change_transport(command)
+        }
         "open" => config.open(&args[3], &password(false)?),
         "enter" => {
             let vm = config.vm.as_ref().ok_or(Error("vm_not_configured"))?;
@@ -235,6 +255,7 @@ pub fn main() -> Result<()> {
             }
             close_general()?;
             clear_key_selection()?;
+            clear_transport_selection()?;
             if recovery_required()? {
                 fs::remove_file(RECOVERY).map_err(|_| Error("recovery_clear_failed"))?;
             }
@@ -296,6 +317,16 @@ pub fn main() -> Result<()> {
                 },
                 api_key_present: api_keys.as_ref().map(|keys| keys.selected.is_some()),
                 api_keys,
+                egress: if mode == MountMode::Closed {
+                    None
+                } else {
+                    let (saved, selected) = transport_profiles()?;
+                    Some(egress::Status {
+                        saved: saved.metadata(),
+                        selected: selected.as_ref().unwrap_or(&saved).metadata(),
+                        temporary: selected.is_some(),
+                    })
+                },
             };
             println!(
                 "{}",
@@ -308,6 +339,55 @@ pub fn main() -> Result<()> {
 }
 
 impl Config {
+    fn change_transport(&self, command: egress::Command) -> Result<()> {
+        let mode = mount_mode()?;
+        require(mode != MountMode::Closed, "general_not_open")?;
+        let save = matches!(command, egress::Command::Save { .. });
+        let temporary = matches!(command, egress::Command::Select { .. });
+        require(
+            !save || mode == MountMode::ReadWrite,
+            "general_not_writable",
+        )?;
+        require(
+            !mapping_open("oblivion-session")? && crate::vm::stopped()?,
+            "session_must_be_closed",
+        )?;
+        let (saved, _) = transport_profiles()?;
+        let profile = match command {
+            egress::Command::Save { transport } | egress::Command::Select { transport } => {
+                egress::Profile::new(transport).map_err(Error)?
+            }
+            egress::Command::Saved {} => saved,
+        };
+        require(
+            self.gateway_network
+                || matches!(profile.metadata(), oblivion_transport::Metadata::Tor {}),
+            "external_proxy_requires_network",
+        )?;
+        // Close delegated connections before changing either stored or volatile
+        // credentials. Any failed write leaves the gateway stopped.
+        if self.gateway.is_some() {
+            crate::gateway::stop()?;
+        }
+        if temporary {
+            write_transport_profile(
+                &Path::new(RUN).join("transport-selection.json"),
+                &profile,
+                false,
+            )?;
+        } else {
+            clear_transport_selection()?;
+            if save {
+                write_transport_profile(
+                    &Path::new(PROFILE).join("transport.json"),
+                    &profile,
+                    true,
+                )?;
+            }
+        }
+        self.start_gateway()
+    }
+
     fn change_keys(&self, command: keys::Command) -> Result<()> {
         let mode = mount_mode()?;
         require(mode != MountMode::Closed, "general_not_open")?;
@@ -553,11 +633,9 @@ impl Config {
     }
 }
 
-fn read_api_keys() -> Result<keys::Archive> {
+fn profile_directory() -> Result<bool> {
     let directory = match fs::symlink_metadata(PROFILE) {
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Ok(keys::Archive::empty());
-        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
         Err(_) => return Err(Error("profile_unavailable")),
         Ok(directory) => directory,
     };
@@ -565,6 +643,13 @@ fn read_api_keys() -> Result<keys::Archive> {
         directory.is_dir() && directory.uid() == 0 && directory.mode() & 0o077 == 0,
         "unsafe_profile",
     )?;
+    Ok(true)
+}
+
+fn read_api_keys() -> Result<keys::Archive> {
+    if !profile_directory()? {
+        return Ok(keys::Archive::empty());
+    }
     let path = Path::new(PROFILE).join("abliteration.keys.json");
     match fs::symlink_metadata(&path) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
@@ -653,6 +738,84 @@ fn write_key_selection(id: Option<&str>) -> Result<()> {
         .map_err(|_| Error("selection_write_failed"))?;
     file.write_all(id.unwrap_or("").as_bytes())
         .map_err(|_| Error("selection_write_failed"))
+}
+
+fn transport_profiles() -> Result<(egress::Profile, Option<egress::Profile>)> {
+    let saved = if profile_directory()? {
+        read_transport_profile(&Path::new(PROFILE).join("transport.json"))?.unwrap_or_default()
+    } else {
+        egress::Profile::default()
+    };
+    // A corrupt saved profile is never hidden by a volatile override.
+    Ok((
+        saved,
+        read_transport_profile(&Path::new(RUN).join("transport-selection.json"))?,
+    ))
+}
+
+fn read_transport_profile(path: &Path) -> Result<Option<egress::Profile>> {
+    match fs::symlink_metadata(path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(Error("transport_profile_unavailable")),
+        Ok(_) => {}
+    }
+    let mut bytes = Zeroizing::new(Vec::new());
+    trusted_file(path)?
+        .take(egress::LIMIT as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| Error("transport_profile_unavailable"))?;
+    Ok(Some(egress::Profile::decode(&bytes).map_err(Error)?))
+}
+
+fn clear_transport_selection() -> Result<()> {
+    for name in [
+        "transport-selection.json",
+        "transport-selection.json.pending",
+    ] {
+        let path = Path::new(RUN).join(name);
+        match fs::symlink_metadata(&path) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => return Err(Error("selection_unavailable")),
+            Ok(_) => {}
+        }
+        trusted_file(&path)?;
+        fs::remove_file(path).map_err(|_| Error("selection_write_failed"))?;
+    }
+    Ok(())
+}
+
+fn write_transport_profile(path: &Path, profile: &egress::Profile, durable: bool) -> Result<()> {
+    let pending = path.with_extension("json.pending");
+    for existing in [path, &pending] {
+        match fs::symlink_metadata(existing) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(_) => return Err(Error("transport_profile_unavailable")),
+            Ok(_) => {
+                trusted_file(existing)?;
+            }
+        }
+    }
+    if pending.exists() {
+        fs::remove_file(&pending).map_err(|_| Error("transport_write_failed"))?;
+    }
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
+        .open(&pending)
+        .map_err(|_| Error("transport_write_failed"))?;
+    file.write_all(&profile.encode().map_err(Error)?)
+        .map_err(|_| Error("transport_write_failed"))?;
+    if durable {
+        file.sync_all()
+            .map_err(|_| Error("transport_write_failed"))?;
+    }
+    fs::rename(pending, path).map_err(|_| Error("transport_write_failed"))?;
+    if durable {
+        sync_directory(path.parent().ok_or(Error("invalid_path"))?)?;
+    }
+    Ok(())
 }
 
 pub(crate) fn tor_state() -> Result<Option<oblivion_tor_state::State>> {

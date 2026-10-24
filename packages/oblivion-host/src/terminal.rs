@@ -89,11 +89,11 @@ impl Terminal {
     }
 
     pub fn password(&mut self, title: &str) -> Result<Option<Zeroizing<Vec<u8>>>> {
-        self.field(title, true)
+        self.field(title, true, "Password nascosta")
     }
 
     pub fn name(&mut self, title: &str) -> Result<Option<String>> {
-        let Some(bytes) = self.field(title, false)? else {
+        let Some(bytes) = self.field(title, false, "Nome")? else {
             return Ok(None);
         };
         let name = std::str::from_utf8(&bytes)?.to_owned();
@@ -101,9 +101,20 @@ impl Terminal {
         Ok(Some(name))
     }
 
-    fn field(&mut self, title: &str, hidden: bool) -> Result<Option<Zeroizing<Vec<u8>>>> {
+    pub fn text(&mut self, title: &str) -> Result<Option<String>> {
+        self.field(title, false, "Indirizzo")?
+            .map(|bytes| String::from_utf8(bytes.to_vec()).map_err(Into::into))
+            .transpose()
+    }
+
+    fn field(
+        &mut self,
+        title: &str,
+        hidden: bool,
+        label: &str,
+    ) -> Result<Option<Zeroizing<Vec<u8>>>> {
         self.flush_input();
-        self.write(&format!("{CLEAR}{BRAND} OBLIVION - controllo fidato{RESET}\r\n\r\n {title}\r\n\r\n {ACTION}Invio conferma | Esc annulla{RESET}\r\n\r\n {}: \x1b[?25h", if hidden { "Password nascosta" } else { "Nome" }))?;
+        self.write(&format!("{CLEAR}{BRAND} OBLIVION - controllo fidato{RESET}\r\n\r\n {title}\r\n\r\n {ACTION}Invio conferma | Esc annulla{RESET}\r\n\r\n {label}: \x1b[?25h"))?;
         let mut secret = Zeroizing::new(Vec::with_capacity(1024));
         loop {
             let input = self.input(-1)?;
@@ -144,7 +155,7 @@ impl Terminal {
                         .chars()
                         .filter(|c| !c.is_control())
                         .collect();
-                    self.write(&format!("\r\x1b[2K Nome: {text}"))?;
+                    self.write(&format!("\r\x1b[2K {label}: {text}"))?;
                 }
             }
         }

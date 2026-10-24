@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-24",
+  "repository_parent": "68767fae5ef62da43f1ac12e964e56bf2a37065f",
+  "status": "host configuration and manager source implemented; native checks passed; Linux compilation and end-to-end verification pending",
+  "scope": "Versioned global transport profile, temporary RAM selection, private IPC, trusted manager menu and transport-specific host gateway lifecycle. No OpenCode chat component change.",
+  "native_tests": {
+    "passed": 19,
+    "failed": 0,
+    "ignored": 0,
+    "new_profile_cases": 6,
+    "command": "CARGO_INCREMENTAL=0 cargo test --offline --locked from packages/oblivion-host",
+    "limitation": "Native macOS cfg excludes Linux storage, IPC and gateway modules; the real manager loop requires Linux and is not exercised here."
+  },
+  "native_clippy": {
+    "status": "passed",
+    "command": "CARGO_INCREMENTAL=0 cargo clippy --offline --locked --all-targets -- -D warnings"
+  },
+  "static_checks": {
+    "rustfmt": "passed",
+    "python_vm_services_ast": "passed",
+    "git_diff_check": "passed"
+  },
+  "linux_build": "not attempted while disk space is insufficient and Docker returns I/O errors",
+  "linux_vm_tests": {
+    "status": "not_run",
+    "fixture": "script/oblivion/vm-services-test.py",
+    "prepared_cases": [
+      "trusted network menu with hidden proxy credentials",
+      "persistent profile ownership and unreadability by manager UID",
+      "offline image rejects external SOCKS",
+      "temporary profile and return to saved route",
+      "unknown fields and staging aliases",
+      "corrupt saved profile does not fall back behind temporary selection",
+      "ENOSPC preserves old profile, retry clears staging",
+      "active session rejects every route change",
+      "readonly selection leaves encrypted image byte-identical",
+      "temporary selection cleared on lock",
+      "recovery latch and console credential canaries"
+    ]
+  },
+  "canonical_check": {
+    "command": "bun run check in pinned Docker image",
+    "status": "not_started",
+    "docker_exit_code": 125,
+    "error": "Docker image blob input/output error"
+  },
+  "runtime_verified": false,
+  "production_kvm_tested": false,
+  "free_bytes_at_report": 330002432,
+  "sources": {
+    "packages/oblivion-host/Cargo.lock": "546042bf477aa5a249f1ec8ce93d25f71b388a48c94d5c93804b6c4763908e39",
+    "packages/oblivion-host/Cargo.toml": "1a5f944aa50427c9966074006908bcc22db401d2eba73d344fa0589886fd66bc",
+    "packages/oblivion-host/src/client.rs": "b3d9e951e1e9e7415242c64358c0391124b0755eeee8f1382d0004e5c63833b8",
+    "packages/oblivion-host/src/control.rs": "bcdb1646d97b15e2263e2b610e0fd63435628829e57a5a80ace64b2730de914f",
+    "packages/oblivion-host/src/gateway.rs": "b65fb7a48bc2f3850282880d533d2df2fe72fa40975cf2fbd8e89cc86904f1e2",
+    "packages/oblivion-host/src/ipc.rs": "0f7fe02fc80fd581b57f8b57b45a47c315f9f31a0849a64290618bc8d457345b",
+    "packages/oblivion-host/src/lib.rs": "ce01c69ed9fa4d10948f8ab7350765c2fdede5901fc4a2de926db6470e422c15",
+    "packages/oblivion-host/src/manager.rs": "8f6bea4cfa30b727690c673851f51e8c56e95671a509d4a40d9adf0ca63ad62b",
+    "packages/oblivion-host/src/storage.rs": "9703c7251d03906efcb991d7fa77def326d1f74e2717797870df66955aec3874",
+    "packages/oblivion-host/src/terminal.rs": "fc8ef41fa85d38ab2c4f6d15e62361617672a16f711fd8f86ccc04ce1500b98b",
+    "script/oblivion/Dockerfile.storage-lab": "5eb8519ae37fe9c4ba42b2e64df71f74d1feeab9d2daf2716fef7da42cd8c8f0",
+    "script/oblivion/Dockerfile.storage-lab.dockerignore": "d7c663bbc739d899c97942cdcd68a39f9e7c969c54bb86ee7a10e3a83198b511",
+    "script/oblivion/Dockerfile.vm-lab": "1bfcf1f1e7ff597a8e23d819f8376bcbc975004c2ba412614d12fbaaeb69f129",
+    "script/oblivion/vm-services-test.py": "a8e05a3457215d1d9117fd6da3d33a0859d6a52628c8cc697811ab4f682a1a43",
+    "packages/oblivion-host/src/egress.rs": "e2fc2244144fd103bd59ee7f86c7dc8595c1f1065eba94b62b261fe63e5f21cf",
+    "packages/oblivion-host/tests/egress.rs": "a77cb5e30ef916b34fb1590b777769e436ed9b8e9087b7ecc50974c360650d73"
+  },
+  "artifacts": {
+    "artifacts/oblivion-host-transport/native-profile-tests.log": "844adb626fdfcf563c7e542c7a9066a93e20b0f7a5e9da0cf9496f24b68b564e",
+    "artifacts/oblivion-host-transport/native-clippy-final.log": "a85c6da4db16b8463d32d8966b246c4132a1c3bf91c71f17e038252d71d92c15",
+    "artifacts/oblivion-host-transport/native-tests-final.log": "f319a995c5464a11699ba2b5ad7bff62836c7c14fa26444b5f336361f3b7c5bd",
+    "artifacts/oblivion-host-transport/docker-storage-status.log": "90c7914fc823cb91713b08809df73175fa373ead0f3769c1c67e3747006ad579",
+    "artifacts/oblivion-host-transport/root-check.log": "1c001f5040cfaf675206ae0214399e139a05e599440e54aef11a98ca81ada0ef"
+  },
+  "remaining_gates": [
+    "Recover disk space and Docker storage without resetting unrelated project data.",
+    "Compile all host and gateway Linux branches and run the services/manager/LUKS suite with current matched bundles.",
+    "Execute two-VM SOCKS authentication, failure, stream and packet-capture tests and Tor regression from the runtime integration milestone.",
+    "Verify host-managed Tor-to-SOCKS-to-Tor transitions, no Tor state writes in SOCKS and stream revocation before vault closure.",
+    "Exercise the new trusted menu at narrow and wide console sizes.",
+    "Pass the canonical repository check.",
+    "Implement the authorized tools proxy, file transfers, ephemeral guest and remaining live OS roadmap gates."
+  ]
+}

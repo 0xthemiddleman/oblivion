@@ -46,8 +46,13 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
             | "open"
             | "set-api-key"
             | "api-keys"
+            | "egress"
     );
-    let limit = if operation == "api-keys" { 4096 } else { 1024 };
+    let limit = if matches!(operation.as_str(), "api-keys" | "egress") {
+        4096
+    } else {
+        1024
+    };
     let mut secret = Zeroizing::new(Vec::with_capacity(limit + 1));
     if needs_secret {
         std::io::stdin()

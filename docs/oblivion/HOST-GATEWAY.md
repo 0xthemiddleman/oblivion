@@ -3,9 +3,14 @@
 Il controller Linux ora può avviare una VM gateway dopo lo sblocco del generale
 e consegnarle la chiave selezionata nell'[archivio del profilo](CREDENTIALS.md). Il collegamento usa il
 [protocollo privato del supervisore](GATEWAY-CONTROL.md). La [rete della sessione](SESSION-NETWORK.md) usa un token locale revocabile.
-Lo [stato Tor](TOR-STATE.md) viene importato dal generale prima di abilitare
+Nel percorso Tor, lo [stato](TOR-STATE.md) viene importato dal generale prima di abilitare
 la rete; una nuova apertura online richiede bootstrap completo e guardie
 acquisite dal servizio host.
+
+Il nuovo sorgente legge anche il [profilo Tor/SOCKS](KEYS-AND-EGRESS.md):
+configurazione salvata oppure selezione temporanea in RAM. SOCKS esclude
+completamente importazione e checkpoint Tor. Questa estensione attende collaudo
+Linux; le evidenze esistenti sotto descrivono il percorso Tor precedente.
 
 ## Ciclo di vita
 

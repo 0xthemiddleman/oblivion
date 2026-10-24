@@ -24,6 +24,15 @@ GENERAL = b"synthetic-general-password"
 PASSWORD = b"synthetic-session-password-a"
 API_KEY = b"OBLIVION_API_KEY_CANARY_5c91"
 NEXT_API_KEY = b"OBLIVION_API_NEXT_CANARY_86ab"
+PROXY_USER = b"OBLIVION_PROXY_USER_CANARY_31d2"
+PROXY_PASSWORD = b"OBLIVION_PROXY_PASSWORD_CANARY_72a4"
+PROXY = {"mode": "socks5", "endpoint": "192.168.1.20:1080",
+    "authentication": {"username": PROXY_USER.decode(), "password": PROXY_PASSWORD.decode()}}
+TOR_SAVE = json.dumps({"action": "save", "transport": {"mode": "tor"}}).encode()
+TOR_SELECT = json.dumps({"action": "select", "transport": {"mode": "tor"}}).encode()
+PROXY_SAVE = json.dumps({"action": "save", "transport": PROXY}).encode()
+PROXY_SELECT = json.dumps({"action": "select", "transport": PROXY}).encode()
+SAVED_TRANSPORT = b'{"action":"saved"}'
 CONTROLLER = "oblivion-controller.service"
 MANAGER = "oblivion-manager.service"
 RECOVER = "oblivion-recover.service"
@@ -330,7 +339,8 @@ with socket.socket(socket.AF_UNIX) as client:
     assert probe.returncode == 0, probe.stderr
     assert int(property(CONTROLLER, "MainPID")) > 0
     check("fragmented controller frames and secrets expire despite continued progress; the same service accepts the next valid request")
-    assert status()["api_key_present"] is None
+    assert status()["api_key_present"] is None and status()["egress"] is None
+    assert command("egress", secret=TOR_SAVE, success=False) == "general_not_open"
     assert command("set-api-key", secret=API_KEY, success=False) == "general_not_writable"
     assert command("clear-api-key", success=False) == "general_not_writable"
     send(b"d", "Premi D di nuovo")
@@ -382,6 +392,66 @@ with socket.socket(socket.AF_UNIX) as client:
     forbidden = subprocess.run(["cat", str(key_file)], user=1000, group=1000, extra_groups=[], capture_output=True)
     assert forbidden.returncode != 0 and not forbidden.stdout
     check("trusted manager saves a hidden API key only in the root-owned encrypted profile; status and manager UID cannot retrieve it")
+    assert status()["egress"] == {"saved": {"mode": "tor"}, "selected": {"mode": "tor"}, "temporary": False}
+    assert command("egress", secret=PROXY_SAVE, success=False) == "external_proxy_requires_network"
+    config = json.loads(Path(CONFIG).read_text())
+    # This storage/UI suite has no gateway VM. Enable the root network policy
+    # only to exercise profile choices; no external connection is created.
+    assert config.get("gateway") is None
+    config["gateway_network"] = True
+    Path(CONFIG).write_text(json.dumps(config))
+    send(b"r", "percorso di rete")
+    send(b"s", "Proxy SOCKS5 - IPv4:porta")
+    send(b"192.168.1.20:1080\r", "Con autenticazione")
+    send(b"a", "Username SOCKS5")
+    send(PROXY_USER + b"\r", "Password SOCKS5")
+    send(PROXY_PASSWORD + b"\r", "Salva nel generale cifrato")
+    send(b"s", "Rete: SOCKS5 192.168.1.20:1080")
+    transport_file = Path("/run/oblivion/general/profile/transport.json")
+    assert json.loads(transport_file.read_text()) == {"version": 1, "transport": PROXY}
+    assert transport_file.stat().st_uid == 0 and transport_file.stat().st_mode & 0o777 == 0o600
+    forbidden = subprocess.run(["cat", str(transport_file)], user=1000, group=1000, extra_groups=[], capture_output=True)
+    assert forbidden.returncode != 0 and not forbidden.stdout
+    assert PROXY_USER.decode() not in command("status") and PROXY_PASSWORD.decode() not in command("status")
+    check("trusted network menu saves hidden proxy credentials only in the root-owned encrypted profile; offline policy refuses external proxies")
+    saved_transport = transport_file.read_bytes()
+    send(b"r", "percorso di rete")
+    send(b"t", "Salva nel generale cifrato")
+    send(b"t", "Rete: Tor (temporanea)")
+    selection_file = Path("/run/oblivion/transport-selection.json")
+    assert transport_file.read_bytes() == saved_transport and status()["egress"]["temporary"]
+    assert selection_file.stat().st_uid == 0 and selection_file.stat().st_mode & 0o777 == 0o600
+    send(b"r", "percorso di rete")
+    send(b"p", "Rete: SOCKS5 192.168.1.20:1080")
+    assert not selection_file.exists() and not status()["egress"]["temporary"]
+    for body in [b'{"action":"saved","transport":{"mode":"tor"}}',
+                 b'{"action":"save","transport":{"mode":"tor","extra":true}}']:
+        assert command("egress", secret=body, success=False) == "invalid_transport_command"
+        assert transport_file.read_bytes() == saved_transport
+    pending_transport = transport_file.with_suffix(".json.pending")
+    pending_transport.symlink_to(transport_file)
+    assert command("egress", secret=TOR_SAVE, success=False) == "file_unavailable"
+    pending_transport.unlink()
+    os.link(transport_file, pending_transport)
+    assert command("egress", secret=TOR_SAVE, success=False) == "unsafe_file"
+    pending_transport.unlink()
+    pending_transport.write_bytes(b"interrupted-transport-update")
+    command("egress", secret=PROXY_SAVE)
+    assert not pending_transport.exists()
+    command("egress", secret=TOR_SELECT)
+    transport_file.write_bytes(b'{"version":999}')
+    assert command("status", success=False) == "invalid_transport_profile"
+    transport_file.write_bytes(saved_transport)
+    command("egress", secret=SAVED_TRANSPORT)
+    check("temporary transport stays in RAM; saved selection restores it; unknown fields, aliases and corrupt profiles never trigger a fallback")
+    transport_filler = transport_file.with_name("transport-space-fixture")
+    fill_profile(transport_filler)
+    assert command("egress", secret=TOR_SAVE, success=False) == "transport_write_failed"
+    assert transport_file.read_bytes() == saved_transport
+    transport_filler.unlink()
+    command("egress", secret=PROXY_SAVE)
+    assert transport_file.read_bytes() == saved_transport
+    check("full-disk transport update preserves the prior profile; retry replaces the interrupted private staging file")
     for secret in [b"too short", b"invalid-key with-spaces", b"invalid-key-with-newline\n"]:
         assert command("set-api-key", secret=secret, success=False) == "invalid_api_key"
         assert stored_key() == API_KEY
@@ -472,6 +542,10 @@ with socket.socket(socket.AF_UNIX) as client:
     assert stored_key() == NEXT_API_KEY
     assert command("api-keys", secret=key_command("select", id=first_key), success=False) == "session_must_be_closed"
     assert command("api-keys", secret=key_command("remove", id=second_key), success=False) == "session_must_be_closed"
+    for body in [TOR_SAVE, TOR_SELECT, SAVED_TRANSPORT]:
+        assert command("egress", secret=body, success=False) == "session_must_be_closed"
+    assert transport_file.read_bytes() == saved_transport
+    check("active chat blocks persistent, temporary and saved-profile transport changes")
     check("key picker chooses the opening credential; an active session blocks key mutations and identity changes")
     send(b"\x1d", "Sessioni protette")
     send(b"g", "chiavi Abliteration")
@@ -500,11 +574,23 @@ with socket.socket(socket.AF_UNIX) as client:
         assert command("api-keys", secret=body, success=False) == "general_not_writable"
     command("api-keys", secret=key_command("select", id=first_key))
     assert status()["api_keys"]["selected"] == first_key
+    assert command("egress", secret=TOR_SAVE, success=False) == "general_not_writable"
+    assert status()["egress"]["selected"]["mode"] == "socks5" and not status()["egress"]["temporary"]
+    command("egress", secret=TOR_SELECT)
+    assert status()["egress"]["selected"]["mode"] == "tor" and status()["egress"]["temporary"]
+    command("egress", secret=PROXY_SELECT)
+    assert selection_file.exists() and status()["egress"]["temporary"]
+    command("egress", secret=SAVED_TRANSPORT)
+    assert not selection_file.exists()
+    command("egress", secret=TOR_SELECT)
+    assert transport_file.read_bytes() == saved_transport
     pending_id = next(Path("/run/oblivion/general/sessions").glob("*.pending")).stem
     assert command("discard-session-pending", pending_id, success=False) == "general_not_writable"
     assert status()["incomplete_sessions"] == []
     command("lock")
     assert file_digest("/data/general.luks") == encrypted_before
+    assert not selection_file.exists()
+    check("read-only transport choices use RAM, clear on lock and leave the entire encrypted image byte-identical")
     check("read-only profile exposes key metadata and permits RAM selection, rejects all key mutations and pending deletion, and remains byte-identical")
     terminal.reset()
     os.kill(manager_pid, signal.SIGKILL)
@@ -586,7 +672,7 @@ with socket.socket(socket.AF_UNIX) as client:
     assert current["recovery_required"] and current["session_open"] and current["general_open"], current
     for operation, arguments, secret in [("create", [], PASSWORD), ("enter", [session_id], PASSWORD),
             ("unlock", [], GENERAL), ("unlock-ephemeral", [], GENERAL),
-            ("set-api-key", [], NEXT_API_KEY), ("clear-api-key", [], b"")]:
+            ("set-api-key", [], NEXT_API_KEY), ("clear-api-key", [], b""), ("egress", [], TOR_SELECT)]:
         assert command(operation, *arguments, secret=secret, success=False) == "recovery_required"
     rejected = subprocess.run(["/usr/bin/oblivion-control", "create"], input=PASSWORD,
         capture_output=True, user=1000, group=1000, extra_groups=[], timeout=30)
@@ -612,8 +698,8 @@ with socket.socket(socket.AF_UNIX) as client:
     assert property(MANAGER, "ActiveState") in ["inactive", "failed"]
     assert not Path(f"/proc/{manager_pid}").exists()
     check("controller stop drains dependent services and leaves no active VM or open volume")
-    assert all(secret not in output for secret in [GENERAL, PASSWORD, API_KEY, NEXT_API_KEY])
-    check("synthetic passwords and API keys never appear on the managed console")
+    assert all(secret not in output for secret in [GENERAL, PASSWORD, API_KEY, NEXT_API_KEY, PROXY_USER, PROXY_PASSWORD])
+    check("synthetic passwords, API keys and proxy credentials never appear on the managed console")
     subprocess.run(["umount", "/data"], check=True)
     print("OBLIVION_VM_LAB_PASS", flush=True)
 except BaseException:

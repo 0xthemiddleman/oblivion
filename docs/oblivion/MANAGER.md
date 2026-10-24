@@ -38,6 +38,13 @@ stato, mai i segreti. Con più chiavi propone la scelta prima dell'apertura;
 in readonly permette solo la selezione in RAM. Il controller consegna al
 gateway esclusivamente quella selezionata.
 
+Il nuovo codice aggiunge **R** per il [percorso Tor/SOCKS](KEYS-AND-EGRESS.md):
+profilo salvato nel generale oppure scelta temporanea fino al suo blocco,
+con credenziali nascoste. Il cambio richiede chat chiusa. Questa schermata è
+compilata sul Mac; le nuove prove interattive Debian sono preparate ma ancora
+ineseguite per gli errori I/O di Docker. Le evidenze precedenti del manager
+non coprono il nuovo menu. Nessuna modifica alla chat TUI upstream.
+
 Le password si inseriscono fuori dalla VM, senza eco né history; i buffer
 posseduti dal manager sono azzerati e il processo Linux disabilita i core dump
 e l'accesso tramite dump del processo. La creazione richiede almeno 16 byte;

@@ -75,7 +75,8 @@ queste scelte andranno perse alla chiusura di un avvio readonly.
 Un errore di salvataggio iniziale impedisce l'attivazione della rete. Un
 checkpoint periodico fallito termina il proprietario e la VM gateway.
 Se fallisce il checkpoint durante il blocco, il gateway viene comunque
-fermato ma il controller restituisce `tor_state_not_saved`: il generale non
+fermato ma il controller restituisce `gateway_shutdown_unconfirmed` (nel
+codice precedente `tor_state_not_saved`): il generale non
 viene dichiarato chiuso. Un nuovo blocco completa la chiusura. La revoca
 urgente senza risposta distrugge la VM senza aspettare un nuovo checkpoint.
 

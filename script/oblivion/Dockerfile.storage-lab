@@ -5,6 +5,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     util-linux busybox-static cpio kmod linux-image-arm64 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
+COPY packages/oblivion-tor-state/ /oblivion-tor-state/
+COPY packages/oblivion-transport/ /oblivion-transport/
 COPY packages/oblivion-host/ ./
 RUN cargo build --locked --release --bins --examples
 COPY script/oblivion/storage-lab-init.sh /lab/init

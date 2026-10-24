@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.31 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.32 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -27,8 +27,11 @@ nessuna rotazione automatica. Il [proxy SOCKS5 globale alternativo](docs/oblivio
 ha un [connettore verificato separatamente](docs/oblivion/EGRESS-CONNECTOR.md).
 L'integrazione con supervisore e firewall è scritta ma **non ancora compilata
 e collaudata in Linux**: Docker è fermo per spazio insufficiente ed errori I/O.
-Storage e scelta nel manager restano da collegare; Tor rimane il percorso
-selezionabile dall'host. Nessuna modifica ai componenti della chat TUI.
+Anche storage, IPC e scelta nel manager sono ora scritti: profilo salvato nel
+generale e scelta temporanea in RAM, con cambio consentito soltanto a chat
+chiuse. Sul Mac passano 19 test host e Clippy; i rami Linux, il menu interattivo
+e il percorso completo richiedono ancora collaudo. Le immagini precedenti
+rimangono quelle verificate. Nessuna modifica ai componenti della chat TUI.
 
 Restano da completare collaudo Abliteration reale e shutdown globale, proxy dei tool,
 trasferimenti USB e OnionShare, sessione effimera completa, rifinitura della TUI,

@@ -11,6 +11,7 @@ lab-emulation = []
 
 [dependencies]
 oblivion-tor-state = { path = "../oblivion-tor-state" }
+oblivion-transport = { path = "../oblivion-transport" }
 libc = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

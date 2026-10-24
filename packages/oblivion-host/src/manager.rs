@@ -1,6 +1,7 @@
 use oblivion_host::control::{self, Result};
-use oblivion_host::keys;
 use oblivion_host::terminal::{self, ACTION, BRAND, CLEAR, FEEDBACK, LOGO, RESET, Terminal};
+use oblivion_host::{egress, keys};
+use oblivion_transport::{Authentication, Metadata, Transport};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -21,6 +22,7 @@ struct Status {
     recovery_required: bool,
     api_key_present: Option<bool>,
     api_keys: Option<keys::Status>,
+    egress: Option<egress::Status>,
     gateway_state: Option<String>,
     gateway_vm_state: Option<String>,
     gateway_network: bool,
@@ -107,7 +109,7 @@ fn run(preview: bool) -> Result<()> {
         {
             view.push_str(" SESSIONE ANCORA APERTA\r\n\r\n [Invio] Console   [C] Chiudi e blocca\r\n [F] Chiusura forzata\r\n");
         } else if status.general_readonly {
-            view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [G] Scegli chiave API  [B] Blocca\r\n");
+            view.push_str(" Profilo in sola lettura; guest effimero non ancora disponibile.\r\n [G] Scegli chiave API  [R] Rete  [B] Blocca\r\n");
         } else {
             view.push_str(if incomplete {
                 " Creazioni interrotte - mai aperte come chat\r\n\r\n"
@@ -115,7 +117,7 @@ fn run(preview: bool) -> Result<()> {
                 " Sessioni protette\r\n\r\n"
             });
             let limit = rows
-                .saturating_sub(if rows >= 20 && cols >= 64 { 20 } else { 15 })
+                .saturating_sub(if rows >= 20 && cols >= 64 { 21 } else { 16 })
                 .max(1) as usize;
             let start = selected.saturating_sub(limit - 1);
             for (index, session) in sessions.iter().enumerate().skip(start).take(limit) {
@@ -155,11 +157,28 @@ fn run(preview: bool) -> Result<()> {
                     .unwrap_or("nessuna");
                 view.push_str(&format!(" Chiave selezionata: {name}\r\n"));
             }
+            if let Some(egress) = &status.egress {
+                view.push_str(&format!(
+                    " Rete: {}{}  [R] Configura\r\n",
+                    transport_label(&egress.selected),
+                    if egress.temporary {
+                        " (temporanea)"
+                    } else {
+                        ""
+                    }
+                ));
+            }
             if let Some(gateway) = &status.gateway_state {
                 view.push_str(
                     if gateway == "active" && status.gateway_vm_state.as_deref() == Some("active") {
                         if status.gateway_network {
-                            " Gateway avviato. Tor può richiedere alcuni istanti.\r\n"
+                            if status.egress.as_ref().is_some_and(|egress| {
+                                matches!(egress.selected, Metadata::Socks5 { .. })
+                            }) {
+                                " Gateway avviato con SOCKS5.\r\n"
+                            } else {
+                                " Gateway avviato. Tor può richiedere alcuni istanti.\r\n"
+                            }
                         } else {
                             " Gateway pronto; rete non abilitata.\r\n"
                         }
@@ -266,6 +285,10 @@ fn run(preview: bool) -> Result<()> {
             if !status.general_mounted {
                 return Ok(());
             }
+            if key == b'r' {
+                transport_menu(&mut terminal)?;
+                return Ok(());
+            }
             if key == b'g' {
                 key_menu(&mut terminal, false)?;
                 return Ok(());
@@ -365,8 +388,12 @@ fn run(preview: bool) -> Result<()> {
                     "Gateway non disponibile. Il generale resta aperto: puoi bloccarlo e riprovare."
                 }
                 "gateway_unavailable" => "Gateway non attivo. Blocca il generale e sbloccalo prima di aprire una sessione.",
-                "gateway_not_ready" => "Tor sta preparando la connessione. Attendi e riprova ad aprire la sessione.",
-                "tor_state_not_saved" => "Stato Tor non salvato. Il gateway è fermo: blocca di nuovo per chiudere il generale.",
+                "gateway_not_ready" => "Il percorso di rete non è ancora pronto. Attendi e riprova ad aprire la sessione.",
+                "gateway_shutdown_unconfirmed" => "Chiusura non confermata. Il gateway è fermo: blocca di nuovo per chiudere il generale.",
+                "invalid_proxy_endpoint" => "Proxy non valido: indica un IPv4 e una porta; loopback e rete interna non sono ammessi.",
+                "invalid_proxy_authentication" => "Username e password SOCKS devono contenere da 1 a 255 byte, senza caratteri di controllo.",
+                "external_proxy_requires_network" => "La rete è disabilitata in questa immagine: il proxy esterno non può essere attivato.",
+                "session_must_be_closed" => "Chiudi la sessione prima di cambiare chiave o percorso di rete.",
                 "session_channel_failed" | "invalid_session_ready" => "La sessione non ha completato l'avvio protetto. Chiudila prima di riprovare.",
                 "insufficient_space" => {
                     "Spazio insufficiente. Controlla le creazioni interrotte prima di riprovare."
@@ -418,6 +445,95 @@ fn enter_console(terminal: &mut Terminal) -> Result<bool> {
     busy(terminal, "Chiusura della sessione")?;
     control::request("close", None, &[])?;
     Ok(result? == terminal::Action::New)
+}
+
+fn transport_label(transport: &Metadata) -> String {
+    match transport {
+        Metadata::Tor {} => "Tor".to_owned(),
+        Metadata::Socks5 {
+            endpoint,
+            authenticated,
+        } => format!(
+            "SOCKS5 {endpoint}{}",
+            if *authenticated { " con password" } else { "" }
+        ),
+    }
+}
+
+fn transport_menu(terminal: &mut Terminal) -> Result<()> {
+    let status: Status = serde_json::from_str(&control::request("status", None, &[])?)?;
+    let egress = status.egress.ok_or("general_not_open")?;
+    terminal.flush_input();
+    terminal.write(&format!("{CLEAR}{BRAND} OBLIVION - percorso di rete{RESET}\r\n\r\n Attuale: {}{}\r\n Salvato: {}\r\n\r\n [T] Tor  [S] SOCKS5  [P] Usa profilo salvato\r\n [Esc] Indietro\r\n\r\n Il cambio chiude il gateway precedente.\r\n Nessuna connessione diretta o cambio automatico.\r\n {}",
+        transport_label(&egress.selected), if egress.temporary { " (fino al blocco del generale)" } else { "" },
+        transport_label(&egress.saved), if status.general_readonly { "Profilo in sola lettura: modifiche solo in RAM." } else { "" }))?;
+    let key = terminal.input(-1)?;
+    let transport = match key.as_slice() {
+        b"p" | b"P" => {
+            busy(terminal, "Ripristino del percorso salvato")?;
+            control::request("egress", None, br#"{"action":"saved"}"#)?;
+            return Ok(());
+        }
+        b"t" | b"T" => Transport::default(),
+        b"s" | b"S" => {
+            let Some(transport) = proxy_settings(terminal)? else {
+                return Ok(());
+            };
+            transport
+        }
+        _ => return Ok(()),
+    };
+    transport.validate()?;
+    let save = if status.general_readonly {
+        false
+    } else {
+        terminal.flush_input();
+        terminal.write(&format!("{CLEAR} Percorso scelto: {}\r\n\r\n [S] Salva nel generale cifrato\r\n [T] Usa fino al blocco del generale\r\n [Esc] Annulla", transport_label(&transport.metadata())))?;
+        match terminal.input(-1)?.as_slice() {
+            b"s" | b"S" => true,
+            b"t" | b"T" => false,
+            _ => return Ok(()),
+        }
+    };
+    let command = if save {
+        egress::Command::Save { transport }
+    } else {
+        egress::Command::Select { transport }
+    };
+    let bytes = zeroize::Zeroizing::new(serde_json::to_vec(&command)?);
+    busy(terminal, "Cambio del percorso di rete")?;
+    control::request("egress", None, &bytes)?;
+    Ok(())
+}
+
+fn proxy_settings(terminal: &mut Terminal) -> Result<Option<Transport>> {
+    let Some(endpoint) = terminal.text("Proxy SOCKS5 - IPv4:porta (esempio 192.168.1.20:1080)")?
+    else {
+        return Ok(None);
+    };
+    let endpoint = endpoint.parse().map_err(|_| "invalid_proxy_endpoint")?;
+    terminal.flush_input();
+    terminal.write(&format!("{CLEAR} Il proxy vede le destinazioni richieste.\r\n Username e password SOCKS viaggiano in chiaro fino al proxy.\r\n Le richieste API usano HTTPS verificato.\r\n\r\n [A] Con autenticazione  [N] Senza autenticazione\r\n [Esc] Annulla"))?;
+    let authentication = match terminal.input(-1)?.as_slice() {
+        b"a" | b"A" => {
+            let Some(username) = terminal.password("Username SOCKS5 (nascosto)")? else {
+                return Ok(None);
+            };
+            let Some(password) = terminal.password("Password SOCKS5")? else {
+                return Ok(None);
+            };
+            Some(Authentication {
+                username: zeroize::Zeroizing::new(std::str::from_utf8(&username)?.to_owned()),
+                password: zeroize::Zeroizing::new(std::str::from_utf8(&password)?.to_owned()),
+            })
+        }
+        b"n" | b"N" => None,
+        _ => return Ok(None),
+    };
+    Ok(Some(Transport::Socks5 {
+        endpoint,
+        authentication,
+    }))
 }
 
 fn key_menu(terminal: &mut Terminal, choosing: bool) -> Result<bool> {

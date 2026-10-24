@@ -3,12 +3,12 @@
 Requisiti aggiunti il 24 ottobre 2026: salvare più API key Abliteration e
 scegliere tra Tor, predefinito, e un proxy SOCKS5 globale per Oblivion.
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager e nel
-controller. Il percorso online usa ancora Tor: la scelta di un SOCKS5 esterno
-non è ancora attiva. Il [connettore](EGRESS-CONNECTOR.md) ha prove separate,
-mentre supervisore e firewall sono ora collegati nel sorgente, in attesa del
-collaudo Linux. Storage e manager devono ancora essere collegati. Lo storage
-Docker del Mac restituisce errori I/O dopo l'esaurimento dello spazio: nessuna
-nuova evidenza VM viene dichiarata per queste modifiche.
+controller. Le immagini finora collaudate usano Tor. Il
+[connettore](EGRESS-CONNECTOR.md) ha prove separate; supervisore, firewall,
+storage e manager sono ora collegati nel sorgente, in attesa del collaudo
+Linux completo. Lo storage Docker del Mac restituisce errori I/O dopo
+l'esaurimento dello spazio: nessuna nuova evidenza VM viene dichiarata per
+queste modifiche.
 
 ## Chiavi salvate
 
@@ -68,6 +68,58 @@ Per SOCKS il firewall del gateway consentirà solo all'apposito servizio
 l'endpoint configurato, senza l'uscita generale oggi attribuita a Tor.
 Un proxy su LAN richiede un'eccezione limitata al suo IP e porta, non l'apertura
 della rete locale all'agente.
+
+## Profilo host e manager: codice disponibile, collaudo Linux pendente
+
+Il nuovo profilo versionato `profile/transport.json` contiene modalità,
+endpoint IPv4 letterale e autenticazione opzionale, nel generale cifrato.
+File root 0600, staging nella stessa directory, `fsync`, rename e sincronizzazione
+della directory precedono il riavvio del gateway. Il default è Tor solo quando
+il file manca: formato, versione, campi o valori invalidi producono un errore.
+
+`/run/oblivion/transport-selection.json` contiene un'eventuale scelta temporanea
+nella tmpfs privata root 0600. Il profilo salvato resta invariato. La scelta
+vale fino al blocco del generale e viene rimossa anche allo sblocco successivo;
+non è una preferenza associata a una singola chat. Un profilo salvato corrotto
+non viene nascosto da una selezione temporanea. File e staging usano gli stessi
+controlli anti-symlink/hardlink del controller.
+
+L'operazione IPC privata `egress` accetta un JSON di massimo 4096 byte nel
+frame segreto; non usa argomenti o ambiente per le credenziali:
+
+- `save` con `transport`: salva e seleziona il profilo, solo con generale scrivibile.
+- `select` con `transport`: selezione temporanea, ammessa anche in readonly.
+- `saved`: rimuove la selezione temporanea e ripristina il profilo salvato.
+
+Il controller richiede generale aperto, assenza di recupero, volume della chat
+chiuso e processo VM fermo. Arresta il gateway precedente prima di scrivere;
+un errore di scrittura non lo riavvia. La configurazione root di laboratorio
+`gateway_network: false` rifiuta SOCKS esterni: la scelta utente non può
+scavalcare un'immagine configurata offline.
+
+Nel manager fidato, **R** apre la rete: **T** sceglie Tor, **S** configura SOCKS,
+**P** ripristina il profilo salvato. Il salvataggio permanente o temporaneo si
+sceglie prima dell'applicazione; in readonly si usa soltanto RAM. Username e
+password sono campi nascosti; lo stato espone soltanto modalità, endpoint,
+presenza di autenticazione e origine temporanea/salvata. La schermata spiega
+che l'autenticazione SOCKS standard viaggia in chiaro fino al proxy. La chat
+OpenCode non viene modificata.
+
+Il proprietario host invia il trasporto sul canale privato del supervisore.
+In modalità SOCKS non legge né importa né salva lo stato Tor. La chiusura usa
+`shutdown`; in Tor continua a richiedere il checkpoint prima dell'arresto.
+Una chiusura non confermata restituisce ora `gateway_shutdown_unconfirmed`
+dopo aver distrutto la VM. Il generale non viene dichiarato bloccato finché
+il controller non completa la chiusura del volume.
+
+Il [report host](host-transport-status.json) registra 19 test nativi passati,
+compresi sei casi del profilo, più Clippy su tutti i target nativi. Non sono
+prove dei rami Linux esclusi da `cfg`. La suite `vm-services-test.py` include
+ora menu reale, LUKS, permessi, staging, ENOSPC, blocco a chat aperta e
+readonly con confronto byte per byte del volume: **non è ancora stata eseguita**
+con questo codice. Restano inoltre da provare il cambio effettivo di gateway
+Tor↔SOCKS, stream, persistenza delle guardie e tutte le catture esterne. Il
+proxy dei tool rimane da realizzare prima di dichiarare il trasporto globale.
 
 I nomi delle destinazioni vengono passati al proxy dopo l'autorizzazione,
 usando l'indirizzamento per dominio di [SOCKS5, RFC 1928](https://www.rfc-editor.org/rfc/rfc1928#section-5).

@@ -13,8 +13,10 @@ automatica. Il [SOCKS5 globale](KEYS-AND-EGRESS.md) viene prima del proxy dei
 tool: il [connettore](EGRESS-CONNECTOR.md) è compilato e verificato separatamente,
 mentre l'integrazione con supervisore e firewall è scritta e attende compilazione
 e collaudo Linux. Le build sono sospese per spazio insufficiente sul Mac ed errori
-I/O nello storage Docker. Configurazione host e selezione nel manager restano da
-integrare; il percorso selezionabile dall'host usa ancora Tor.
+I/O nello storage Docker. Configurazione host e selezione nel manager sono
+anch'esse scritte: [stato e limiti](host-transport-status.json). Passano 19 test
+host sul Mac e Clippy; questa prova non compila né esercita i rami Linux di
+storage, IPC e gateway. Le nuove prove LUKS/manager sono preparate ma ineseguite.
 
 Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
 OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;

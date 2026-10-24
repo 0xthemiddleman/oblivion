@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends cargo rustc gcc
 FROM rust-toolchain AS compiler
 WORKDIR /build
 COPY packages/oblivion-tor-state/ /oblivion-tor-state/
+COPY packages/oblivion-transport/ /oblivion-transport/
 COPY packages/oblivion-host/ ./
 RUN cargo test --locked && cargo build --locked --release --bins --examples && cp target/release/oblivion-storage /tmp/oblivion-storage \
     && cargo build --locked --release --features lab-emulation --bin oblivion-storage
@@ -22,7 +23,7 @@ RUN mkdir /bundle && cp /tmp/oblivion-storage /bundle/oblivion-storage \
     && cp target/release/oblivion-storage /bundle/oblivion-storage-lab \
     && cp target/release/oblivion-control target/release/oblivion-manager /bundle/ \
     && cp host/*.service /bundle/ \
-    && find Cargo.toml Cargo.lock src tests host ../oblivion-tor-state/Cargo.toml ../oblivion-tor-state/src -type f -print0 | sort -z | xargs -0 sha256sum > /bundle/sources.sha256 \
+    && find Cargo.toml Cargo.lock src tests host ../oblivion-tor-state/Cargo.toml ../oblivion-tor-state/src ../oblivion-transport/Cargo.toml ../oblivion-transport/src -type f -print0 | sort -z | xargs -0 sha256sum > /bundle/sources.sha256 \
     && cd /bundle && sha256sum oblivion-* sources.sha256 > SHA256SUMS
 
 # Small development bundle, overlaid only in the disposable laboratory's RAM.
@@ -110,6 +111,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools 
 COPY --from=selected-guest / /guest/
 COPY --from=selected-host / /host/
 COPY packages/oblivion-host/ /sources/packages/oblivion-host/
+COPY packages/oblivion-tor-state/ /sources/packages/oblivion-tor-state/
+COPY packages/oblivion-transport/ /sources/packages/oblivion-transport/
 COPY script/oblivion/ /sources/script/oblivion/
 COPY script/oblivion/vm-lab-pack.sh /pack
 RUN sh /pack

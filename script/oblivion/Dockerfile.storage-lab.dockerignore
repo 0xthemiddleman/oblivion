@@ -1,5 +1,13 @@
 **
 !packages/
+!packages/oblivion-tor-state/
+!packages/oblivion-tor-state/Cargo.toml
+!packages/oblivion-tor-state/src/
+!packages/oblivion-tor-state/src/**
+!packages/oblivion-transport/
+!packages/oblivion-transport/Cargo.toml
+!packages/oblivion-transport/src/
+!packages/oblivion-transport/src/**
 !packages/oblivion-host/
 !packages/oblivion-host/Cargo.toml
 !packages/oblivion-host/Cargo.lock
