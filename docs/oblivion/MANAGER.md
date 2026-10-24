@@ -41,8 +41,9 @@ gateway esclusivamente quella selezionata.
 Il nuovo codice aggiunge **R** per il [percorso Tor/SOCKS](KEYS-AND-EGRESS.md):
 profilo salvato nel generale oppure scelta temporanea fino al suo blocco,
 con credenziali nascoste. Il cambio richiede chat chiusa. Questa schermata è
-compilata sul Mac; le nuove prove interattive Debian sono preparate ma ancora
-ineseguite per gli errori I/O di Docker. Le evidenze precedenti del manager
+compilata sul Mac e in [Debian ARM64 tramite CI](linux-ci-evidence.json);
+le nuove prove interattive Debian sono preparate ma ancora ineseguite.
+Le evidenze precedenti del manager
 non coprono il nuovo menu. Nessuna modifica alla chat TUI upstream.
 
 Le password si inseriscono fuori dalla VM, senza eco né history; i buffer

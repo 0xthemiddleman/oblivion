@@ -11,12 +11,18 @@ Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager fidato:
 archivio versionato, migrazione, scelta per apertura e nessuna rotazione
 automatica. Il [SOCKS5 globale](KEYS-AND-EGRESS.md) viene prima del proxy dei
 tool: il [connettore](EGRESS-CONNECTOR.md) è compilato e verificato separatamente,
-mentre l'integrazione con supervisore e firewall è scritta e attende compilazione
-e collaudo Linux. Le build sono sospese per spazio insufficiente sul Mac ed errori
-I/O nello storage Docker. Configurazione host e selezione nel manager sono
-anch'esse scritte: [stato e limiti](host-transport-status.json). Passano 19 test
-host sul Mac e Clippy; questa prova non compila né esercita i rami Linux di
-storage, IPC e gateway. Le nuove prove LUKS/manager sono preparate ma ineseguite.
+mentre l'integrazione con supervisore e firewall è ora compilata in Debian ARM64
+dalla [CI del fork](linux-ci-evidence.json). Passano 19 test host e 15 test di
+libreria gateway; i due casi dell'adapter esclusi richiedono prove VM separate.
+La [matrice di rete](transport-vm-evidence.json) supera inoltre 12 casi SOCKS
+e 9 casi Tor offline, con due VM nuove per caso e catture esterne.
+Passano anche `bun run check` e il compilatore TypeScript ufficiale, 34 task
+ciascuno. Questo supera il blocco delle build locali dovuto agli errori I/O di
+Docker, senza riparare il disco del Mac. Configurazione host e selezione nel
+manager sono compilate anche per Linux; le nuove prove LUKS/manager sono
+collegate a un job CI con il vero client compilato, ancora senza esito verificato.
+Il [report precedente](host-transport-status.json)
+rimane lo snapshot della sola verifica nativa.
 
 Vincolo UI confermato: mantenere grafica, componenti e interazioni della chat
 OpenCode, con rimozioni mirate e branding leggero. Nessun redesign della chat;
@@ -54,8 +60,9 @@ generale scrivibile e acquisito anche alla chiusura ordinata. Il bootstrap
 e la presenza delle guardie precedono nuove autorizzazioni online. Il collaudo
 del provider reale resta aperto. La precedente verifica di lint e dei 34 task di
 typecheck è passata nell’ambiente Debian/Bun fissato dal repository. Per le
-modifiche correnti al trasporto, il comando canonico non è partito: Docker
-restituisce un errore I/O. Non si estende la precedente evidenza a questo diff.
+modifiche correnti al trasporto, il comando canonico locale non era partito
+per l'errore I/O Docker. La successiva [CI Linux](linux-ci-evidence.json)
+lo ha eseguito con successo sul commit indicato nel report.
 
 Il grant ora nasce soltanto dopo l'avvio di QEMU sospeso e resta associato al
 suo pidfd. La [revoca all'uscita del processo](session-exit-evidence.json)

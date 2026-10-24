@@ -1,12 +1,12 @@
 # Connettore Tor e SOCKS5
 
 `oblivion-egress` è il nuovo componente di trasporto, compilato e verificato
-separatamente. Il collegamento a supervisore e firewall è ora scritto, ma
-**attende compilazione e collaudo Linux**. Le immagini già verificate usano
-ancora il percorso precedente. Il nuovo codice host comprende ora
-[storage, IPC e selezione nel manager](KEYS-AND-EGRESS.md), compilati soltanto
-nei target nativi disponibili sul Mac. Il lifecycle Linux dei volumi e il
-cambio effettivo di percorso rimangono da collaudare.
+separatamente. Il collegamento a supervisore e firewall e il nuovo codice host
+per [storage, IPC e selezione nel manager](KEYS-AND-EGRESS.md) sono ora compilati
+in [Debian ARM64 tramite CI](linux-ci-evidence.json). Supervisore e firewall
+superano inoltre la [matrice con due VM](transport-vm-evidence.json): 12 casi
+SOCKS e 9 Tor offline. Il lifecycle Linux dei volumi e il cambio effettivo di
+profilo attraverso il manager rimangono da collaudare.
 I componenti della chat OpenCode non cambiano.
 
 ## Confini implementati
@@ -32,7 +32,7 @@ Il tipo condiviso `oblivion-transport::Transport` distingue:
 - `socks5`: endpoint IPv4 letterale e porta, con autenticazione opzionale.
   Sono esclusi hostname, IPv6, porta zero, `0.0.0.0/8`, `224.0.0.0/3`, loopback e il
   collegamento interno `10.88.0.0/30`. Un IP LAN esplicito è ammesso dal tipo;
-  l'eccezione firewall limitata a quell'IP e porta è scritta e attende collaudo.
+  l'eccezione firewall limitata a quell'IP e porta è verificata nella matrice VM.
 
 Le credenziali del SOCKS esterno sono distinte dal token locale: al proxy
 vengono inviate soltanto quelle configurate, oppure nessuna autenticazione.
@@ -84,7 +84,7 @@ SOCKS completo, con firewall e sottoprocessi, prima di dichiarare il supporto
 globale. Il laboratorio non ha NIC esterna, non usa provider reale e non
 verifica l'isolamento KVM.
 
-## Integrazione runtime scritta, verifica pendente
+## Integrazione runtime verificata nel laboratorio
 
 Il controller privato accetta un trasporto nel messaggio `configure`; se
 omesso usa Tor, preservando il protocollo dell'host esistente. La configurazione
@@ -106,18 +106,20 @@ file tmpfiles crea la directory RAM vuota necessaria al mount del controller,
 senza avviare Tor. L'avvio attende il canale di controllo prima di fermare Tor
 per l'importazione dello stato. Revoca e guasti del controller chiudono entrambi
 i figli; `ExecStopPost` ferma Tor e ricarica la policy con selettori vuoti.
-Questi sono comportamenti previsti dal sorgente, non nuovi risultati di test.
+La matrice VM verifica separatamente revoca, crash dei due figli e del controller,
+perdita del controllo e configurazioni non valide, richiedendo l'arresto dei
+processi e la rimozione delle autorizzazioni di rete.
 
 Il nuovo `script/oblivion/run-transport-lab.py` prepara due VM indipendenti e un
-proxy SOCKS/TLS sintetico sul loopback del Mac, raggiunto attraverso l'alias
+proxy SOCKS/TLS sintetico sul loopback dell'host di laboratorio, raggiunto attraverso l'alias
 QEMU. Nessuna richiesta viene inoltrata a un provider. L'immagine di laboratorio
 aggiunge esclusivamente il certificato pubblico della fixture al broker e
 conserva il diff; le immagini di produzione non ricevono quella CA. I test
-previsti coprono credenziali e metodi rifiutati, proxy fermo, ripresa, rotazione
+coprono credenziali e metodi rifiutati, proxy fermo, ripresa, rotazione
 del token, stream revocato, crash e tentativo di riconfigurazione. Le catture
 esterne controllano anche le coppie IP/porta, oltre ai protocolli.
 
-Il [report corrente](transport-runtime-status.json) distingue:
+Il [report precedente](transport-runtime-status.json) distingue:
 
 - controlli statici Rust, Python e shell;
 - smoke test del solo server sintetico sul Mac, con curl e verifica TLS;
@@ -125,7 +127,27 @@ Il [report corrente](transport-runtime-status.json) distingue:
 - build Linux e `bun run check` non completati per errori I/O Docker, con
   circa 340 MiB liberi sul Mac; nessuna nuova esecuzione delle due VM.
 
-Prima di eseguire questi comandi occorre liberare spazio e verificare che
+La [CI successiva](linux-ci-evidence.json) ha completato build e controlli
+del repository su un runner Linux ARM64 indipendente. Il workflow
+`.github/workflows/oblivion-check.yml` esegue anche le matrici di guasto SOCKS e
+Tor offline con `--accelerator tcg`, conservando report, console e PCAP sintetici.
+Il backend resta esplicito: `hvf` sul Mac, `tcg` su Linux, senza fallback.
+L'emulazione software non verifica l'isolamento hardware. I bundle hanno
+manifest SHA256 e una retention CI di sette giorni; non sono una release firmata.
+
+La [matrice completata](transport-vm-evidence.json), sul commit `30495ba`,
+ha 21 casi positivi. Tutti i 12 casi SOCKS verificano stream TLS, autenticazione,
+assenza di fallback, revoca/crash e una cattura esterna contenente solo TCP verso
+il proxy scelto, senza DNS/UDP/IPv6 né chiavi API o token locali in chiaro.
+I 9 casi Tor offline hanno zero pacchetti sull'interfaccia esterna, compresi
+startup e tentativi di aggiramento del firewall. Sono verificati UID separati,
+capability assenti nei figli, argv/ambiente senza segreti e core dump disabilitati.
+Il report conserva anche i due fallimenti iniziali del laboratorio e le correzioni:
+compatibilità QEMU e attesa dell'arresto del supervisore prima di verificare
+l'assenza del listener dopo un crash. Nessuna correzione al codice di produzione
+è stata necessaria per far passare questa matrice.
+
+Prima di eseguire questi comandi **localmente** occorre liberare spazio e verificare che
 Docker abbia ripreso a leggere e scrivere normalmente. Non è stato eseguito
 un reset globale di Docker e non sono stati rimossi dati di altri progetti.
 Da root del repository, usare directory di output nuove:
@@ -145,9 +167,9 @@ PYTHONDONTWRITEBYTECODE=1 python3 script/oblivion/run-transport-lab.py \
 
 Ripetere la suite SOCKS con autenticazione `none` e per i guasti `revoke`,
 `broker-crash`, `supervisor-crash`, `control-disconnect` e `reconfigure`.
-Eseguire poi regressione Tor online, persistenza delle guardie, lifecycle host
-e volumi, controlli Rust Linux e comando canonico del repository. Finché
-questi gate restano aperti non è dichiarato il supporto SOCKS globale.
+Per il prodotto rimangono regressione Tor online, persistenza delle guardie,
+lifecycle host e volumi e proxy dei tool. Finché questi gate restano aperti
+non è dichiarato il supporto SOCKS globale.
 
 ## Integrazione successiva
 
@@ -155,13 +177,8 @@ questi gate restano aperti non è dichiarato il supporto SOCKS globale.
    e la scelta temporanea in readonly, ora implementati nel sorgente host.
 2. Collaudare il passaggio del profilo dall'host e l'avvio Tor condizionale.
    Verificare che SOCKS non importi, acquisisca o salvi stato Tor.
-3. Collaudare l'avvio del connettore con UID separato per grant e i soli segreti
-   del trasporto. Il broker continua a ricevere chiave API e token locale.
-4. Collaudare il firewall per modalità: API e tool soltanto al connettore locale,
-   connettore soltanto al Tor locale oppure all'IP/porta del proxy scelto.
-   Nessun accesso grezzo da guest e nessuna uscita diretta o DNS di sistema.
-5. Collegare revoca e arresto di entrambi i processi al lifecycle verificato
-   delle VM; richiedere chat e trasferimenti chiusi prima di cambiare modalità.
-6. Esercitare il percorso completo con proxy disponibile, caduto, autenticato,
-   credenziali errate e stream attivi, preservando il percorso Tor e la sua
-   persistenza. Poi estendere la stessa scelta al futuro proxy dei tool.
+3. Ripetere revoca e arresto attraverso il lifecycle host/LUKS completo;
+   richiedere chat e trasferimenti chiusi prima di cambiare modalità.
+4. Esercitare provider e Tor reali, preservando lo stato selettivo di Tor.
+5. Estendere la stessa scelta al proxy autorizzato dei tool e provarne le
+   destinazioni, la policy e i tentativi di aggiramento.

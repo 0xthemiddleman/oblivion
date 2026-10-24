@@ -1,6 +1,6 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.32 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
+Versione 0.33 — 24 ottobre 2026. Prototipo in sviluppo sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. Sono implementati LUKS2 a due livelli, controller
 Linux, VM dedicata, manager fidato e prima TUI ridotta. Il gateway conserva
 la chiave API fuori dalla chat, assegna token per apertura e revoca anche alla
@@ -25,13 +25,18 @@ Le [API key multiple](docs/oblivion/CREDENTIALS.md) sono ora salvabili e
 selezionabili nel manager fidato, con migrazione del formato precedente e
 nessuna rotazione automatica. Il [proxy SOCKS5 globale alternativo](docs/oblivion/KEYS-AND-EGRESS.md)
 ha un [connettore verificato separatamente](docs/oblivion/EGRESS-CONNECTOR.md).
-L'integrazione con supervisore e firewall è scritta ma **non ancora compilata
-e collaudata in Linux**: Docker è fermo per spazio insufficiente ed errori I/O.
+L'integrazione con supervisore e firewall è ora compilata in Debian ARM64
+dalla [CI del fork](docs/oblivion/linux-ci-evidence.json), che supera anche
+il controllo canonico e il compilatore TypeScript ufficiale. La
+[matrice VM](docs/oblivion/transport-vm-evidence.json) supera 12 casi SOCKS e
+9 casi Tor offline, con catture esterne e guasti durante gli stream.
 Anche storage, IPC e scelta nel manager sono ora scritti: profilo salvato nel
 generale e scelta temporanea in RAM, con cambio consentito soltanto a chat
-chiuse. Sul Mac passano 19 test host e Clippy; i rami Linux, il menu interattivo
-e il percorso completo richiedono ancora collaudo. Le immagini precedenti
-rimangono quelle verificate. Nessuna modifica ai componenti della chat TUI.
+chiuse. Passano 19 test host sia sul Mac sia in Debian; il menu interattivo
+e il lifecycle completo richiedono ancora collaudo; il relativo job CI è stato
+preparato con il vero client compilato e volumi sintetici. La CI permette di proseguire
+mentre il Docker locale rimane fermo per spazio insufficiente ed errori I/O.
+Nessuna modifica ai componenti della chat TUI.
 
 Restano da completare collaudo Abliteration reale e shutdown globale, proxy dei tool,
 trasferimenti USB e OnionShare, sessione effimera completa, rifinitura della TUI,

@@ -1,0 +1,2383 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "30495ba9f96221dac084592844edf957723c8db9",
+  "scope": "Two separate Debian ARM64 VMs per case on Linux TCG, real supervisor/connector/firewall, synthetic credentials and loopback SOCKS/TLS provider. The lab API alone trusts the public fixture CA.",
+  "run": {
+    "id": 40089963500,
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40089963500",
+    "conclusion": "success",
+    "successful_jobs": 23
+  },
+  "result": {
+    "socks_cases": 12,
+    "offline_tor_cases": 9,
+    "checks_across_cases": 228,
+    "failures": 0
+  },
+  "checks": {
+    "canonical": "bun run check passed (34 typecheck tasks)",
+    "official_typescript": "bun run typecheck:tsc passed (34 tasks)",
+    "host_component_tests": 19,
+    "gateway_library_tests": 15,
+    "ignored_adapter_tests": 2
+  },
+  "image_manifest": "a77058b685ddd93d1c243cf02a68676054a067909dbf036036b0c87eafeda910  binaries.sha256\nb53de36d4acb0e9915ca0e0d133d1578909a85f80f316247a6a804b677ae6934  broker-sources.sha256\nab079a0e371ba868c27b1b59c032c5afabc9452377317f16ab083ae67852d7c4  initrd\n391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\n9050fce4c8a12a29a6a2d23e69e6792d36271051efab61885f4c695648e96f85  laboratory.squashfs\n14d9a6d3549d0457a3f42aa8bde34869a018159c9cfb06e4d6f42c984bbc49d0  sources.sha256\n09565492f087dedd50cd3be09a406c9589bfbfd7c25e6058d5d84b22b0108fc3  trust.diff\n",
+  "sources_at_verified_commit": {
+    ".github/workflows/oblivion-check.yml": "17693f2cdcc0ee27f2f6cfb522f3d18b15234fb0fcba1063043a10c9cf51b913",
+    "script/oblivion/Dockerfile.vm-lab": "1bfcf1f1e7ff597a8e23d819f8376bcbc975004c2ba412614d12fbaaeb69f129",
+    "script/oblivion/run-network-lab.py": "1e81102c66765dfa22d0081ba99948cce981f1e88e1086ad8bb3358ab0e3d5ab",
+    "script/oblivion/run-transport-lab.py": "0778cda8851d63569a6b9f72d58d4911cba9360e7689537711bb5587a4c822d1",
+    "script/oblivion/vm-network-fixture.py": "e5cf7e3821fb8fe08d94bd83d4806e342d249e08940d8eac5dde223584d8e8bf",
+    "script/oblivion/transport_fixture.py": "b51797b28ca4c0fd96e419f6c901c0c7ae8d9c786b0aab93e2f90de36043111c",
+    "script/oblivion/packet_capture.py": "37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86",
+    "script/oblivion/vm-stream-cert.pem": "59b9627aaf332437cbf8e3483683f12d457c2397d37250883f17640d1557ae62",
+    "packages/oblivion-gateway/src/supervisor.rs": "afefade5fcc6faa28d5924052dff07ca1d70335d133eac59f3c6c3474a54739b",
+    "packages/oblivion-gateway/src/network.rs": "81615d8c06485f36b416779e48d318b332af5b69b67a7e19d7aa321f5a1aa54a",
+    "packages/oblivion-gateway/src/tor.rs": "998661c13e65262347fde7934a100453db8779808f71858c77340a977aae6fba",
+    "packages/oblivion-gateway/src/egress.rs": "781ae9e21793e2b478ed72e0371e5f484db26c8e0d9de2c6d90f3f4022f4c186",
+    "packages/oblivion-gateway/guest/firewall.nft": "2c3b88df8230bea62546a4ae6b4aa42fbe1c41958d761ba502593e5026f469ba",
+    "packages/oblivion-gateway/guest/oblivion-gateway-control.service": "188338e655eb369ba9a71220761ad3e3f6c695e5a730c8e8b07b470b063e7846"
+  },
+  "cases": [
+    {
+      "transport": "socks5",
+      "authentication": "none",
+      "fault": "broker-crash",
+      "passed": true,
+      "seconds": 113.13,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "broker-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 116,
+        "ipv4": 114,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 114,
+        "tcp_ports": [
+          36197,
+          46314,
+          46316,
+          46330,
+          46336,
+          46352,
+          60742
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            46314,
+            "10.0.2.2",
+            36197
+          ],
+          [
+            "10.0.2.15",
+            46316,
+            "10.0.2.2",
+            36197
+          ],
+          [
+            "10.0.2.15",
+            46330,
+            "10.0.2.2",
+            36197
+          ],
+          [
+            "10.0.2.15",
+            46336,
+            "10.0.2.2",
+            36197
+          ],
+          [
+            "10.0.2.15",
+            46352,
+            "10.0.2.2",
+            36197
+          ],
+          [
+            "10.0.2.15",
+            60742,
+            "10.0.2.2",
+            36197
+          ],
+          [
+            "10.0.2.2",
+            36197,
+            "10.0.2.15",
+            46314
+          ],
+          [
+            "10.0.2.2",
+            36197,
+            "10.0.2.15",
+            46316
+          ],
+          [
+            "10.0.2.2",
+            36197,
+            "10.0.2.15",
+            46330
+          ],
+          [
+            "10.0.2.2",
+            36197,
+            "10.0.2.15",
+            46336
+          ],
+          [
+            "10.0.2.2",
+            36197,
+            "10.0.2.15",
+            46352
+          ],
+          [
+            "10.0.2.2",
+            36197,
+            "10.0.2.15",
+            60742
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "bff05cba19057c9c0eb9228cb6e17b7c6dc4d76ba4badc8961e58610e4220d20"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "f14d1d0889540f024d06f7f2d73a734bacf73d52d788b42618c1011cf866caf5",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "026f82be0cbe78f3482d2e3fae5c2d8f403f2ab0b211ea12258e37f75babcd28",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "4e54a16fb6dce33c3bb31128c817ee3290c96405d24942cfaa29fc6ad02fd70e",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "01f104ee0bb42b35ecd40801230f56e554a326aefd4850fd707f4f30674d02ab",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "bff05cba19057c9c0eb9228cb6e17b7c6dc4d76ba4badc8961e58610e4220d20",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "47b68a054ac2e394be79e07ae2e1bcbe9c60726c6bc1d3c5c2a7aca22e753782",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "98836a5920f51e65d245ae2d3271cf655f99e1a00f3e2217ddb26d0ea6af06d8",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "f14d1d0889540f024d06f7f2d73a734bacf73d52d788b42618c1011cf866caf5"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "none",
+      "fault": "control-disconnect",
+      "passed": true,
+      "seconds": 111.15,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "control-disconnect closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 114,
+        "ipv4": 112,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 112,
+        "tcp_ports": [
+          34795,
+          46682,
+          53190,
+          53202,
+          53206,
+          53212,
+          53220
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            46682,
+            "10.0.2.2",
+            34795
+          ],
+          [
+            "10.0.2.15",
+            53190,
+            "10.0.2.2",
+            34795
+          ],
+          [
+            "10.0.2.15",
+            53202,
+            "10.0.2.2",
+            34795
+          ],
+          [
+            "10.0.2.15",
+            53206,
+            "10.0.2.2",
+            34795
+          ],
+          [
+            "10.0.2.15",
+            53212,
+            "10.0.2.2",
+            34795
+          ],
+          [
+            "10.0.2.15",
+            53220,
+            "10.0.2.2",
+            34795
+          ],
+          [
+            "10.0.2.2",
+            34795,
+            "10.0.2.15",
+            46682
+          ],
+          [
+            "10.0.2.2",
+            34795,
+            "10.0.2.15",
+            53190
+          ],
+          [
+            "10.0.2.2",
+            34795,
+            "10.0.2.15",
+            53202
+          ],
+          [
+            "10.0.2.2",
+            34795,
+            "10.0.2.15",
+            53206
+          ],
+          [
+            "10.0.2.2",
+            34795,
+            "10.0.2.15",
+            53212
+          ],
+          [
+            "10.0.2.2",
+            34795,
+            "10.0.2.15",
+            53220
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "3483c354de891600abd59bef235c555c1f6492d54ba2a55b4067ed2c517ecc68"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "7807ba5d7c95575092c1b784cf5b460234ac9adf9e4eecde9fa80c5baca53ceb",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "d97308261fbf78651de07e42fd8025def79018acc7aac61b69572ab445b5ea5d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "d197da83ba2be346a920d05ecae68b6aa0af2f07532b0b89c1fd08bb059a1266",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "3aa483533ea621c5fb34963c9e6bf2618332a2f0422d633d51746d993a36ddc4",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "3483c354de891600abd59bef235c555c1f6492d54ba2a55b4067ed2c517ecc68",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "60961dcc4af5f01c8953d4a044dc2a30660ae3cdef75ad362aa9d3c44cd0b458",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "45b1cb1d151587a3e1a789a339bb8d903d040b883cd84a8eb5babf4c3199602f",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "7807ba5d7c95575092c1b784cf5b460234ac9adf9e4eecde9fa80c5baca53ceb"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "none",
+      "fault": "egress-crash",
+      "passed": true,
+      "seconds": 106.97,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "egress-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 358,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 355,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 110,
+        "ipv4": 108,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 108,
+        "tcp_ports": [
+          40707,
+          49546,
+          51426,
+          51438,
+          51454,
+          51458,
+          51474
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            49546,
+            "10.0.2.2",
+            40707
+          ],
+          [
+            "10.0.2.15",
+            51426,
+            "10.0.2.2",
+            40707
+          ],
+          [
+            "10.0.2.15",
+            51438,
+            "10.0.2.2",
+            40707
+          ],
+          [
+            "10.0.2.15",
+            51454,
+            "10.0.2.2",
+            40707
+          ],
+          [
+            "10.0.2.15",
+            51458,
+            "10.0.2.2",
+            40707
+          ],
+          [
+            "10.0.2.15",
+            51474,
+            "10.0.2.2",
+            40707
+          ],
+          [
+            "10.0.2.2",
+            40707,
+            "10.0.2.15",
+            49546
+          ],
+          [
+            "10.0.2.2",
+            40707,
+            "10.0.2.15",
+            51426
+          ],
+          [
+            "10.0.2.2",
+            40707,
+            "10.0.2.15",
+            51438
+          ],
+          [
+            "10.0.2.2",
+            40707,
+            "10.0.2.15",
+            51454
+          ],
+          [
+            "10.0.2.2",
+            40707,
+            "10.0.2.15",
+            51458
+          ],
+          [
+            "10.0.2.2",
+            40707,
+            "10.0.2.15",
+            51474
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "28db41764d0f0e7dda48fce4eb73727b8068f4e624b348415df0e9d46dbd1bf1"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "2af929015a6dbe472b902b2bb0058cfd2f17778c6cdf4a76e257e5949360ece1",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "5462834efb31f148c1aac7b894c9972d913a501b29a3e8cbb8cfe8d915164a6d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "c47846c4028af3420a450b5ce1757d573d6c2d238dad970d819048d7344d165c",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "4063697c7a60e69f36b7af38b8bf36d467cc63300ecce6ad367644799c099231",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "28db41764d0f0e7dda48fce4eb73727b8068f4e624b348415df0e9d46dbd1bf1",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "d98a717e1d895990a799c73eb96217ded2106e62210f89662b90f3a2274019c4",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "23b34a37254be5f25c4a7b3bfd673b701c2ab01513e9dec777df9c2d0ca4bbd1",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "2af929015a6dbe472b902b2bb0058cfd2f17778c6cdf4a76e257e5949360ece1"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "none",
+      "fault": "reconfigure",
+      "passed": true,
+      "seconds": 105.21,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "reconfigure closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 109,
+        "ipv4": 107,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 107,
+        "tcp_ports": [
+          37325,
+          46258,
+          46264,
+          46272,
+          46284,
+          46292,
+          48976
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            46258,
+            "10.0.2.2",
+            37325
+          ],
+          [
+            "10.0.2.15",
+            46264,
+            "10.0.2.2",
+            37325
+          ],
+          [
+            "10.0.2.15",
+            46272,
+            "10.0.2.2",
+            37325
+          ],
+          [
+            "10.0.2.15",
+            46284,
+            "10.0.2.2",
+            37325
+          ],
+          [
+            "10.0.2.15",
+            46292,
+            "10.0.2.2",
+            37325
+          ],
+          [
+            "10.0.2.15",
+            48976,
+            "10.0.2.2",
+            37325
+          ],
+          [
+            "10.0.2.2",
+            37325,
+            "10.0.2.15",
+            46258
+          ],
+          [
+            "10.0.2.2",
+            37325,
+            "10.0.2.15",
+            46264
+          ],
+          [
+            "10.0.2.2",
+            37325,
+            "10.0.2.15",
+            46272
+          ],
+          [
+            "10.0.2.2",
+            37325,
+            "10.0.2.15",
+            46284
+          ],
+          [
+            "10.0.2.2",
+            37325,
+            "10.0.2.15",
+            46292
+          ],
+          [
+            "10.0.2.2",
+            37325,
+            "10.0.2.15",
+            48976
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "16c5f752566f1e2b5551d451478ea377e1fdba9905ade7e67f497cf2d7f02f71"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "51fcb9f89b274c5bf13f30e5c4471f0444f30c68ed21f963b21c7f2cc19b8723",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "d339aab40a414cb629eca0dbf56550d79c6da55d18a6b6b060d17812b69d49fa",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "53389aa73f41c986fb3b06c0a40cc71ab8efbe8817a12ce3b0a8ff533c87e656",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "f10df941a31f0831426383a0656e5e64a2e5b0526d31d679b3154635488f8eef",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "16c5f752566f1e2b5551d451478ea377e1fdba9905ade7e67f497cf2d7f02f71",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "73bcb400b29bd32d8585834bccd5180f0f5f169d41c89b84eb315f7ce57a25fd",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "b8758b609db2464aebafe8bc5605184f5ee7cca18abff2978839807a93c371ce",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "51fcb9f89b274c5bf13f30e5c4471f0444f30c68ed21f963b21c7f2cc19b8723"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "none",
+      "fault": "revoke",
+      "passed": true,
+      "seconds": 107.17,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "revoke closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 358,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 355,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "inactive",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 110,
+        "ipv4": 108,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 108,
+        "tcp_ports": [
+          36247,
+          42056,
+          42064,
+          42068,
+          42084,
+          42096,
+          48710
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            42056,
+            "10.0.2.2",
+            36247
+          ],
+          [
+            "10.0.2.15",
+            42064,
+            "10.0.2.2",
+            36247
+          ],
+          [
+            "10.0.2.15",
+            42068,
+            "10.0.2.2",
+            36247
+          ],
+          [
+            "10.0.2.15",
+            42084,
+            "10.0.2.2",
+            36247
+          ],
+          [
+            "10.0.2.15",
+            42096,
+            "10.0.2.2",
+            36247
+          ],
+          [
+            "10.0.2.15",
+            48710,
+            "10.0.2.2",
+            36247
+          ],
+          [
+            "10.0.2.2",
+            36247,
+            "10.0.2.15",
+            42056
+          ],
+          [
+            "10.0.2.2",
+            36247,
+            "10.0.2.15",
+            42064
+          ],
+          [
+            "10.0.2.2",
+            36247,
+            "10.0.2.15",
+            42068
+          ],
+          [
+            "10.0.2.2",
+            36247,
+            "10.0.2.15",
+            42084
+          ],
+          [
+            "10.0.2.2",
+            36247,
+            "10.0.2.15",
+            42096
+          ],
+          [
+            "10.0.2.2",
+            36247,
+            "10.0.2.15",
+            48710
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "db1ea6dd8d10f129dd03b725a5ee87aebf26bb8eb53c938cd5545a7e26823f94"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "efaa47ea34544ee08d78673dfdde5ecd8f1e8b0ba6f275e72641e445ebe688ce",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "6bdcd61485cd8c2799c4dd538598c2598bda67cfeaa3811f431973b0bde2842b",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "2f7984287c2ea8e1c256b08a3265f7cc2bf295d46922cda10e38b00eed0be1c3",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "fe3a0ca20af9ff0e3eeb726a71b536c35325cc51ebc58488b8035e7f169eafe6",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "db1ea6dd8d10f129dd03b725a5ee87aebf26bb8eb53c938cd5545a7e26823f94",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "7a8a3a6fe3358ab0dbaf53403d0b56860f79b064d332a0724845aef0d5906c1d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "3e3355a2376116f610a7042e4bd5eb93f311b4c27c40b0205e1454cab79b695e",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "efaa47ea34544ee08d78673dfdde5ecd8f1e8b0ba6f275e72641e445ebe688ce"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "none",
+      "fault": "supervisor-crash",
+      "passed": true,
+      "seconds": 106.09,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "supervisor-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 111,
+        "ipv4": 109,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 109,
+        "tcp_ports": [
+          38170,
+          44280,
+          44282,
+          44292,
+          44302,
+          44304,
+          46527
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            38170,
+            "10.0.2.2",
+            46527
+          ],
+          [
+            "10.0.2.15",
+            44280,
+            "10.0.2.2",
+            46527
+          ],
+          [
+            "10.0.2.15",
+            44282,
+            "10.0.2.2",
+            46527
+          ],
+          [
+            "10.0.2.15",
+            44292,
+            "10.0.2.2",
+            46527
+          ],
+          [
+            "10.0.2.15",
+            44302,
+            "10.0.2.2",
+            46527
+          ],
+          [
+            "10.0.2.15",
+            44304,
+            "10.0.2.2",
+            46527
+          ],
+          [
+            "10.0.2.2",
+            46527,
+            "10.0.2.15",
+            38170
+          ],
+          [
+            "10.0.2.2",
+            46527,
+            "10.0.2.15",
+            44280
+          ],
+          [
+            "10.0.2.2",
+            46527,
+            "10.0.2.15",
+            44282
+          ],
+          [
+            "10.0.2.2",
+            46527,
+            "10.0.2.15",
+            44292
+          ],
+          [
+            "10.0.2.2",
+            46527,
+            "10.0.2.15",
+            44302
+          ],
+          [
+            "10.0.2.2",
+            46527,
+            "10.0.2.15",
+            44304
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "32b67d4f6e32de3b489f4517cc3df728ad47e47733f1360d9327a01f7cb70c0a"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "f29a8bd0a174fd292b30eb72a4c792b082926e10351831b74cdb5ada49b3c38c",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "f9e10ff14f941ed42f702c10a046e5d3fffb879a1573ec1220ee53c31cc9c0cf",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "57922f7e097c968e7f1302995c67569f3969371fbcbb14b8c57e5cc5a92a45e0",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "49aa3bd7aea0ed377bed1d8036981c89ac677579340864f3ef159fb0c058b3ce",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "32b67d4f6e32de3b489f4517cc3df728ad47e47733f1360d9327a01f7cb70c0a",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "f2e1121c3d5baf813d254d45d0fc2a72c87d0116193e6ce1734a9627a07e2808",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "605b49839b2491422d8a22a2437856f00ef5112e3b8c951a14afdedc775cf56b",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-none-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "f29a8bd0a174fd292b30eb72a4c792b082926e10351831b74cdb5ada49b3c38c"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "required",
+      "fault": "broker-crash",
+      "passed": true,
+      "seconds": 115.01,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "broker-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 373,
+        "broker_pid": 384,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 381,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 139,
+        "ipv4": 137,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 137,
+        "tcp_ports": [
+          36813,
+          47296,
+          47304,
+          47310,
+          47326,
+          47340,
+          47346,
+          57008
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            47296,
+            "10.0.2.2",
+            36813
+          ],
+          [
+            "10.0.2.15",
+            47304,
+            "10.0.2.2",
+            36813
+          ],
+          [
+            "10.0.2.15",
+            47310,
+            "10.0.2.2",
+            36813
+          ],
+          [
+            "10.0.2.15",
+            47326,
+            "10.0.2.2",
+            36813
+          ],
+          [
+            "10.0.2.15",
+            47340,
+            "10.0.2.2",
+            36813
+          ],
+          [
+            "10.0.2.15",
+            47346,
+            "10.0.2.2",
+            36813
+          ],
+          [
+            "10.0.2.15",
+            57008,
+            "10.0.2.2",
+            36813
+          ],
+          [
+            "10.0.2.2",
+            36813,
+            "10.0.2.15",
+            47296
+          ],
+          [
+            "10.0.2.2",
+            36813,
+            "10.0.2.15",
+            47304
+          ],
+          [
+            "10.0.2.2",
+            36813,
+            "10.0.2.15",
+            47310
+          ],
+          [
+            "10.0.2.2",
+            36813,
+            "10.0.2.15",
+            47326
+          ],
+          [
+            "10.0.2.2",
+            36813,
+            "10.0.2.15",
+            47340
+          ],
+          [
+            "10.0.2.2",
+            36813,
+            "10.0.2.15",
+            47346
+          ],
+          [
+            "10.0.2.2",
+            36813,
+            "10.0.2.15",
+            57008
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "2191ca1baaff413c33fd1365d154bd52556acc59e6731f633d08677e8ff35e99"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "4d4bae84b7db7716a30048684b58856f98f501133519c59322685dd95b54654f",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "7bf8749d3b33568380c80d0a314ed3cd42b17f89cb97f7769a6a35edfe04c199",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "660fff96ac75de038a3c607234383b6fef8be2aed4cd9425243525b31f27d0ba",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "7693610f68b3467315eb73d4a1bfdde3895c411996b6c358578e04e9e4656435",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "2191ca1baaff413c33fd1365d154bd52556acc59e6731f633d08677e8ff35e99",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "35c1bbd7bce95cdc88afe1b62dba74d3846b44c2e290a198e69c3d800f7f608e",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "40f657f39a9b20cd524c3c4e43cce0066fb76ca86faf322b24490cb8197fb80d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "4d4bae84b7db7716a30048684b58856f98f501133519c59322685dd95b54654f"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "required",
+      "fault": "control-disconnect",
+      "passed": true,
+      "seconds": 105.59,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "control-disconnect closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 135,
+        "ipv4": 133,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 133,
+        "tcp_ports": [
+          45586,
+          46139,
+          60096,
+          60100,
+          60110,
+          60126,
+          60134,
+          60146
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            45586,
+            "10.0.2.2",
+            46139
+          ],
+          [
+            "10.0.2.15",
+            60096,
+            "10.0.2.2",
+            46139
+          ],
+          [
+            "10.0.2.15",
+            60100,
+            "10.0.2.2",
+            46139
+          ],
+          [
+            "10.0.2.15",
+            60110,
+            "10.0.2.2",
+            46139
+          ],
+          [
+            "10.0.2.15",
+            60126,
+            "10.0.2.2",
+            46139
+          ],
+          [
+            "10.0.2.15",
+            60134,
+            "10.0.2.2",
+            46139
+          ],
+          [
+            "10.0.2.15",
+            60146,
+            "10.0.2.2",
+            46139
+          ],
+          [
+            "10.0.2.2",
+            46139,
+            "10.0.2.15",
+            45586
+          ],
+          [
+            "10.0.2.2",
+            46139,
+            "10.0.2.15",
+            60096
+          ],
+          [
+            "10.0.2.2",
+            46139,
+            "10.0.2.15",
+            60100
+          ],
+          [
+            "10.0.2.2",
+            46139,
+            "10.0.2.15",
+            60110
+          ],
+          [
+            "10.0.2.2",
+            46139,
+            "10.0.2.15",
+            60126
+          ],
+          [
+            "10.0.2.2",
+            46139,
+            "10.0.2.15",
+            60134
+          ],
+          [
+            "10.0.2.2",
+            46139,
+            "10.0.2.15",
+            60146
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "ec6566491f8d089794d9993f73df05709f3dd26d169f64267ee495fe42f5d12e"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "ed10de5b88d74c139d14bde1dc08860eb0f8f54fdc50d8beee4b318355839b66",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "dbb180dcff41ccc969b3a5756f1c413e23f6c700b0a56e6e727c14419635a512",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "a95f26ac20ef204379f0d9c6721e0d9a8d04fe9988b734aab318b19abeed8d49",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "166ec3e42383195c6fe85ad56d22fb760dbb1cf8da7cf7a1034820019e7447d8",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "ec6566491f8d089794d9993f73df05709f3dd26d169f64267ee495fe42f5d12e",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "ea26680512f24ce0adf67576896a62463ca531b8103583534aa02f3a2e86d3ce",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "0ebd4ef86bff9eb20c7dd7827bf8bc20bbcf5ba688619cfa5ffb6d8af0694fb2",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-control-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "ed10de5b88d74c139d14bde1dc08860eb0f8f54fdc50d8beee4b318355839b66"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "required",
+      "fault": "egress-crash",
+      "passed": true,
+      "seconds": 106.75,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "egress-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 358,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 355,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 134,
+        "ipv4": 132,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 132,
+        "tcp_ports": [
+          33689,
+          40492,
+          40496,
+          40512,
+          40516,
+          40520,
+          40534,
+          57846
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            40492,
+            "10.0.2.2",
+            33689
+          ],
+          [
+            "10.0.2.15",
+            40496,
+            "10.0.2.2",
+            33689
+          ],
+          [
+            "10.0.2.15",
+            40512,
+            "10.0.2.2",
+            33689
+          ],
+          [
+            "10.0.2.15",
+            40516,
+            "10.0.2.2",
+            33689
+          ],
+          [
+            "10.0.2.15",
+            40520,
+            "10.0.2.2",
+            33689
+          ],
+          [
+            "10.0.2.15",
+            40534,
+            "10.0.2.2",
+            33689
+          ],
+          [
+            "10.0.2.15",
+            57846,
+            "10.0.2.2",
+            33689
+          ],
+          [
+            "10.0.2.2",
+            33689,
+            "10.0.2.15",
+            40492
+          ],
+          [
+            "10.0.2.2",
+            33689,
+            "10.0.2.15",
+            40496
+          ],
+          [
+            "10.0.2.2",
+            33689,
+            "10.0.2.15",
+            40512
+          ],
+          [
+            "10.0.2.2",
+            33689,
+            "10.0.2.15",
+            40516
+          ],
+          [
+            "10.0.2.2",
+            33689,
+            "10.0.2.15",
+            40520
+          ],
+          [
+            "10.0.2.2",
+            33689,
+            "10.0.2.15",
+            40534
+          ],
+          [
+            "10.0.2.2",
+            33689,
+            "10.0.2.15",
+            57846
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "3b5476eb1ef62a112fddf494cc67d6c4015d07680e386ddcec387cb601b5ed52"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "8f883db2a88a9797d79d5d49888786ffe7916760a0f90f85e0740728b0e23b2d",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "45d571c752cb63e3cd7f3d3637989ec1149e70e7c2b99dfd4d48f79b6cb0ffc9",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "d6590f35ac2c0c01b59dcbdc55f34f630c9464ae5a604ad969899c1436929872",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "a929769e0df13e7d623a7f20a6231054161c2d0f213e881577dd6c17b5924d1d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "3b5476eb1ef62a112fddf494cc67d6c4015d07680e386ddcec387cb601b5ed52",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "2cd31fcd29eaad27cea66cc87b14d86e42947c317f952c8cce5f2888fb4671a9",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "91cddf611b294902a14a2028792e8f2e566b230c40df9dc02c3e0cf2daa0094d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "8f883db2a88a9797d79d5d49888786ffe7916760a0f90f85e0740728b0e23b2d"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "required",
+      "fault": "reconfigure",
+      "passed": true,
+      "seconds": 106.72,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "reconfigure closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 132,
+        "ipv4": 130,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 130,
+        "tcp_ports": [
+          41715,
+          42628,
+          46030,
+          46042,
+          46054,
+          46058,
+          46070,
+          46076
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            42628,
+            "10.0.2.2",
+            41715
+          ],
+          [
+            "10.0.2.15",
+            46030,
+            "10.0.2.2",
+            41715
+          ],
+          [
+            "10.0.2.15",
+            46042,
+            "10.0.2.2",
+            41715
+          ],
+          [
+            "10.0.2.15",
+            46054,
+            "10.0.2.2",
+            41715
+          ],
+          [
+            "10.0.2.15",
+            46058,
+            "10.0.2.2",
+            41715
+          ],
+          [
+            "10.0.2.15",
+            46070,
+            "10.0.2.2",
+            41715
+          ],
+          [
+            "10.0.2.15",
+            46076,
+            "10.0.2.2",
+            41715
+          ],
+          [
+            "10.0.2.2",
+            41715,
+            "10.0.2.15",
+            42628
+          ],
+          [
+            "10.0.2.2",
+            41715,
+            "10.0.2.15",
+            46030
+          ],
+          [
+            "10.0.2.2",
+            41715,
+            "10.0.2.15",
+            46042
+          ],
+          [
+            "10.0.2.2",
+            41715,
+            "10.0.2.15",
+            46054
+          ],
+          [
+            "10.0.2.2",
+            41715,
+            "10.0.2.15",
+            46058
+          ],
+          [
+            "10.0.2.2",
+            41715,
+            "10.0.2.15",
+            46070
+          ],
+          [
+            "10.0.2.2",
+            41715,
+            "10.0.2.15",
+            46076
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "ff43e1a1813dafc9da2b3584b8298e4485e1a80c1aad1d10629f77ffbda34cb9"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "5d136b7e2a450bfbd0369c41b85783e8b7e1be8258ffbdd4db0f01e5205160ff",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "9749d33992413be8a4248d9a7cd66f30966de663eb43acad50f4133c3ac9e5e8",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "a55809df73f49e3d7e904ee88f8a4c0024a5fede6ce9e6950d9255900220388a",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "e1a1cc20e4356d44e3adabdd4f6d85bd24d45c0ceef6e86a7bdcfb35435f5f83",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "ff43e1a1813dafc9da2b3584b8298e4485e1a80c1aad1d10629f77ffbda34cb9",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "c45cc486510b7fde62d247ee3ebe7a39892d474b8374442d1fb79953ebacb5d8",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "45beb66905d7c42f7a563afdcec157c9b2feb73b4f71268e51fdd95d288f653c",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-reconfigure-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "5d136b7e2a450bfbd0369c41b85783e8b7e1be8258ffbdd4db0f01e5205160ff"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "required",
+      "fault": "revoke",
+      "passed": true,
+      "seconds": 105.25,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "revoke closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 358,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 355,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "inactive",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 132,
+        "ipv4": 130,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 130,
+        "tcp_ports": [
+          44791,
+          49428,
+          49438,
+          49440,
+          49442,
+          49458,
+          49472,
+          60180
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            49428,
+            "10.0.2.2",
+            44791
+          ],
+          [
+            "10.0.2.15",
+            49438,
+            "10.0.2.2",
+            44791
+          ],
+          [
+            "10.0.2.15",
+            49440,
+            "10.0.2.2",
+            44791
+          ],
+          [
+            "10.0.2.15",
+            49442,
+            "10.0.2.2",
+            44791
+          ],
+          [
+            "10.0.2.15",
+            49458,
+            "10.0.2.2",
+            44791
+          ],
+          [
+            "10.0.2.15",
+            49472,
+            "10.0.2.2",
+            44791
+          ],
+          [
+            "10.0.2.15",
+            60180,
+            "10.0.2.2",
+            44791
+          ],
+          [
+            "10.0.2.2",
+            44791,
+            "10.0.2.15",
+            49428
+          ],
+          [
+            "10.0.2.2",
+            44791,
+            "10.0.2.15",
+            49438
+          ],
+          [
+            "10.0.2.2",
+            44791,
+            "10.0.2.15",
+            49440
+          ],
+          [
+            "10.0.2.2",
+            44791,
+            "10.0.2.15",
+            49442
+          ],
+          [
+            "10.0.2.2",
+            44791,
+            "10.0.2.15",
+            49458
+          ],
+          [
+            "10.0.2.2",
+            44791,
+            "10.0.2.15",
+            49472
+          ],
+          [
+            "10.0.2.2",
+            44791,
+            "10.0.2.15",
+            60180
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "c436c3614c66bea132f9c2fc3f73635a43f6cab52b0d1b21cf16d1c8bbe116af"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "e373d0fb9abe5be389b8d1be4aca0e1ec9d22540c6886fc98f140cb08ccfa602",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "aadab12ace1ad5319c619a8e0332cef923522cad2bc0ad824f82b94c2ae08478",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "b239d6728ee968fa137ae52a186dabd28913093baa37902288397f4ad6704246",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "1fa206fc79d9435b3985bb835162a73eb8e974015732f48a2f01688556c2bf67",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "c436c3614c66bea132f9c2fc3f73635a43f6cab52b0d1b21cf16d1c8bbe116af",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "2de64a347b3ff2505c483bf4ebb7baeec4a4cd79fae5e764a8d776dc6b9480c8",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "ba2bc9e0ddbf00efa9b7c76f66c3c5e05cd460444e73706534fc2f9c8f0f0d84",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-revoke-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "e373d0fb9abe5be389b8d1be4aca0e1ec9d22540c6886fc98f140cb08ccfa602"
+      }
+    },
+    {
+      "transport": "socks5",
+      "authentication": "required",
+      "fault": "supervisor-crash",
+      "passed": true,
+      "seconds": 111.02,
+      "checks": [
+        "startup has no Tor daemon, Tor state, selected route or IP traffic",
+        "SOCKS selection starts only the API and connector, with distinct unprivileged UIDs and one firewall endpoint",
+        "valid grant streams verified HTTPS through SOCKS with remote domain resolution; invalid grant never contacts the proxy",
+        "compromised chat cannot forward; API/Tor UIDs cannot use external SOCKS; connector cannot use another port or local Tor",
+        "unoffered authentication methods, rejected credentials and CONNECT errors fail without TLS, retries or fallback",
+        "a stopped SOCKS listener returns provider_unavailable without an alternative route",
+        "proxy recovery keeps the chosen route; revocation closes the API listener and the next grant rejects the previous token",
+        "supervisor-crash closes an established upstream TLS stream and the chat response",
+        "shutdown removes both grant processes and all route permissions; SOCKS never starts or writes Tor state",
+        "full outside capture contains only TCP to the configured proxy, no cleartext API key or local token, no DNS/UDP/IPv6; VM consoles contain no secrets"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 357,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 354,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "inactive",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 138,
+        "ipv4": 136,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 136,
+        "tcp_ports": [
+          45326,
+          45605,
+          59746,
+          59762,
+          59766,
+          59774,
+          59782,
+          59796
+        ],
+        "udp_ports": [],
+        "tcp_flows": [
+          [
+            "10.0.2.15",
+            45326,
+            "10.0.2.2",
+            45605
+          ],
+          [
+            "10.0.2.15",
+            59746,
+            "10.0.2.2",
+            45605
+          ],
+          [
+            "10.0.2.15",
+            59762,
+            "10.0.2.2",
+            45605
+          ],
+          [
+            "10.0.2.15",
+            59766,
+            "10.0.2.2",
+            45605
+          ],
+          [
+            "10.0.2.15",
+            59774,
+            "10.0.2.2",
+            45605
+          ],
+          [
+            "10.0.2.15",
+            59782,
+            "10.0.2.2",
+            45605
+          ],
+          [
+            "10.0.2.15",
+            59796,
+            "10.0.2.2",
+            45605
+          ],
+          [
+            "10.0.2.2",
+            45605,
+            "10.0.2.15",
+            45326
+          ],
+          [
+            "10.0.2.2",
+            45605,
+            "10.0.2.15",
+            59746
+          ],
+          [
+            "10.0.2.2",
+            45605,
+            "10.0.2.15",
+            59762
+          ],
+          [
+            "10.0.2.2",
+            45605,
+            "10.0.2.15",
+            59766
+          ],
+          [
+            "10.0.2.2",
+            45605,
+            "10.0.2.15",
+            59774
+          ],
+          [
+            "10.0.2.2",
+            45605,
+            "10.0.2.15",
+            59782
+          ],
+          [
+            "10.0.2.2",
+            45605,
+            "10.0.2.15",
+            59796
+          ]
+        ],
+        "ipv4_fragments": 0,
+        "sha256": "12e5bf0b482c5f0381557865e4788f9cad1ccfc9cf3a6c84e80b5c4a9931cf7c"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "e402a248bc7b28cfdd34d31c201ad19b5da9930bb8a0e7570eff96dbab848901",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-configure.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "fff93d7aacbc7076a871ca19b229c5616a81b05fa0c80763829ee27cd040832f",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "044d0eb8d45df9c013f76d3b47111893488c382decc2c1a41d2a4b2e8d09dfc1",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "48b242e6688b43b60cc316b1fe30c2727223dcc406390d15329f9aa26d6311c5",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "12e5bf0b482c5f0381557865e4788f9cad1ccfc9cf3a6c84e80b5c4a9931cf7c",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "8851ab3f7bc3160094fa8d0ba95a0de437936c7e2b4981ef5a037204ff87621d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "800dd287c59e26251db30a87315e1f13adb612c4c149314d920ee49547f87ac8",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-socks-required-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "e402a248bc7b28cfdd34d31c201ad19b5da9930bb8a0e7570eff96dbab848901"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "broker-crash",
+      "passed": true,
+      "seconds": 117.98,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault broker-crash removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "7394f26e68e1c6e3faf5b7b7b1fd0408d228161861aea8126d8ddd8a889487b7",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "3a791b468caee45fe3fb87edec2d31035258ca21d380c62f8cb785d3ec0d9c55",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "1aa933251cd2e0ce518da6c5c6e5da23813f321f32f855a6404004830ffee17a",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "c5d78e089a3a77f6f23b2d32b3318c6d32514e796175aada262e8453cccf65b4",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "eb3f446ffcc35f36ce06b76e07b8e465bde6883898e0d058ef73774d4bb527e3",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-broker-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "7394f26e68e1c6e3faf5b7b7b1fd0408d228161861aea8126d8ddd8a889487b7"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "disconnect",
+      "passed": true,
+      "seconds": 110.95,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault disconnect removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "aec6c9e0b252acbd1781684f78c23523e080246771f9f21eee2f5a90e8b6decb",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "d63a9c382ffb3b891d4a1baaa694980a6609f7273382d030ed66f33d687e983c",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "091362355cd6be1c250e5e2d00ef1c902be0ad3c60b0fd7533849658d3c27b31",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "aef6cb1c267e88274d9d9e3804fffdbb55c4a6256253636a6e4ba2efb8288682",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "b0ee95d460d1794b917e4fab2cd49047861419a91f8f6f34d670f3f81c5a7fdb",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-disconnect-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "aec6c9e0b252acbd1781684f78c23523e080246771f9f21eee2f5a90e8b6decb"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "duplicate-grant",
+      "passed": true,
+      "seconds": 112.66,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault duplicate-grant removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "54630a02e36302666740f90628b05a0fc98b73c249aee22221f99b0455bcb8fc",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "d20ca40dd52dbfdaf4530f9994f73865bce9761e7a610ae251f6e4ee4717d5fa",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "365c652d26b69dad08bfdc99eb2509fa49a724863346eb28b2cd4ca2b5f255ee",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "9cea3d77b39a4cd17253b5b5787dbbaa178cc4f7d96bb6e833ee2fcca9a31947",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "39ec9fd1dce4c29c3f572acdf56b711cdc81abc638494ed69d20e36ee3364990",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-duplicate-grant-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "54630a02e36302666740f90628b05a0fc98b73c249aee22221f99b0455bcb8fc"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "egress-crash",
+      "passed": true,
+      "seconds": 117.92,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault egress-crash removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "d9c4eb516a75ca5a262068027ab912312a6e236d3750395d87cb162f3f58caa3",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "3f74c1a15a1014ce34d58380effcc7a9098df72a1e230e3e07d29bc653a478c1",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "3f532111ed9ae2d70bea3433865644e50191ed858c5f3cc6c2bb59d1c1a47813",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "fa50572808552caeaaf647e6996961311e6880c5f4a28c08f300a4a7df971448",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "1b100f0d6c2d04d27536370532811e8194be2989cedec1baa2f83e54e2aaba6e",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-egress-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "d9c4eb516a75ca5a262068027ab912312a6e236d3750395d87cb162f3f58caa3"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "malformed",
+      "passed": true,
+      "seconds": 113.34,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault malformed removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "ba3d410f9570746724a454a2cd4dce22f2169ced6e8dddbe3dddd5194e472679",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "7aecef92f72e253fd778e333706ef01f07274a676c739461cb5080eca49be1c8",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "6238cfad86f4baa8f19c46859d2abdac73f6a22d4fc0d9321fc8441eeafbcd13",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "a700d90f3642795599e3ebe84e74c186e6f1b1501635b5e8dc2137201389045f",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "6ea09df0fb16c6af3609390cf052d2650957e49c5a303c86bbfa5389ba2de2fb",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-malformed-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "ba3d410f9570746724a454a2cd4dce22f2169ced6e8dddbe3dddd5194e472679"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "oversized",
+      "passed": true,
+      "seconds": 119.35,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault oversized removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "a6fdafe4aa5f3995463dcfd7d3a83d0b61623245462cbf0bf460d8b47b832ab6",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "b2499a94f6bf012835168e6c1b59d129d8eead3ad0239f62963ea396e3db6059",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "4e87d179094e2e8db90d0586e6cb37b21d4637728531ff24ae6b1bc3f2c44482",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "8e6b4297105796fcdd07157feb404fe24e38f93a7ee4120e4b1dbe8e1ac21491",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "c71e114dd9e62cd1bf23e27d6a714737d4d2ff278a790acf291abfe647dd5eb4",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-oversized-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "a6fdafe4aa5f3995463dcfd7d3a83d0b61623245462cbf0bf460d8b47b832ab6"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "partial",
+      "passed": true,
+      "seconds": 119.89,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault partial removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 348,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "2adb2163f759bfc5ebd0d196d51093a3dc4b63c274de1e1cfa4d01de71ea991e",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "2d9a69aa0a7ec0c678e13fb3293903a9c7eca9cd7a997bb9aa97750a98bd2553",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "d8236e03ab61f6a8868ba176e2b4250ba370f7f992b3f2a04037909357e35f1a",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "8350444e88d629a1d4f05b751258eb2fe5c39633d85392d8ae3cea14c972ff9f",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "fc1162da55fe89015aa6f626e676e93775dd897fffd8545c35e3e2645935f4c5",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-partial-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "2adb2163f759bfc5ebd0d196d51093a3dc4b63c274de1e1cfa4d01de71ea991e"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "shutdown",
+      "passed": true,
+      "seconds": 113.87,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault shutdown removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "inactive",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "354ef61098887c07a0fdb1d1358549ac995c3cb0b4fb50cd1c2f40db23ea83df",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "dba20b1820cbb8f95a61bb23b636cca257bef3d78ca01d9f10b71c54063b5ec9",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "ca17f1d72a66b0ddb282412662845e36965b0eb9d75046dbace6bdafb0358f4c",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "f65778c06cadde874ef550e5b40cdf406aebb0b3b723a8761280655597f53c42",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "a4bc179370ac9d790471c02e815ea7c3a3efcef56102b0fef421d9b785fe18ec",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-shutdown-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "354ef61098887c07a0fdb1d1358549ac995c3cb0b4fb50cd1c2f40db23ea83df"
+      }
+    },
+    {
+      "transport": "tor",
+      "authentication": "isolation",
+      "fault": "supervisor-crash",
+      "passed": true,
+      "seconds": 116.4,
+      "checks": [
+        "separate VMs boot read-only with no shared filesystem; Tor is not started before a transport is selected",
+        "private virtio control configures the production supervisor; API and egress children use distinct UIDs, no capabilities, no environment and no core dumps",
+        "chat reaches the production API broker; token checked; disabled Tor fails closed",
+        "root in the chat cannot reach listening administration/SOCKS sockets or forward TCP, DNS, UDP/QUIC and IPv6",
+        "API process UID cannot connect directly to a public IP",
+        "external packet capture sees zero IP packets before Tor activation, including startup and bypass probes",
+        "crashing Tor makes API calls fail without a direct fallback",
+        "revocation closes the listener and the next API instance rejects the previous token",
+        "control fault supervisor-crash removes broker and connector, clears route selectors and stops Tor without automatic restart",
+        "gateway termination leaves the chat without an alternative network path",
+        "synthetic provider credential never appears in either VM console log",
+        "complete external capture contains only TCP after Tor activation and no UDP or IPv6"
+      ],
+      "processes": {
+        "supervisor_pid": 349,
+        "broker_pid": 400,
+        "broker_uid": 1300,
+        "broker_caps": 0,
+        "egress_pid": 397,
+        "egress_uid": 1201,
+        "egress_caps": 0
+      },
+      "stopped": {
+        "supervisor": "failed",
+        "tor": "failed",
+        "broker_absent": true,
+        "egress_absent": true,
+        "routes_empty": true
+      },
+      "outside_capture": {
+        "packets": 0,
+        "ipv4": 0,
+        "ipv6": 0,
+        "udp": 0,
+        "tcp": 0,
+        "tcp_ports": [],
+        "udp_ports": [],
+        "tcp_flows": [],
+        "ipv4_fragments": 0,
+        "sha256": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc"
+      },
+      "summary": "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json",
+      "summary_sha256": "3c9773061d6f2e65af992f929657be9042e266095f05ed06bc65e87606c774c9",
+      "evidence_files": {
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/before-tor-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat-inside.pcap": "eee8a99fa451c2d4a83e0c5a00f4e6ad60245a56e01d2c14ab86e70663a122e0",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/chat.log": "2805e27e26764fa1dc7a950f35fd194f3d28578bb20d6c8322a6a0247a0fa62d",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-inside.pcap": "0f8791058bcd7a91ed4850a9e3bc08ec9577edbe0ae67cb016a8db4ac7ddb2a5",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway-outside.pcap": "653932defd05743054207942b60e946cfd591200e6ab808d058e382a8999d9fc",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/gateway.log": "d701c5f01f03a10bac01fc757302a190dace6ec5a1d1f288dfc18046891cb312",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/rules-after-probes.json": "9e1db18b83db76a032e25d0a438b0235b0e1a5efea3192ae9c8e628858540979",
+        "artifacts/oblivion-linux-ci/run-30495ba/evidence/oblivion-network-evidence-tor-isolation-supervisor-crash-30495ba9f96221dac084592844edf957723c8db9/results/case/summary.json": "3c9773061d6f2e65af992f929657be9042e266095f05ed06bc65e87606c774c9"
+      }
+    }
+  ],
+  "earlier_failures": [
+    {
+      "run": 40088949461,
+      "source_commit": "9aa312dbdf9caa139765fa041c97077832ee86bc",
+      "reason": "QEMU 8.2 lacks reconnect-ms; minimal runner has no PXE ROM. No VM checks executed.",
+      "fix": "Use the disabled reconnect default and explicitly empty ROM filename.",
+      "log": "artifacts/oblivion-linux-ci/run-9aa312d/failed.log",
+      "log_sha256": "9bf0caf3cf6db25e70e1bb2d584d1a8232f71a17ad24105d71bcf1730bc8fd65"
+    },
+    {
+      "run": 40089355438,
+      "source_commit": "9b2f0994e6c06e8159998bb7e2c19a21c3b81afe",
+      "reason": "Authenticated revoke passed all 10 checks. Egress-crash checked listener before the asynchronous supervisor shutdown barrier.",
+      "fix": "Require bounded supervisor termination before asserting listener absence; stream EOF remains independently required.",
+      "log": "artifacts/oblivion-linux-ci/run-9b2f099/failed.log",
+      "log_sha256": "83356576361d5c236e27a7158b34b366da7e85f45a7ec6dd15b21e138f48de4a"
+    }
+  ],
+  "local_evidence": {
+    "artifacts/oblivion-linux-ci/run-30495ba/artifacts.json": "d23e2fd54f039d484f2e5537c58fee0c4caa165610d609ff692078921f038341",
+    "artifacts/oblivion-linux-ci/run-30495ba/checks.log": "b2761ebfc714212d048b6e217dd375eaa1f8a27ea36a42c5e485a02bf7f0d9cb",
+    "artifacts/oblivion-linux-ci/run-30495ba/run.json": "2dbfc82256515ea1c4914e03bb459185d55a4720f0c0cd885985148b32b69024"
+  },
+  "limits": [
+    "No host LUKS/profile/manager lifecycle or compiled OpenCode execution in this matrix.",
+    "No real Tor bootstrap or Abliteration request in this matrix.",
+    "The authorized tools proxy is still unimplemented; global SOCKS support is not complete.",
+    "TCG is functional software emulation, not production KVM or physical-hardware isolation evidence.",
+    "Packet captures show emitted packets; blocked attempts need separate syscall/audit analysis.",
+    "All credentials and captured authentication are synthetic; these diagnostic artifacts are laboratory outputs, not runtime application logging.",
+    "CI artifacts are retained for seven days and are not signed release artifacts."
+  ],
+  "chat_tui_changed": false
+}

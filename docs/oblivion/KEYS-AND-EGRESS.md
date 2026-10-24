@@ -3,12 +3,12 @@
 Requisiti aggiunti il 24 ottobre 2026: salvare più API key Abliteration e
 scegliere tra Tor, predefinito, e un proxy SOCKS5 globale per Oblivion.
 Le [chiavi multiple](CREDENTIALS.md) sono implementate nel manager e nel
-controller. Le immagini finora collaudate usano Tor. Il
-[connettore](EGRESS-CONNECTOR.md) ha prove separate; supervisore, firewall,
-storage e manager sono ora collegati nel sorgente, in attesa del collaudo
-Linux completo. Lo storage Docker del Mac restituisce errori I/O dopo
-l'esaurimento dello spazio: nessuna nuova evidenza VM viene dichiarata per
-queste modifiche.
+controller. Il [connettore](EGRESS-CONNECTOR.md), supervisore e firewall ora
+superano anche la [matrice con due VM](transport-vm-evidence.json): 12 casi
+SOCKS e 9 Tor offline. Storage e manager sono collegati e compilati in
+[Debian ARM64 tramite CI](linux-ci-evidence.json), in attesa del collaudo
+completo dei nuovi profili con LUKS. Il Docker del Mac restituisce ancora
+errori I/O; la CI usa un runner indipendente.
 
 ## Chiavi salvate
 

@@ -10,7 +10,10 @@ importazione, attivazione e checkpoint dello [stato Tor](TOR-STATE.md).
 Il sorgente ora aggiunge il [connettore per grant e il firewall Tor/SOCKS](EGRESS-CONNECTOR.md).
 La descrizione del protocollo seguente riflette il codice corrente; le prove
 VM già registrate in questo documento riguardano la versione precedente con
-il solo broker. L'integrazione nuova attende ancora compilazione e collaudo Linux.
+il solo broker. L'integrazione nuova è ora compilata in
+[Debian ARM64 tramite CI](linux-ci-evidence.json) e supera una
+[matrice runtime separata](transport-vm-evidence.json) con 12 casi SOCKS e
+9 Tor offline. Restano i gate host/LUKS, provider e Tor online.
 
 ## Confini
 

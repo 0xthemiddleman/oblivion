@@ -1,0 +1,81 @@
+{
+  "date": "2026-10-24",
+  "scope": "Fresh Debian ARM64 compilation and component tests, plus canonical repository and official TypeScript checks. No VM execution in this run.",
+  "source_commit": "2840f94c9ac12da93b108fd1d3e22d2b4722f91f",
+  "workflow": ".github/workflows/oblivion-check.yml",
+  "run": {
+    "id": 40088652370,
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40088652370",
+    "conclusion": "success",
+    "attempt": 1
+  },
+  "runner": "ubuntu-24.04-arm",
+  "checks": {
+    "host": {
+      "cargo_test": {
+        "passed": 19,
+        "failed": 0
+      },
+      "release_bins_and_examples": "passed",
+      "lab_emulation_storage_binary": "passed"
+    },
+    "gateway": {
+      "cargo_test_lib_lab_emulation": {
+        "passed": 15,
+        "failed": 0,
+        "ignored_adapter_cases": 2
+      },
+      "integration_test_compilation": "passed, not executed",
+      "production_bins": "passed"
+    },
+    "images": {
+      "transport_network_artifacts": "built, checksums verified, not booted"
+    },
+    "canonical": {
+      "command": "bun run check",
+      "status": "passed",
+      "typecheck_tasks": 34
+    },
+    "official_typescript": {
+      "command": "bun run typecheck:tsc",
+      "status": "passed",
+      "tasks": 34
+    }
+  },
+  "artifacts": [
+    {
+      "name": "oblivion-gateway-arm64-2840f94c9ac12da93b108fd1d3e22d2b4722f91f",
+      "id": 12558405922,
+      "bytes": 10584975,
+      "digest": "sha256:63dfa33083cae2190c09e5eaada0937ee1304137ae5a5b8508b6a9e8eaf2ce38",
+      "expires_at": "2026-10-31T11:10:34Z"
+    },
+    {
+      "name": "oblivion-host-arm64-2840f94c9ac12da93b108fd1d3e22d2b4722f91f",
+      "id": 12558301755,
+      "bytes": 1763374,
+      "digest": "sha256:558b801261704c18105c99d1fc588c23fad09723e6cca1d6526d14e18aed12cd",
+      "expires_at": "2026-10-31T11:10:33Z"
+    },
+    {
+      "name": "oblivion-transport-lab-arm64-2840f94c9ac12da93b108fd1d3e22d2b4722f91f",
+      "id": 12557869022,
+      "bytes": 174370087,
+      "digest": "sha256:4a58b447c726fa77be66fb4eef0df8ef5af1f7c6207c90f927537d4e8cd50861",
+      "expires_at": "2026-10-31T11:10:35Z"
+    }
+  ],
+  "local_evidence": {
+    "artifacts/oblivion-linux-ci/run-2840f94/artifacts.json": "a25f0fa1a64faebc3b4854c2aedeea43856915430f37a8893d018a71bab5a92c",
+    "artifacts/oblivion-linux-ci/run-2840f94/checks.log": "c6ce886b4b8279668745cbe10ea58924e5e7a8f347fcd6fe3de54e6a9830472b",
+    "artifacts/oblivion-linux-ci/run-2840f94/run.json": "6fe075ca0fa8ea23cf08b5def52e3771815dfe43bef8a63045821fb9a4dee672"
+  },
+  "limits": [
+    "No VM firewall, LUKS, manager or transport lifecycle test is claimed by this build report.",
+    "The two ignored adapter cases and Linux activation tests require separate VM runs.",
+    "No real provider credentials, provider request or KVM/hardware validation.",
+    "The Mac Docker storage still has I/O errors and little free space; CI does not repair it.",
+    "The GitHub artifact retention is seven days; manifests and hashes are evidence of the identified build, not a signed release."
+  ],
+  "chat_tui_changed": false
+}
