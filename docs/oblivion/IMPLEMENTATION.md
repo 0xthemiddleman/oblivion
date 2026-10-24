@@ -24,6 +24,10 @@ manager sono compilate anche per Linux. Le nuove prove LUKS/manager hanno un
 chiavi, profili e disco pieno, poi timeout aspettando la chat nella VM. La causa
 è in verifica; il lifecycle completo e i casi readonly non sono ancora superati
 da questa build.
+La prova diretta della stessa TUI ARM passa in 63,5 secondi. La ripetizione
+annidata fallisce con QEMU ancora attivo; la causa resta aperta. Il workflow
+ora conserva la prova ARM e predispone il ciclo completo su host x86/KVM,
+con guest TCG di laboratorio e senza fallback automatico dell'acceleratore.
 Il [report precedente](host-transport-status.json)
 rimane lo snapshot della sola verifica nativa.
 

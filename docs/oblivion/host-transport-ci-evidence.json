@@ -73,5 +73,50 @@
     "host-evidence/ci/host-results/serial.log": "736a1977c80a8546ee4a5cf2620be11e549c091a110a0c58fb9cb31a9e3b5c5f",
     "host-evidence/ci/host-results/summary.json": "d3f8ec7841160155ebe7c4917a14d974fc7c910c237a3f14d987903964ebb621",
     "host-evidence/oblivion-build/build-evidence.json": "0e1f8b4a5e467dec1bad88470c43b94080f9438c24bd1d8d6a3e48c6aac9a393"
+  },
+  "followup_diagnostic": {
+    "source_commit": "bacdc047ec278a373dc6e93b77f74ddf07503a3a",
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40093180875",
+    "run_id": 40093180875,
+    "host_job_id": 120870511379,
+    "conclusion": "failure",
+    "other_jobs_succeeded": 23,
+    "direct_guest_boot": {
+      "scope": "compiled chat TUI boot only; synthetic plaintext vault, no LUKS or host lifecycle assertion",
+      "accelerator": "tcg",
+      "nested": false,
+      "network_interfaces": 0,
+      "seconds": 63.51,
+      "markers": {
+        "Conversazioni e documenti": true,
+        "/exit blocca": true
+      },
+      "passed": true,
+      "termination": "QEMU terminated by diagnostic after observation; not a shutdown test",
+      "opencode_sha256": "e76368b509629ee76661657b38dceafd376ce15156b0651bfecf0351dbd1b7de",
+      "image_manifest": "391a3b39b265585ed094fba56994c4613a3c41fc65b9670e42da5a66d63ca07e  kernel\nb86ec93be8413ba883ce16bc7ab2ab089e8cb2359c7851ecf7b22f521c80c6ab  initrd\n96d1accd1cb89ff6a41455bdae63524d8be88316e86e945ccef1088320d76fa6  host.squashfs\n5f5dc1832ec5d93491b6f9cdbb0fda9350938d31ae20b97c340b46fbd5c1d78a  host-packages.tsv\nb23d84696f492da1c5998e8f4fb026d3357aa72b7b95de89d1e5104f172b2786  guest-packages.tsv\n5ed1f10d6f9642253e1e1e245402ddb846c5fe4aeb7c185b3c34cdff5a994300  sources.sha256\nc07fcbcd120062e4306d0e10d33d9b35da0e09ed55286e1d67df02e0615358bd  opencode.sha256\nde88b4b15b2e95630d1255ea0ddbcce56ea840bd87a35548caabcf5b585c297a  opencode-build.json\nc588c020590898778a225edd1d77af041d4cce28f59de1f1f5ff9dde79d7a428  manager.sha256\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  tui-lab\n"
+    },
+    "nested_host_suite": {
+      "seconds": 540.08,
+      "checks_passed": 15,
+      "guest_pass": false,
+      "qmp_status": "running",
+      "cpu_sample": "EL1h, kernel-mode PC; not a userspace process trace",
+      "cpu_usage_nsec": 245184732000,
+      "memory_current_bytes": 325083136,
+      "failure": "The same 180-second screen deadline expired at the first chat opening."
+    },
+    "interpretation": "The compiled ARM64 TUI renders in direct TCG. Its host-managed nested path remains unverified; software-emulation overhead is a hypothesis, not a proven root cause.",
+    "next_verification": "An x86 CI host using KVM is prepared; inner session remains lab-only TCG. No production KVM or physical USB assertion.",
+    "local_artifacts": "artifacts/oblivion-linux-ci/run-bacdc04",
+    "artifact_hashes": {
+      "host-evidence/ci/host-image/SHA256SUMS": "e6bbc93c68b04b53dd819dd6c6c76c01a7ce6074cfadf2281de813fde9842595",
+      "host-evidence/ci/host-image/sources.sha256": "5ed1f10d6f9642253e1e1e245402ddb846c5fe4aeb7c185b3c34cdff5a994300",
+      "host-evidence/ci/host-results/serial.log": "20c73bbc8c6e54a770d6d716d1e52bafd4887e3908ba3b49def7093e27b9ae40",
+      "host-evidence/ci/host-results/summary.json": "a94ca7f7eb77bbeaed7c391a8e1aa691ca6d6ca2f99d3ff07227073ab33aff13",
+      "host-evidence/ci/tui-boot/serial.log": "0ce947efe57a50f6cd4372c7d8a7ccbce0d4a79f3bdc26b75d2ac5cf89f584df",
+      "host-evidence/ci/tui-boot/summary.json": "224b29e7bcaa867e5c529f4297b897025c8550a2a9a26300ee197b81200b8603",
+      "host-evidence/oblivion-build/build-evidence.json": "de88b4b15b2e95630d1255ea0ddbcce56ea840bd87a35548caabcf5b585c297a"
+    }
   }
 }
