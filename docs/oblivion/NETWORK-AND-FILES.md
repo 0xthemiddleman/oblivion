@@ -56,6 +56,32 @@ occorre esercitare entrambi i protocolli con quel client, redirect compresi.
 Il servizio API locale deve continuare a usare il proprio canale ristretto;
 le credenziali del proxy esterno restano fuori da ambiente e filesystem del guest.
 
+**Motore delle regole: prima implementazione.**
+`packages/oblivion-transport/src/policy.rs` definisce il formato versionato e
+la decisione pura, riusabile da host e gateway. Accetta al massimo 128 regole
+per destinazione e porta, globali oppure associate all'identificatore opaco
+di una sessione. L'ordine non cambia l'esito: `deny` prevale su `ask`, che
+prevale su `allow`; senza corrispondenze l'esito è `ask`, senza autorizzazione
+implicita. `*.example.com` include i sottodomini, non l'apice o nomi con un
+semplice suffisso simile. Versioni, campi, azioni e ambiti invalidi sono errori.
+
+I nomi ASCII vengono normalizzati; IDN devono arrivare in forma punycode.
+URL, credenziali nell'authority, escape, IPv4 abbreviati/ottali/esadecimali,
+zone IPv6 e nomi locali sono rifiutati. Gli IP ordinari possono avere regole
+esatte; wildcard e CIDR non sono accettati per gli IP. Le esclusioni coprono
+i registri special-purpose [IPv4](https://www.iana.org/assignments/iana-ipv4-special-registry)
+e [IPv6](https://www.iana.org/assignments/iana-ipv6-special-registry), anche le
+eccezioni infrastrutturali globalmente raggiungibili, oltre a multicast e
+IPv6 fuori da `2000::/3`. Questa è una scelta restrittiva del prodotto;
+non è una verifica dell'indirizzo risolto dal proxy remoto.
+
+Passano nove test dedicati sul Mac, insieme ai 19 test host precedenti e a
+Clippy. La funzione non esegue DNS né apre socket. Non è ancora collegata
+al traffico: persistenza nel generale, IPC, proxy HTTP/CONNECT, richieste
+di conferma, permessi temporanei con scadenza e revoca dei tunnel restano
+da implementare e verificare. Il limite del frame JSON appartiene al canale
+che caricherà la policy; il modulo valida struttura, valori e numero di regole.
+
 **Servizio API e significato delle autorizzazioni**
 
 L'adapter nativo di OpenCode rimane il client. Il suo endpoint viene configurato verso il servizio locale ristretto, che aggiunge la API key soltanto nella richiesta al provider. Il guest non riceve la chiave reale; token locali vengono limitati alla sessione e revocati alla chiusura. Il servizio controlla modelli, endpoint, dimensioni e opzioni consentite, gestisce streaming e cancellazione, e rifiuta redirect verso altre origini. Non è un proxy HTTP generico.
