@@ -16,6 +16,16 @@ preparazione USB non è ancora disponibile: il manager lo segnala, disabilita
 la creazione di archivi e `/persist` è in sola lettura. Rete fisica,
 conversazioni online, sessioni KVM e Secure Boot restano fuori da questa prova.
 
+È pronta anche la [variante di collaudo hardware](HARDWARE-ISO.md), separata
+dalla prima immagine: pacchetti Debian per rete e firmware Wi-Fi, nmtui su
+Alt+F2 e SSH con chiave dedicata, spento all'avvio e attivabile localmente.
+Le [evidenze](hardware-iso-evidence.json) registrano 19 controlli in due avvii
+UEFI: DHCP, menu di rete, autenticazione, firewall, chiusura delle sessioni
+amministrative e stato temporaneo assente al nuovo avvio. La cattura distingue
+il traffico IPv6 iniziale del firmware da DHCP e SSH del sistema operativo.
+Il collaudo fisico resta da svolgere; i test non dichiarano compatibilità
+della radio Wi-Fi o funzionamento KVM sul PC dell'utente.
+
 La [regressione della revoca](network-revocation-evidence.json) supera 33
 controlli in VM ARM64 sul Mac (534,49 s), compresi stream attivi durante
 errori di pulizia dei trasferimenti. La rete viene revocata prima della

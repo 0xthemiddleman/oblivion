@@ -1,0 +1,184 @@
+{
+  "date": "2026-10-25",
+  "status": "diagnostic-iso-uefi-network-ssh-verified",
+  "base_revision": "caa1a33b8c04cf3eeab019236c8713db93321ad4",
+  "iso": {
+    "path": "artifacts/oblivion-hardware-iso/image/oblivion-hardware-test-amd64.iso",
+    "bytes": 1093494784,
+    "sha256": "6f5c098deb1113c5e2a82a97840c8f457e32c6283d64d872576ed3409b0a6868"
+  },
+  "base_iso_sha256": "306b24dfe351f129177514247965af0631158e9c1187acab9126813c50a5fd01",
+  "environment": {
+    "host": "macOS ARM64",
+    "guest": "Debian trixie amd64",
+    "firmware": "QEMU EDK2 x86_64",
+    "acceleration": "TCG",
+    "network": "Restricted QEMU usernet with SSH forwarded only to Mac loopback"
+  },
+  "boot_cdrom": {
+    "passed": true,
+    "iso_sha256": "6f5c098deb1113c5e2a82a97840c8f457e32c6283d64d872576ed3409b0a6868",
+    "media": "cdrom",
+    "outer_accelerator": "tcg",
+    "physical_wifi_tested": false,
+    "session_kvm_tested": false,
+    "checks": [
+      "Unmodified ISO reaches the real manager through UEFI",
+      "Debian DHCP works and diagnostic SSH is initially off",
+      "The real Debian nmtui network selector opens and returns",
+      "Only the operator key authenticates; root SSH is rejected and explicit sudo works",
+      "Manager remains unprivileged; temporary state uses RAM, swap is off and no server private key is baked in",
+      "The real nftables rule drops an SSH connection from outside the connected private subnet",
+      "Local SSH disable closes the listener and terminates the established administrative session and command",
+      "Capture limits TCP/UDP to DHCP and diagnostic SSH; only pre-Linux neighbor control may use IPv6",
+      "ACPI shutdown completes; ISO and unrelated synthetic disk remain byte-identical"
+    ],
+    "manager_seconds": 22.49,
+    "firmware_ipv6_control_packets": 2,
+    "seconds": 38.55
+  },
+  "boot_usb": {
+    "passed": true,
+    "iso_sha256": "6f5c098deb1113c5e2a82a97840c8f457e32c6283d64d872576ed3409b0a6868",
+    "media": "usb",
+    "outer_accelerator": "tcg",
+    "physical_wifi_tested": false,
+    "session_kvm_tested": false,
+    "checks": [
+      "Unmodified ISO reaches the real manager through UEFI",
+      "Debian DHCP works and diagnostic SSH is initially off",
+      "The real Debian nmtui network selector opens and returns",
+      "Only the operator key authenticates; root SSH is rejected and explicit sudo works",
+      "A fresh boot has a different SSH identity and no previous Wi-Fi profile or RAM canary",
+      "Manager remains unprivileged; temporary state uses RAM, swap is off and no server private key is baked in",
+      "The real nftables rule drops an SSH connection from outside the connected private subnet",
+      "Local SSH disable closes the listener and terminates the established administrative session and command",
+      "Capture limits TCP/UDP to DHCP and diagnostic SSH; only pre-Linux neighbor control may use IPv6",
+      "ACPI shutdown completes; ISO and unrelated synthetic disk remain byte-identical"
+    ],
+    "manager_seconds": 23.01,
+    "firmware_ipv6_control_packets": 0,
+    "seconds": 38.71
+  },
+  "canonical_check": {
+    "successful": 34,
+    "total": 34,
+    "cached": 34
+  },
+  "provenance": "Packaged source hashes match the worktree. All four VM image hashes and manager/controller binary hashes equal the previously verified base ISO.",
+  "limits": [
+    "Diagnostic administration image, not a functional privacy beta.",
+    "Physical Wi-Fi, Ethernet adapters, KVM, Secure Boot and real provider conversations remain untested.",
+    "USB provisioning and persistent archive creation remain unavailable.",
+    "Diagnostic SSH is locally opt-in and grants the operator sudo access; it is excluded from the normal beta-iso target.",
+    "Network capture includes two ICMPv6 neighbor/multicast control frames from EDK2 before Linux networking; the guest kernel disables IPv6.",
+    "Synthetic unrelated disks remain unchanged; this is not an exhaustive physical filesystem leak audit."
+  ],
+  "resolved_failures": [
+    "Install iproute2 explicitly: NetworkManager does not supply the ip command used by the console.",
+    "Adjust OCR for the nmtui gray panel and avoid reading key fingerprints as exact OCR text.",
+    "Verify the production manager numeric service UID 1000.",
+    "Give the diagnostic host a local hostname mapping so sudo does not attempt name resolution.",
+    "Disable IPv6 from the kernel command line because NetworkManager auto-created connections enabled it despite initial sysctl defaults."
+  ],
+  "artifacts": [
+    {
+      "path": "artifacts/oblivion-hardware-iso/image/SHA256SUMS",
+      "sha256": "cf83aaedf9e1dfc153fa7e8c72007f778dfd9b2b73e03a0bcd673b0d88950fa8"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/image/iso-sources.sha256",
+      "sha256": "4d01faa115907c1ca51179148e06c1c98706776c9853e1527c34be3a21d2b6aa"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/image/host-sources.sha256",
+      "sha256": "3ecd053ab413d13d1175255b4e83e62d5e831c719166498a39dd74c112730b7c"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/image/host-packages.tsv",
+      "sha256": "5c892283684d325abb10f8a3baaa134fb2097ef57803e14d40cd9dd933dc6292"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/image/runtime.sha256",
+      "sha256": "2d9ed5a41f19d15358bce71cc6a6bd1b0fbd4a2d957aec781ff68a215b3a64af"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/build-03.log",
+      "sha256": "2ae9b11e41d020bd098b59b78ffeef32219447b969966513a9da88902994a52a"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/check.log",
+      "sha256": "63cc2efd4bf1e0f7b0be1baf523da2f60d4163976e73fc569bb3d7d5d57ed0b3"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-06/summary.json",
+      "sha256": "c13b9ac714858a7e40d1e33db7896b8214426e870b787b7436d553f7253d8a0b"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-06/command.json",
+      "sha256": "c00ad2930c8d12260f8bc81ca24b9af33f4c820fe6e7ac306e5fb2d53f953347"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-06/network.pcap",
+      "sha256": "3dcdfb0fcb6dd01a239d42d2e8ebb1d5983800358323f032ee74a1209a3598b3"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-06/network.json",
+      "sha256": "a3f22b005a90fb63aacb7a5d5f2439a869aa8e52c4e6cbeb9946e7ac39557da3"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-06/manager.png",
+      "sha256": "076cc9e2a0ba63d56f2998db46387350e6c87c1be2d67fcfb93359462950ae70"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-06/hardware-on.png",
+      "sha256": "7dc2b48380a6eed4b12372f444ad7fea4dbf962232ead78c9cd779a92bb6565a"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-06/nmtui.png",
+      "sha256": "19bcb73963ebb915b1f9e1ef5bef03c6b30ca56ea6d170d1725263fbf725b9ac"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-usb-01/summary.json",
+      "sha256": "8bfed3a5e0e6dbc8d7f11031cda42b0913c8fea2afbe2ca140262a444d4c84b0"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-usb-01/command.json",
+      "sha256": "e873f6bb1187558344bae2f2b66c2888475f60f4108a596b5fb14c9a8d7875a1"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-usb-01/network.pcap",
+      "sha256": "a9217689ce4d52cd13fe009ff5a817ce9993116af1caf4ed59dc8c37bbc5c13a"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-usb-01/network.json",
+      "sha256": "7293e2ca4c406fffc7c5a22815db9ee8df68cf74f318a796214316b244a55b67"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-usb-01/manager.png",
+      "sha256": "076cc9e2a0ba63d56f2998db46387350e6c87c1be2d67fcfb93359462950ae70"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-usb-01/hardware-on.png",
+      "sha256": "1c0a4dba1051b730a8ced46d8857de6b5cf3730512a4a13ac7da749a6441d250"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-usb-01/nmtui.png",
+      "sha256": "19bcb73963ebb915b1f9e1ef5bef03c6b30ca56ea6d170d1725263fbf725b9ac"
+    }
+  ],
+  "harness_sources": [
+    {
+      "path": "script/oblivion/run-hardware-boot.py",
+      "sha256": "7871b6f95790258c4860522eb4ebab26a46db4aba4f91c58a4edce5546476028"
+    },
+    {
+      "path": "script/oblivion/packet_capture.py",
+      "sha256": "37d0782123f25dd4d38ce11313ebed5d99a6c144318ed177e4c106a64c072a86"
+    },
+    {
+      "path": "script/oblivion/build-hardware.sh",
+      "sha256": "1f7afa4163aa9396981c41658d2a25676cf021f6d18dead52366fc9381ce5169"
+    }
+  ]
+}

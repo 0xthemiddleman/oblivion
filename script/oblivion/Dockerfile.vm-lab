@@ -378,10 +378,11 @@ COPY script/oblivion/live-setup.sh /tmp/live-setup
 COPY script/oblivion/live-controller.json /etc/oblivion/controller.json
 RUN sh /tmp/live-setup && rm /tmp/live-setup
 
-FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS live-pack
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS live-pack-tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     squashfs-tools grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools python3 \
     && rm -rf /var/lib/apt/lists/*
+FROM live-pack-tools AS live-pack
 COPY --from=live-host / /host/
 COPY --from=live-session / /session/
 COPY --from=gateway-system / /gateway/
@@ -394,3 +395,32 @@ RUN sh /sources/live-pack.sh
 
 FROM scratch AS beta-iso
 COPY --from=live-pack /out/ /
+
+# Explicitly separate diagnostic distribution. Never selected by beta-iso.
+FROM live-host AS hardware-host
+RUN sed -i 's/^Components: main$/Components: main non-free-firmware/' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    network-manager wpasupplicant openssh-server sudo nftables python3 pciutils usbutils rfkill \
+    firmware-iwlwifi firmware-realtek firmware-atheros firmware-brcm80211 firmware-mediatek \
+    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+COPY script/oblivion/hardware/ /usr/lib/oblivion/hardware/
+COPY artifacts/oblivion-hardware-iso/authorized_key.pub /etc/oblivion/hardware/authorized_key.pub
+RUN sh /usr/lib/oblivion/hardware/install.sh
+COPY packages/oblivion-gateway/guest/resolv.conf /etc/resolv.conf
+COPY script/oblivion/hardware/hosts /etc/hosts
+COPY script/oblivion/hardware/hostname /etc/hostname
+
+FROM live-pack-tools AS hardware-pack
+ARG BASE_ISO_SHA256
+COPY --from=hardware-host / /host/
+COPY --from=compiler /bundle/sources.sha256 /sources/host-sources.sha256
+COPY script/oblivion/hardware/ /sources/hardware/
+COPY script/oblivion/hardware-pack.sh script/oblivion/Dockerfile.vm-lab /sources/
+RUN --mount=type=bind,source=artifacts/oblivion-beta-iso/image/oblivion-development-amd64.iso,target=/base.iso,ro \
+    printf '%s  /base.iso\n' "$BASE_ISO_SHA256" | sha256sum -c - \
+    && sh /sources/hardware-pack.sh
+
+FROM scratch AS hardware-iso
+COPY --from=hardware-pack /out/ /

@@ -29,6 +29,10 @@ accetta la creazione di archivi. `/persist` è un mount tmpfs in sola lettura:
 il controller non può creare per errore un archivio persistente nell'overlay
 RAM. Non ci sono password o volumi preconfezionati.
 
+Per verificare rete e hardware su un PC è disponibile una ricetta separata
+per la [ISO di collaudo](HARDWARE-ISO.md), con strumenti di rete Debian e SSH
+attivabile localmente. Questa prima immagine resta priva di accesso remoto.
+
 Il tasto Q blocca ed esce dal manager; systemd lo riavvia. Per spegnere si usa
 il pulsante di alimentazione/ACPI. Questa immagine non monta né formatta
 automaticamente supporti dati.

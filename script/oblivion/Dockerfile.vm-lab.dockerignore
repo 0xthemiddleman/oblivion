@@ -54,6 +54,9 @@ script/oblivion/*
 !script/oblivion/Dockerfile.vm-lab
 !script/oblivion/Dockerfile.vm-lab.dockerignore
 !script/oblivion/live-*
+!script/oblivion/hardware/
+!script/oblivion/hardware/**
+!script/oblivion/hardware-pack.sh
 !artifacts/
 artifacts/*
 !artifacts/ci/
@@ -93,6 +96,12 @@ artifacts/oblivion-build/cli-linux-x64-baseline/bin/*
 !artifacts/oblivion-beta-iso/
 artifacts/oblivion-beta-iso/*
 !artifacts/oblivion-beta-iso/client-evidence.json
+!artifacts/oblivion-beta-iso/image/
+artifacts/oblivion-beta-iso/image/*
+!artifacts/oblivion-beta-iso/image/oblivion-development-amd64.iso
+!artifacts/oblivion-hardware-iso/
+artifacts/oblivion-hardware-iso/*
+!artifacts/oblivion-hardware-iso/authorized_key.pub
 !artifacts/oblivion-beta-iso/client/
 artifacts/oblivion-beta-iso/client/*
 !artifacts/oblivion-beta-iso/client/cli-linux-x64-baseline/
