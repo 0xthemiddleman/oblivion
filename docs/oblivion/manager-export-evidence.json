@@ -1,0 +1,178 @@
+{
+  "date": "2026-10-25",
+  "implementation_commit": "9e29eda519f3c5b3101d1bcd5fa826ccbe809192",
+  "scope": "Manager USB import, recovery and explicit ext4 export using dedicated networkless VMs; synthetic block devices and UID 1000 shell, without physical USB or a compiled-chat document workflow.",
+  "components": {
+    "host_macos": {
+      "passed": 34,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/host-macos.log",
+        "sha256": "bf8aba5b73b94b69c21da908e1c17d66440192812f85b95449cca44d27e5463f"
+      }
+    },
+    "transfer_macos": {
+      "passed": 47,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/transfer-macos.log",
+        "sha256": "b7c4b4fc8a9128ea6b114c3f15ad5dc957cbedd6bf24688b28c2d24f321f6782"
+      }
+    },
+    "transfer_linux_arm64": {
+      "passed": 50,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/transfer-arm64/tests.log",
+        "sha256": "4c21ea7ef3c6775da16a2fad9377326397f097b58dc1cc942a42ab2bb22d0a6e"
+      }
+    },
+    "transfer_linux_amd64": {
+      "passed": 50,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/transfer-amd64/tests.log",
+        "sha256": "22fdc7d63541089001e87b1acc1c7e120235116a9c6e7a2e0f4b814f9fb62caf"
+      }
+    },
+    "host_linux_arm64": {
+      "passed": 35,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/image-02.log",
+        "sha256": "6a19d683b49b5153276ab8f2709285c0ea6c53603ea4f32677be3c6dfc18c1f3"
+      },
+      "note": "Image compiler runs 35 host and 50 transfer tests (85 combined)."
+    },
+    "host_clippy": {
+      "success": true,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/host-clippy.log",
+        "sha256": "13d4a3268ee20fac58abeddbca80c3b64c3a3b9d828423a13348a33ac0b2ccfa"
+      }
+    },
+    "transfer_clippy": {
+      "success": true,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/transfer-clippy.log",
+        "sha256": "9173993cf88ef40677de82925c40718abd855dbca20042688004d535b21534e5"
+      }
+    },
+    "canonical_check": {
+      "success": true,
+      "log": {
+        "path": "artifacts/oblivion-manager-export/check.log",
+        "sha256": "14b270b1a954c931d7b22181de2018c2b14320c90b2b416de9d4064c5c54d460"
+      },
+      "passed_tasks": 34
+    }
+  },
+  "vm": {
+    "scope": "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
+    "workload": "trusted manager TUI + synthetic shell",
+    "architecture": "aarch64",
+    "outer_accelerator": "hvf",
+    "inner_accelerator": "tcg",
+    "production_kvm_tested": false,
+    "seconds": 276.26,
+    "qemu_exit": 0,
+    "guest_pass": true,
+    "checks": [
+      "PASS: manager detects a SIGKILL-interrupted receiver and deletes its private copy only after confirmation",
+      "PASS: manager opens a readonly networkless import VM without sharing a filesystem",
+      "PASS: cancelling the manifest destroys the source VM and leaves the active chat unchanged",
+      "PASS: confirmed files are verified, group-editable and visible only inside the session",
+      "PASS: reconciliation reads a private durable receipt without rehashing or deleting later chat edits",
+      "PASS: persistent export cancellation before device-write authorization leaves the target disk byte-identical",
+      "PASS: persistent manager export reports removal only after writer detach and cleanup",
+      "PASS: persistent export preserves the existing USB document and the edited session original",
+      "PASS: an interrupted writer never reports eject success and cleanup preserves the encrypted session original",
+      "PASS: source VM death invalidates approval and closes the session through the manager",
+      "PASS: imported documents and later edits survive a fresh VM and LUKS reopening",
+      "PASS: receipt and confirmed cleanup survive LUKS reopening and the recovery menu can lock both volumes",
+      "PASS: an unresponsive recipient stays interlocked until explicit forced closure reaps both VMs",
+      "PASS: blocking from the approval screen revokes the copy before both LUKS volumes close",
+      "PASS: ephemeral export cancellation before device-write authorization leaves the target disk byte-identical",
+      "PASS: ephemeral manager export reports removal only after writer detach and cleanup",
+      "PASS: ephemeral export preserves the existing USB document and the edited session original",
+      "PASS: ephemeral import and edits disappear at closure with the persistent general byte-identical",
+      "PASS: manager output contains neither document payloads nor volume passwords"
+    ],
+    "plaintext_markers_on_disk": [],
+    "disk_scan_canaries": [
+      "OBLIVION_VM_A_CANARY_4d02",
+      "OBLIVION_VM_B_CANARY_b0ca",
+      "OBLIVION_VM_TEMP_CANARY_d9ae",
+      "OBLIVION_API_KEY_CANARY_5c91",
+      "OBLIVION_API_NEXT_CANARY_86ab",
+      "OBLIVION_API_RAM_CANARY_a13e",
+      "OBLIVION_PROXY_USER_CANARY_31d2",
+      "OBLIVION_PROXY_PASSWORD_CANARY_72a4",
+      "synthetic-general-password",
+      "synthetic-session-password-a",
+      "synthetic-session-password-b",
+      "OBLIVION_USB_SELECTED_CANARY_82f1",
+      "OBLIVION_USB_EDIT_CANARY_1b72",
+      "OBLIVION_USB_UNSELECTED_CANARY_29a1",
+      "OBLIVION_IMPORT_PARTIAL_CANARY_c26a",
+      "OBLIVION_EXPORT_EXISTING_CANARY_f4a8"
+    ],
+    "disk_sha256": "3cf6c56e3332f5aa18f742cd11b1a411d0f53874693239e9640e094d2694e0b7",
+    "import_source_sha256": "43956927c479de8c7b06f3173e09fd375f2ff1bed33940cf5b17d22218d74422",
+    "export_target_sha256": "e67d3ef096671509c1299b4b13459015b4b9689f3d0ce1ff9bb27233f044cb4e",
+    "export_target_plaintext_expected": true,
+    "runtime_fixture_override": {
+      "file": "vm-import-test.py",
+      "sha256": "e834852c8d1540d5e8cead90f3a8ba751e4d4281598c5a8f33d9f162de045585"
+    },
+    "fixture_verified": true,
+    "artifacts": [
+      {
+        "path": "artifacts/oblivion-manager-export/vm-03/summary.json",
+        "sha256": "4f16d37762ef0730d4d0b93c87c44e61cee829f9204dcb017ee29e7ad88b112e"
+      },
+      {
+        "path": "artifacts/oblivion-manager-export/vm-03/serial.log",
+        "sha256": "6efe68d0c8a05bbfa06315704382e00363847420214be33422b83a0284ee0138"
+      },
+      {
+        "path": "artifacts/oblivion-manager-export/image-02/SHA256SUMS",
+        "sha256": "fdd8bf679fa02d1c92d9802ce1dae7761a7800414552426b37fc28efc2bba330"
+      },
+      {
+        "path": "artifacts/oblivion-manager-export/image-02/sources.sha256",
+        "sha256": "09d6b631b3480544d1486c0401cf24abecdd5b052f0f10dc5c76684f644a6a52"
+      },
+      {
+        "path": "artifacts/oblivion-manager-export/image-02/manager.sha256",
+        "sha256": "8741c3e9a3cd4756f18955b662c55eebe9e9588dd7690fffe2aa23493c5caa4f"
+      }
+    ],
+    "source_verification": "All image sources match the implementation commit except vm-import-test.py; the corrected fixture is overlaid only into the disposable lab initrd and its digest matches the current source.",
+    "disk_scan_scope": "The writable laboratory data.raw only. The external export-target.raw intentionally contains readable exported documents and is excluded from the no-plaintext claim."
+  },
+  "previous_ci": {
+    "commit": "9331b278bab12916e8af3c89661118c974f8d8ea",
+    "url": "https://github.com/0xthemiddleman/oblivion/actions/runs/40141736634",
+    "conclusion": "success",
+    "passed_jobs": 32,
+    "artifact": {
+      "path": "artifacts/oblivion-manager-export/previous-ci.json",
+      "sha256": "943e452923014a20b7fec99cfcd8193c88b0bcfadc417a6e759c359522dd7078"
+    },
+    "note": "Precedes import recovery and export; the separate x86 manager import job passed nine checks."
+  },
+  "attempts": [
+    {
+      "path": "artifacts/oblivion-manager-export/vm-01",
+      "result": "15 checks passed before adding interrupted-writer and ephemeral-export coverage."
+    },
+    {
+      "path": "artifacts/oblivion-manager-export/vm-02",
+      "result": "Failed fixture expectation: manager emitted the specific export-not-detached error instead of the expected generic error. The trace showed session closure without a successful-eject message. Corrected only the expected UI text; vm-03 passes all 19 checks."
+    }
+  ],
+  "open_gates": [
+    "FAT/exFAT reader and writer integration",
+    "ENOSPC, I/O and device removal during export",
+    "Physical USB and controller/cache power-loss behavior",
+    "Compiled-chat use of imported and edited documents",
+    "Production session KVM and full live USB",
+    "A-to-B copies, OnionShare, remaining PLAN.md release gates"
+  ]
+}

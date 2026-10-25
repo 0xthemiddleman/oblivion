@@ -28,12 +28,12 @@ Le prove hanno corretto tre guasti: backend QMP ancora occupato dopo
 `device_del`, rename impedita da due mount distinti e connect QMP senza
 scadenza quando la VM è congelata. Il blocco non è dichiarato finché la
 pulizia non riesce; la chiusura forzata resta una scelta esplicita.
-La CI `2e5c2f4` completa tutti i 31 job. La successiva `9331b27` supera il
-job x86 di importazione e 31 job complessivi; il ciclo host/rete è ancora in corso.
+La CI `2e5c2f4` completa tutti i 31 job. La successiva `9331b27` termina con
+tutti i 32 job passati, incluso quello x86 di importazione (nove controlli).
 Il recupero nel manager aggiunge ora un elenco delle copie, ricevute private
 persistenti e cancellazione esplicita dei soli tentativi non consegnati.
 Le modifiche successive della chat non vengono ricalcolate né eliminate.
-Restano export, guasti I/O,
+Restano guasti I/O,
 FAT/exFAT, supporti fisici, A→B, OnionShare e immagine live.
 
 La [riconciliazione verificata](import-recovery-evidence.json), commit `9d57eb6`,
@@ -47,6 +47,25 @@ Linux, incluso il recupero dopo una ricevuta finale non letta. Nessuno dei
 nel percorso effimero restano invariati. Tutti i sorgenti runtime e le fixture
 corrispondono all’immagine provata; due file di test sono stati rafforzati dopo
 la build e verificati separatamente sulle tre piattaforme.
+
+L’[export ext4 nel manager](manager-export-evidence.json), commit `9e29eda`,
+completa il primo percorso USB→sessione→USB. Prima del mount scrivibile c’è
+un’autorizzazione distinta; il manifest richiede poi una seconda conferma.
+La VM writer UID 1103 riceve solo la destinazione esterna, senza rete o
+filesystem condivisi. Il manager annuncia la rimozione solo dopo ricevuta,
+smontaggio, flush, arresto della VM e rimozione del mapping.
+Passano 19 controlli VM sul Mac in 276,26 secondi, inclusi export effimero e
+writer congelato/interrotto. L’originale modificato e il documento preesistente
+sulla USB restano intatti; la sorgente e il generale effimero restano identici.
+Nessuno dei 16 marcatori cercati compare nel disco dati del laboratorio;
+la USB di export contiene intenzionalmente copie leggibili.
+Passano 47/50 test del motore su Mac/Linux ARM e x86, 34/35 test host su
+Mac/Linux ARM, Clippy e 34 task del controllo completo. Un tentativo precedente
+si era fermato per il testo generico atteso dalla fixture: il manager mostrava
+già l’errore specifico senza conferma di smontaggio. La fixture corretta è
+verificata per digest nell’initrd RAM; tutti i sorgenti runtime corrispondono
+all’immagine provata. Restano FAT/exFAT, errori del supporto e USB fisica,
+uso dei documenti dalla chat compilata, A→B, OnionShare e live.
 
 Verifica precedente di storage e rete: [40 controlli LUKS/manager e 31 del ciclo di rete](ram-credentials-evidence.json)
 passati. Include la TUI effimera, quota RAM insufficiente, recupero dopo crash,
@@ -183,7 +202,7 @@ separatamente; Tor reale, OOM fisico e verifica dell'intera USB restano da compl
 | Fork privacy             | [Profilo compilato](PRIVACY-PROFILE.md): log/OTLP, dump, updater, discovery e config di progetto disabilitati; binario ARM provato con cattura pacchetti e nel guest          | Altri download/plugin, immagini aggiornate e rifinitura della TUI                     |
 | Rete e provider          | [Broker API](API-BROKER.md), [supervisore privato](GATEWAY-CONTROL.md), [gestione host](HOST-GATEWAY.md) e [due VM su Mac](NETWORK-LAB.md): firewall, Tor e revoca verificata | SOCKS5 globale, provider reale, proxy dei tool e shutdown                             |
 | Credenziali API          | [Chiavi nominate nella TUI fidata](CREDENTIALS.md), archivio root 0600 nel generale, migrazione atomica, selezione in RAM e blocchi readonly/recupero/sessione aperta         | Provider reale, power loss durante migrazione e Wi-Fi                                 |
-| Documenti                | [Import USB e riconciliazione nel manager](FILE-COPY.md)                                                                                                                                                             | Export, USB fisica, I/O, FAT/exFAT, copie A→B e OnionShare                                      |
+| Documenti                | [Import USB, riconciliazione ed export ext4 nel manager](FILE-COPY.md)                                                                                                                                                             | USB fisica, ENOSPC/I/O, FAT/exFAT, copie A→B e OnionShare                                      |
 | Effimero                 | [Manager e VM con disco RAM](EPHEMERAL.md): TUI, seconda chat, gateway, crash e quota insufficiente verificati in Linux                                                      | Tor reale, OOM fisico, credenziali temporanee e zero scritture sull'intera USB          |
 | Live USB                 | Debian minimale scelta                                                                                                                                                        | Immagine x86, provisioning, boot fisico, firmware e periferiche                       |
 | Integrità e manutenzione | Requisiti nel piano                                                                                                                                                           | Firma/catena boot, backup, upgrade/recovery, revisione indipendente, matrice hardware |

@@ -1,25 +1,25 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.56 — 25 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+Versione 0.57 — 25 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
 basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
 
-Il [manager dei documenti](docs/oblivion/FILE-COPY.md) importa file e cartelle
-con sorgente readonly in una VM senza rete, manifest da confermare e consegna
-verificata alla chat. Il nuovo menu riconcilia copie e ricevute nel volume
-cifrato e permette di eliminare soltanto tentativi privati, con conferma.
-Le [prove aggiornate](docs/oblivion/import-recovery-evidence.json) superano
-**12 controlli VM sul Mac** in 239,63 secondi: interruzione del ricevitore,
-pulizia esplicita, conservazione delle modifiche, riapertura LUKS, blocco,
-crash ed effimero. La sorgente resta identica; il generale resta identico
-nel percorso effimero. Nessuno dei 15 marcatori cercati compare nel disco
-scrivibile. Passano 43 test del motore sul Mac, 46 in Debian ARM64 e x86-64,
-34/35 test host su Mac/Linux ARM e 34 task del controllo completo.
+Il [manager dei documenti](docs/oblivion/FILE-COPY.md) collega importazione,
+recupero ed esportazione USB ext4, con VM dedicate senza rete e nessun
+filesystem condiviso. L’export richiede autorizzazione alla scrittura e
+conferma del manifest; indica la rimozione sicura solo dopo smontaggio,
+flush e distruzione del writer. Le [prove aggiornate](docs/oblivion/manager-export-evidence.json)
+superano **19 controlli VM sul Mac** in 276,26 secondi, compresi writer
+interrotto ed export effimero. La sorgente resta identica e il generale resta
+identico nel percorso effimero. Nessuno dei 16 marcatori cercati compare nel
+disco dati del laboratorio; la destinazione esterna contiene intenzionalmente
+copie leggibili. Passano 47 test del motore sul Mac, 50 in Debian ARM64 e
+x86-64, 34/35 test host su Mac/Linux ARM e 34 task del controllo completo.
 La prova usa ext4 virtuale e una shell con l’identità della chat: non completa
-USB fisica, export o la live. La CI precedente `9331b27` ha già superato il
-nuovo job x86 di importazione e 31 job complessivi; il ciclo host/rete è ancora
-in corso. Le nuove prove di riconciliazione non fanno parte di quel commit.
+USB fisica o live. La CI precedente `9331b27` termina con tutti i **32 job
+passati**, incluso il nuovo job x86 di importazione. Riconciliazione ed export
+non fanno parte di quel commit.
 
 Sono implementati il generale LUKS2 e i volumi indipendenti delle sessioni,
 il controller Linux, una VM nuova per apertura, il manager fidato e il profilo
@@ -36,7 +36,7 @@ Si conservano grafica, componenti e interazioni della chat TUI upstream.
 | Sessioni e rete API | [31 controlli del ciclo host sul Mac](docs/oblivion/ram-credentials-evidence.json): token nuovi, revoca, regole A/B, Tor↔SOCKS, stream effimeri e credenziali RAM | Abliteration e conversazione Tor reali, KVM della sessione, shutdown globale del prodotto |
 | Proxy degli strumenti | [Client compilato e cattura esterna verificati](docs/oblivion/ram-credentials-evidence.json): webfetch HTTP/HTTPS, shell, redirect e destinazioni vietate; anche [quattro scenari di revoca/crash](docs/oblivion/tools-vm-evidence.json) | Isolamento Tor dei flussi tool e provider reale |
 | Regole amministrate | [Menu, persistenza e grant host verificati](docs/oblivion/host-policy-evidence.json); 13 test delle regole sul Mac e in Debian ARM/x86 | Conferme interattive, scadenze e revoca di singoli permessi |
-| Documenti, effimero e live | [Importazione e recupero nel manager](docs/oblivion/import-recovery-evidence.json): 12 controlli con VM separate, ricevute, pulizia esplicita, LUKS, blocco ed effimero | Export, USB fisica e guasti I/O, FAT/exFAT, OOM, intera USB invariata, copie A→B, OnionShare e immagine Debian Live |
+| Documenti, effimero e live | [Importazione, recupero ed export nel manager](docs/oblivion/manager-export-evidence.json): 19 controlli con VM separate, ricevute, pulizia esplicita, LUKS, blocco ed effimero | USB fisica, ENOSPC/I/O in copia, FAT/exFAT, OOM, intera USB invariata, copie A→B, OnionShare e immagine Debian Live |
 
 La [CI del commit `65112f3`](docs/oblivion/ephemeral-evidence.json) termina con
 **29 job passati**: compilazione Debian, controlli del repository,
@@ -119,10 +119,15 @@ pubblicate si conservano anche se modificate dalla chat; i tentativi rimasti
 privati possono essere eliminati con doppia conferma. Nessuna ripresa o
 sovrascrittura automatica, nessun mount host e nessuna VM sorgente per l’elenco.
 
-Prossimi passi della fase documenti: export con conferma distinta e
-flush/smontaggio, poi A→B e OnionShare. Test FAT/exFAT,
-rimozione USB, disco pieno/I/O, integrazione con la chat compilata e supporto
-fisico restano aperti. Le caratteristiche del PC Windows serviranno a scegliere
+L’export ext4 aggiunge **E — Esporta**: selezione sotto `workspace` o `imports`,
+nuova directory sulla USB senza sovrascrivere contenuti esistenti, ricevuta e
+conferma distinta dello smontaggio. La sessione non riceve il dispositivo.
+Il writer interrotto non produce una conferma di rimozione sicura; originale
+cifrato e documenti preesistenti restano conservati nelle prove.
+
+Prossimi passi della fase documenti: FAT/exFAT, disco pieno/I/O e rimozione
+durante la copia, integrazione con la chat compilata, poi A→B e OnionShare.
+Il supporto fisico resta aperto. Le caratteristiche del PC Windows serviranno a scegliere
 la prova di boot in VirtualBox; non bloccano lo sviluppo sul Mac.
 
 Lo [stato di realizzazione](docs/oblivion/IMPLEMENTATION.md) conserva risultati,
