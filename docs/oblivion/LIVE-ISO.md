@@ -1,5 +1,10 @@
 # Prima ISO di sviluppo
 
+Nota successiva al collaudo fisico: questa prima immagine non disabilita
+ancora il backend EFI dei log di crash. Le ricette sono state corrette;
+per il prossimo collaudo usare la [variante diagnostica aggiornata](HARDWARE-ISO.md).
+Il [resoconto](PHYSICAL-HARDWARE.md) distingue la correzione live dall'ISO originale.
+
 Obiettivo: avvio x86-64/UEFI fino al manager fidato, usando i servizi e i binari
 di produzione. È il primo artefatto avviabile verso la beta, non la beta
 funzionale né una release per dati privati.

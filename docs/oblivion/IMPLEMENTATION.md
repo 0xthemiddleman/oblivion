@@ -1,5 +1,16 @@
 # Stato di realizzazione
 
+Il [primo collaudo fisico](PHYSICAL-HARDWARE.md) conferma Ethernet, API KVM,
+avvio di un guest diagnostico con kernel/root filesystem di produzione e
+operazioni LUKS del controller su file RAM: sei controlli passati, manager
+ripristinato e contatori di scrittura dei dischi fisici invariati nella prova.
+Il collaudo ha rilevato un backend EFI capace di conservare log di crash fuori
+da LUKS. È disabilitato nella live in esecuzione e nella
+[nuova ISO diagnostica](hardware-pstore-evidence.json), verificata in due avvii
+UEFI sul Mac. La vecchia chiavetta resta immutata: il prossimo avvio fisico
+deve usare l'ISO aggiornata. Non sono ancora provati la chat di produzione
+completa, le quattro VM insieme, il provider reale o la persistenza USB.
+
 Tappa completata: revoca corretta e [prima ISO con il manager](LIVE-ISO.md),
 con le altre funzionalità congelate verso la beta. La roadmap di [PLAN.md](../../PLAN.md)
 resta valida, senza ridurre le garanzie ai soli test già disponibili. VirtualBox resta fuori dal lavoro

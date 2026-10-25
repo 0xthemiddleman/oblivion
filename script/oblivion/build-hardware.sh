@@ -3,6 +3,7 @@ set -eu
 cd "$(dirname "$0")/../.."
 root=$(pwd)
 out="$root/artifacts/oblivion-hardware-iso"
+image=${OBLIVION_HARDWARE_OUTPUT:-"$out/image"}
 key=${OBLIVION_TEST_KEY:-"$HOME/.ssh/oblivion-hardware-test"}
 mkdir -p "$out"
 # The public key is the only credential copied into the build context. This
@@ -26,6 +27,6 @@ PY
 )
 docker buildx build --platform linux/amd64 --file script/oblivion/Dockerfile.vm-lab \
     --target hardware-iso --build-arg "BASE_ISO_SHA256=$base_sha" \
-    --output "type=local,dest=$out/image" .
-printf 'ISO: %s/image/oblivion-hardware-test-amd64.iso\n' "$out"
+    --output "type=local,dest=$image" .
+printf 'ISO: %s/oblivion-hardware-test-amd64.iso\n' "$image"
 printf 'Private SSH key (not in ISO): %s\n' "$key"

@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-25",
+  "status": "physical-kvm-and-ram-luks-verified",
+  "tested_iso_sha256": "6f5c098deb1113c5e2a82a97840c8f457e32c6283d64d872576ed3409b0a6868",
+  "platform": {
+    "architecture": "x86_64",
+    "cpu": "Intel Core i7-13700K",
+    "ram_gib_class": 32,
+    "boot": "Physical USB / UEFI",
+    "kernel": "6.12.113+deb13-amd64"
+  },
+  "network": {
+    "ethernet": "Realtek RTL8125 / r8169, DHCP and authenticated LAN SSH verified",
+    "wifi": "Intel controller / iwlwifi recognized; association and traffic not tested"
+  },
+  "probe": {
+    "passed": true,
+    "checks": [
+      "KVM API is usable on the physical CPU",
+      "A nonroot QEMU boots the packaged Debian kernel/root filesystem using KVM and powers off cleanly",
+      "Production controller creates nested LUKS2 volumes in RAM and rejects an incorrect general password",
+      "Session passwords are separate and a second simultaneous opening is rejected",
+      "Separate filesystems preserve A across reopening and keep its file absent from B",
+      "Lock removes both device mappings and the test marker is absent from the closed ciphertext"
+    ],
+    "qemu_kvm": {
+      "enabled": true,
+      "present": true
+    },
+    "qemu_uid": 1100,
+    "pstore_backend": "(null)",
+    "ram_cleanup_complete": true,
+    "physical_disk_write_counters_unchanged": true,
+    "manager_restored": true,
+    "seconds": 23.52
+  },
+  "pstore_finding": {
+    "initial_backend": "efi_pstore",
+    "initial_disable": "N",
+    "runtime_disable_after": "Y",
+    "runtime_backend_after": null,
+    "systemd_pstore": "masked-runtime",
+    "new_iso_kernel_arguments": [
+      "pstore.backend=none",
+      "efi_pstore.pstore_disable=1",
+      "systemd.mask=systemd-pstore.service"
+    ],
+    "old_usb_modified": false,
+    "existing_crash_contents_read": false
+  },
+  "scope": "Physical x86/KVM Linux boot with diagnostic init, followed by production controller LUKS operations on RAM files. No provider, production chat, physical disk writes, or shared guest folders.",
+  "limits": [
+    "This is not a full production chat or multi-VM topology test. The KVM guest uses diagnostic init.",
+    "LUKS files and synthetic data are in RAM; USB persistence/provisioning is not tested.",
+    "Unchanged physical-device counters cover the test window, not every firmware persistence mechanism.",
+    "Live pstore mitigation is temporary until reboot; use the corrected ISO for subsequent boots.",
+    "Wi-Fi association, provider calls, physical transfer media, Secure Boot and power-loss recovery remain untested."
+  ],
+  "harness": {
+    "path": "script/oblivion/hardware-probe.py",
+    "sha256": "05fe1fdea0145485ee5e624a671b642b296ce3c456ab2e99cb1f309368603e48"
+  },
+  "local_evidence": [
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/inventory.json",
+      "sha256": "aa6cf6640699ca479c8e60418b58fc0bc07b2854b234ef17c9744d68ba4fb81a"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/probe-03.json",
+      "sha256": "66edc7cfafff21c9d228dd1df70859bf7ef36447e2ca744ecbdc01b72480ac37"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/probe-03.log",
+      "sha256": "e52221eec7652f202d53463ae35685565a706f1c1b649714d87673a6bdc4269b"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/kernel-settings.json",
+      "sha256": "2425353a12264c2183fa0e4b55b9d5ae894d76b7789f63bcf301dde229bbb6b1"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/pstore-fix.json",
+      "sha256": "0ba965768207181b6196d026be5f49347851dbe91b4fe8ef95279787e840530d"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/final-state.json",
+      "sha256": "c6cac82ee237ca079898ed02618a918dadbc24498ae480e7dd3560d2fcfcb433"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/check.log",
+      "sha256": "ef7c281e185b512f488f8d64a7622b049ab2ab9f01fe17b76490e93387f901a4"
+    }
+  ],
+  "privacy": "Detailed device inventory, LAN addresses, server key and disk identifiers are local-only and omitted from this public report."
+}

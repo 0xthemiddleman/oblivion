@@ -1,5 +1,10 @@
 # ISO per collaudo sul PC
 
+**Aggiornamento dopo il primo PC fisico:** usare l'immagine corretta in
+`artifacts/oblivion-hardware-iso/image-pstore/oblivion-hardware-test-amd64.iso`.
+La prima immagine poteva abilitare crash log Linux nel firmware UEFI.
+Il [resoconto fisico](PHYSICAL-HARDWARE.md) spiega il riscontro e la correzione.
+
 Questa variante della live aggiunge pacchetti Debian già esistenti:
 NetworkManager/nmtui, firmware Wi-Fi Intel, Realtek, Atheros, Broadcom e
 MediaTek, OpenSSH e strumenti per identificare l'hardware. Non include un
@@ -21,7 +26,7 @@ non è ancora implementato.
 
 ## Uso
 
-Artefatto: `artifacts/oblivion-hardware-iso/image/oblivion-hardware-test-amd64.iso`.
+Artefatto aggiornato: `artifacts/oblivion-hardware-iso/image-pstore/oblivion-hardware-test-amd64.iso`.
 Il file `SHA256SUMS` nella stessa cartella permette di verificare la copia.
 La scrittura su una chiavetta richiede di scegliere esplicitamente il supporto;
 gli script di build e test non scrivono su dischi fisici.
@@ -61,6 +66,9 @@ sh script/oblivion/build-hardware.sh
 ```
 
 Richiede la prima ISO verificata, descritta in [LIVE-ISO.md](LIVE-ISO.md).
+La build scrive per default in `artifacts/oblivion-hardware-iso/image`;
+`OBLIVION_HARDWARE_OUTPUT` permette un'altra directory, usata per conservare
+l'artefatto iniziale durante questa correzione.
 Lo script ne controlla l'hash, riusa le quattro immagini VM senza modificarle
 e ricostruisce solo l'host con i pacchetti diagnostici. La prima ISO resta
 separata; il target `beta-iso` non include SSH né la chiave del collaudatore.

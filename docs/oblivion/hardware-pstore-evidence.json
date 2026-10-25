@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-25",
+  "status": "pstore-disabled-iso-uefi-verified",
+  "iso": {
+    "path": "artifacts/oblivion-hardware-iso/image-pstore/oblivion-hardware-test-amd64.iso",
+    "bytes": 1093494784,
+    "sha256": "4ca02fad8ac60a2a8c0694eb376a08403d1a01a407589a4e6ce0a25f60769b90"
+  },
+  "replaces_diagnostic_iso_sha256": "6f5c098deb1113c5e2a82a97840c8f457e32c6283d64d872576ed3409b0a6868",
+  "reason": "Physical hardware enabled EFI-backed persistent Linux crash logs outside LUKS volumes.",
+  "fix": [
+    "Select no pstore backend from the kernel command line.",
+    "Disable the EFI pstore driver before userspace.",
+    "Mask systemd-pstore.service at boot."
+  ],
+  "verification": "The boot harness asserts backend=none, EFI disabled if loaded and systemd-pstore masked, then repeats the network/SSH and volatile-state checks.",
+  "boot_cdrom": {
+    "passed": true,
+    "iso_sha256": "4ca02fad8ac60a2a8c0694eb376a08403d1a01a407589a4e6ce0a25f60769b90",
+    "media": "cdrom",
+    "outer_accelerator": "tcg",
+    "physical_wifi_tested": false,
+    "session_kvm_tested": false,
+    "checks": [
+      "Unmodified ISO reaches the real manager through UEFI",
+      "Debian DHCP works and diagnostic SSH is initially off",
+      "The real Debian nmtui network selector opens and returns",
+      "Only the operator key authenticates; root SSH is rejected and explicit sudo works",
+      "Manager remains unprivileged; temporary state uses RAM, swap is off and no server private key is baked in",
+      "The real nftables rule drops an SSH connection from outside the connected private subnet",
+      "Local SSH disable closes the listener and terminates the established administrative session and command",
+      "Capture limits TCP/UDP to DHCP and diagnostic SSH; only pre-Linux neighbor control may use IPv6",
+      "ACPI shutdown completes; ISO and unrelated synthetic disk remain byte-identical"
+    ],
+    "manager_seconds": 23.2,
+    "firmware_ipv6_control_packets": 2,
+    "seconds": 40.55
+  },
+  "boot_usb": {
+    "passed": true,
+    "iso_sha256": "4ca02fad8ac60a2a8c0694eb376a08403d1a01a407589a4e6ce0a25f60769b90",
+    "media": "usb",
+    "outer_accelerator": "tcg",
+    "physical_wifi_tested": false,
+    "session_kvm_tested": false,
+    "checks": [
+      "Unmodified ISO reaches the real manager through UEFI",
+      "Debian DHCP works and diagnostic SSH is initially off",
+      "The real Debian nmtui network selector opens and returns",
+      "Only the operator key authenticates; root SSH is rejected and explicit sudo works",
+      "A fresh boot has a different SSH identity and no previous Wi-Fi profile or RAM canary",
+      "Manager remains unprivileged; temporary state uses RAM, swap is off and no server private key is baked in",
+      "The real nftables rule drops an SSH connection from outside the connected private subnet",
+      "Local SSH disable closes the listener and terminates the established administrative session and command",
+      "Capture limits TCP/UDP to DHCP and diagnostic SSH; only pre-Linux neighbor control may use IPv6",
+      "ACPI shutdown completes; ISO and unrelated synthetic disk remain byte-identical"
+    ],
+    "manager_seconds": 23.57,
+    "firmware_ipv6_control_packets": 0,
+    "seconds": 39.48
+  },
+  "canonical_check": {
+    "successful": 34,
+    "total": 34,
+    "cached": 34
+  },
+  "production_guest_images_unchanged": true,
+  "limits": [
+    "Updated artifact is tested in QEMU/UEFI on the Mac, not yet reflashed and cold-booted on the physical PC.",
+    "The physical PC still runs the previous ISO with the runtime mitigation applied.",
+    "No new full privacy or provider-chat guarantee; original beta/provisioning limitations remain.",
+    "The normal development GRUB recipe is corrected, but its original ISO was not rebuilt in this step."
+  ],
+  "artifacts": [
+    {
+      "path": "artifacts/oblivion-hardware-iso/image-pstore/SHA256SUMS",
+      "sha256": "c76deb1315aa2ace3e97505e9a9c428bd83f4bb4a9a893969028ffc005f61d9a"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/image-pstore/iso-sources.sha256",
+      "sha256": "7c7f7fdc97575ac7afadb22502d0edb11744e31c794fdc7f7ad2ddf0f4f88b7a"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/image-pstore/runtime.sha256",
+      "sha256": "2d9ed5a41f19d15358bce71cc6a6bd1b0fbd4a2d957aec781ff68a215b3a64af"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/image-pstore/host-packages.tsv",
+      "sha256": "5c892283684d325abb10f8a3baaa134fb2097ef57803e14d40cd9dd933dc6292"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/build-pstore-01.log",
+      "sha256": "6ccd86078bff463a8e8b6d9006f6ab5416ddd14dcae2f1d8d38d85dbef156c88"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-01/summary.json",
+      "sha256": "b1b3183b19a892e058442707bfc8fa1e1800be07f1d3a931855ea3a56f1d315b"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-01/network.json",
+      "sha256": "0955408066df31dcaf95ca2873ffb3f26d6d258ca0222ab789366f8dd975ae5e"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-01/network.pcap",
+      "sha256": "e4ead916d63906da50e935a244095f18b5c5e465956a610e8d587572609c89ff"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-01/inspection.txt",
+      "sha256": "5bc928e72009e9a920655cb994dac6c42763ebd45d02dc7357fa84164a0b23f7"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-01/manager.png",
+      "sha256": "076cc9e2a0ba63d56f2998db46387350e6c87c1be2d67fcfb93359462950ae70"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-usb-01/summary.json",
+      "sha256": "438e5f3df69597daf54e24104be9051220241eb5f5a3034e0ea9dff0f2425e5f"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-usb-01/network.json",
+      "sha256": "60843f368d0f7d5155041770f7d21e81c2625c3d375f471b927c87e9466de1d1"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-usb-01/network.pcap",
+      "sha256": "ecf15acaed23aa5b463c7d19d09b237d78321b5b35262f0a2cb873dd1fdeb003"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-usb-01/inspection.txt",
+      "sha256": "4ae5e0b192045f706c9fe24e3fed91f3635969ebc8e3e6df76b61cc2c28bbfc0"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/boot-pstore-usb-01/manager.png",
+      "sha256": "076cc9e2a0ba63d56f2998db46387350e6c87c1be2d67fcfb93359462950ae70"
+    }
+  ],
+  "verification_sources": [
+    {
+      "path": "script/oblivion/build-hardware.sh",
+      "sha256": "04e5d54c50365c8b0969d080f8926374779443e01309cd5bb076a30ce084b13b"
+    },
+    {
+      "path": "script/oblivion/run-hardware-boot.py",
+      "sha256": "d0a8a147b84830249c4045a380b2406fb149434dd988e0bc6f8eb8a04e60f2f9"
+    },
+    {
+      "path": "script/oblivion/live-grub.cfg",
+      "sha256": "d15dbdf10206d3b36084718b4d59180bc3ea8824d96c0f258c022ceeab8a76fd"
+    }
+  ]
+}
