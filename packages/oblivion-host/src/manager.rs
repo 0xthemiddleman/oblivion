@@ -51,6 +51,7 @@ fn run(preview: bool) -> Result<()> {
         return Err("linux_nonroot_manager_required".into());
     }
     let mut terminal = Terminal::open()?;
+    let storage_unavailable = std::env::var_os("OBLIVION_STORAGE_UNAVAILABLE").is_some();
     if preview {
         terminal.write(&format!("{CLEAR}{BRAND}{LOGO}{RESET}\r\n\r\n OBLIVION - ANTEPRIMA, nessun archivio collegato\r\n\r\n > Sessione 7c2a  Bloccata\r\n   Sessione 91f4  Bloccata\r\n\r\n {ACTION}Premi un tasto per uscire. Nessuna password richiesta.{RESET}"))?;
         terminal.input(-1)?;
@@ -101,7 +102,11 @@ fn run(preview: bool) -> Result<()> {
             } else if !status.general_present && status.general_incomplete {
                 " Preparazione generale interrotta.\r\n Nessun archivio pronto; il tentativo incompleto e' conservato.\r\n\r\n [D] Elimina il tentativo incompleto\r\n"
             } else if !status.general_present {
-                " Prima preparazione di Oblivion\r\n\r\n [Invio] Crea il volume generale cifrato\r\n"
+                if storage_unavailable {
+                    " ISO DI SVILUPPO - avvio del manager\r\n\r\n Supporto dati USB non ancora predisposto.\r\n Creazione degli archivi disabilitata.\r\n Nessun dato viene salvato in questa prova.\r\n"
+                } else {
+                    " Prima preparazione di Oblivion\r\n\r\n [Invio] Crea il volume generale cifrato\r\n"
+                }
             } else {
                 " Archivio generale bloccato\r\n\r\n [Invio] Sblocca  [E] Avvio effimero\r\n"
             });
@@ -246,7 +251,7 @@ fn run(preview: bool) -> Result<()> {
                 && matches!(key, b'\r' | b'\n' | b'e')
             {
                 if !status.general_present {
-                    if key == b'e' {
+                    if key == b'e' || storage_unavailable {
                         return Ok(());
                     }
                     if !status.general_incomplete {

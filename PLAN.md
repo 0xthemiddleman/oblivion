@@ -1,9 +1,31 @@
 # Oblivion — piano di prodotto e realizzazione
 
-Versione 0.57 — 25 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
-basato su OpenCode v2.1.4. **Non esiste ancora una live Oblivion pronta all'uso.**
+Versione 0.58 — 25 ottobre 2026. Prototipo sviluppato sul Mac ARM disponibile,
+basato su OpenCode v2.1.4. **La prima ISO di sviluppo arriva al manager;
+non è ancora una beta funzionale con persistenza USB.**
 Il piano conserva l'intera roadmap; i risultati di laboratorio non completano
 le verifiche del prodotto su hardware reale.
+
+Priorità concordata per la beta: correggere la revoca della rete e produrre
+la [prima ISO avviabile fino al manager](docs/oblivion/LIVE-ISO.md), prima di
+aggiungere altre funzionalità. Sono rinviati OnionShare, copie A→B, permessi
+avanzati e ampliamento della compatibilità hardware. Il supporto filesystem
+resta quello di Debian. La preparazione della USB persistente e il ciclo
+completo su hardware seguono la prima immagine di sviluppo.
+
+La [ISO verificata](docs/oblivion/live-iso-evidence.json) pesa circa 890 MiB:
+boot UEFI da CD-ROM e USB virtuali fino al manager in circa 22 secondi,
+input, ritorno dopo uscita e spegnimento ACPI verificati sul Mac. Nessuna
+modifica al disco sintetico estraneo. Il manager non root espone soltanto la
+console necessaria; la creazione degli archivi è disabilitata finché manca
+la preparazione del supporto persistente. Rete fisica, KVM e Secure Boot
+restano verifiche separate, non dimostrate da questo boot.
+
+La [revoca prima della pulizia](docs/oblivion/network-revocation-evidence.json)
+è verificata con 33 controlli VM in 534,49 secondi. Un errore reale nella
+lettura dello stato di trasferimento non impedisce più la chiusura dello
+stream del provider: leave revoca prima della pulizia; lock ferma prima il
+gateway. I volumi restano correttamente interbloccati se la pulizia fallisce.
 
 Il [manager dei documenti](docs/oblivion/FILE-COPY.md) collega importazione,
 recupero ed esportazione USB ext4, con VM dedicate senza rete e nessun

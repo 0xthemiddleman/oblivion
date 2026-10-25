@@ -1,0 +1,128 @@
+{
+  "date": "2026-10-25",
+  "status": "development-iso-uefi-boot-verified",
+  "iso": {
+    "path": "artifacts/oblivion-beta-iso/image/oblivion-development-amd64.iso",
+    "bytes": 933486592,
+    "sha256": "306b24dfe351f129177514247965af0631158e9c1187acab9126813c50a5fd01"
+  },
+  "environment": {
+    "host": "macOS ARM64",
+    "guest": "Debian trixie amd64",
+    "firmware": "QEMU EDK2 x86_64, Secure Boot not enabled",
+    "accelerator": "tcg"
+  },
+  "boot_cdrom": {
+    "passed": true,
+    "iso_sha256": "306b24dfe351f129177514247965af0631158e9c1187acab9126813c50a5fd01",
+    "firmware_sha256": "33090cc07675baa5190d9f1e84bf5176b33bcbfa9bacac522961150cdb6dbb2a",
+    "boot": "UEFI",
+    "outer_accelerator": "tcg",
+    "session_kvm_tested": false,
+    "scope": "Unmodified ISO boot and real manager keyboard input; no guest diagnostic hooks, network, physical USB or session workload.",
+    "manager_seconds": 22.27,
+    "unrelated_disk_unchanged": true,
+    "clean_acpi_poweroff": true,
+    "seconds": 29.27
+  },
+  "boot_usb": {
+    "passed": true,
+    "iso_sha256": "306b24dfe351f129177514247965af0631158e9c1187acab9126813c50a5fd01",
+    "firmware_sha256": "33090cc07675baa5190d9f1e84bf5176b33bcbfa9bacac522961150cdb6dbb2a",
+    "boot": "UEFI",
+    "media": "usb",
+    "outer_accelerator": "tcg",
+    "session_kvm_tested": false,
+    "scope": "Unmodified ISO boot and real manager keyboard input; no guest diagnostic hooks, network, physical USB or session workload.",
+    "manager_seconds": 22.19,
+    "unrelated_disk_unchanged": true,
+    "clean_acpi_poweroff": true,
+    "seconds": 28.94
+  },
+  "checks": [
+    "Unmodified ISO reaches the real manager through UEFI from both optical and USB mass-storage media.",
+    "Enter does not create a supposedly persistent archive in the RAM overlay.",
+    "Q clears the console and the supervised manager returns after lock and exit.",
+    "ACPI poweroff completes and the unrelated synthetic disk remains byte-identical in both boots."
+  ],
+  "source_verification": "All packaged ISO recipe and host source hashes match the current worktree. The client and gateway have separate source/binary manifests.",
+  "network_fix": "network-revocation-evidence.json",
+  "component_checks": {
+    "mac_host": 34,
+    "linux_arm64_host": 35,
+    "linux_amd64_host": 35,
+    "linux_amd64_transfer": 51,
+    "linux_amd64_gateway_library": 28,
+    "canonical_check": 34
+  },
+  "resolved_boot_failures": [
+    "Create the minimal /etc/network directory expected by live-boot.",
+    "Use nonetworking ip=off: ip=frommedia also activated initramfs-tools network configuration and waited for a NIC.",
+    "Bind and allow only /dev/tty1 inside the manager private device namespace; without it systemd failed with 208/STDIN and 209/STDOUT."
+  ],
+  "limits": [
+    "Development boot image, not a functional privacy beta.",
+    "No USB provisioning or persistent archive creation; /persist is read-only and the manager exposes the limitation.",
+    "Network configuration, real provider chat, production KVM sessions and physical hardware are not tested by these boots.",
+    "Secure Boot and a verified boot chain are not implemented; checksum files are not signatures.",
+    "The unrelated test disk is a synthetic unformatted file; this is not an exhaustive physical-disk leak audit."
+  ],
+  "artifacts": [
+    {
+      "path": "artifacts/oblivion-beta-iso/boot-04/summary.json",
+      "sha256": "750833c211b5697ff345ded07f45e76079dea86513a81cef8a16335de8795ae4"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/boot-04/manager.png",
+      "sha256": "076cc9e2a0ba63d56f2998db46387350e6c87c1be2d67fcfb93359462950ae70"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/boot-04/command.json",
+      "sha256": "7d65dd9bf181a5326dd5dfc07277b509d00f801487934faeb5dc90418f961a9e"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/boot-usb-01/summary.json",
+      "sha256": "63e940bc46d1e62f808badc06bc624c2d13f61a592398cc04c1fe483d39189a4"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/boot-usb-01/command.json",
+      "sha256": "2019f35fa5c0325a1b1cf64beea0b7d69b85feddf546c62fe0ca961779f36107"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/boot-usb-01/manager.png",
+      "sha256": "076cc9e2a0ba63d56f2998db46387350e6c87c1be2d67fcfb93359462950ae70"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/image/SHA256SUMS",
+      "sha256": "06e65141ceb730e1db14e3a3502c2e0f8c4f8dc25211b4a9da381ea913816646"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/image/iso-sources.sha256",
+      "sha256": "296fd8e5b1806ba881607c74eab2a8f9d7467d1cf81fb21d091e0a0b9cd4dfad"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/image/host-sources.sha256",
+      "sha256": "3ecd053ab413d13d1175255b4e83e62d5e831c719166498a39dd74c112730b7c"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/image/gateway-sources.sha256",
+      "sha256": "f018bb50630445f93d162c4d2e3e0a31cc386cfb1c222f53977f1c969f6c7f80"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/image/client-evidence.json",
+      "sha256": "78d96708c108ef9ff681c0be75c1a150354ea2d51ed79105519486c9d3f0ba75"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/image/client-sources.sha256",
+      "sha256": "b720fcff6230dc1a2f06da405bb92645c53b59ca28a6276cc3c1ac1798f9c334"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/iso-build-04.log",
+      "sha256": "b64802ab522e5296360bded138c3cb9de7fb8926e694359e4b2745ab5920e004"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/check.log",
+      "sha256": "8ad55b8292082fa4adaef44d90f9511e018e79742115b8dda6c35dd582b6a7bd"
+    }
+  ]
+}

@@ -1,11 +1,26 @@
 # Stato di realizzazione
 
-Obiettivo attivo: completare la roadmap di [PLAN.md](../../PLAN.md), senza ridurre
-le garanzie ai soli test già disponibili. VirtualBox resta fuori dal lavoro
+Tappa completata: revoca corretta e [prima ISO con il manager](LIVE-ISO.md),
+con le altre funzionalità congelate verso la beta. La roadmap di [PLAN.md](../../PLAN.md)
+resta valida, senza ridurre le garanzie ai soli test già disponibili. VirtualBox resta fuori dal lavoro
 immediato. Il prototipo di laboratorio non è una release da usare con dati privati.
 Lo sviluppo procede sul Mac ARM disponibile: Docker per build e prove del binario,
 Debian/HVF e guest TCG per il laboratorio VM. L'hardware x86/KVM è un gate di
 rilascio, non un blocco allo sviluppo sul Mac.
+
+La [ISO di sviluppo](live-iso-evidence.json) supera il boot UEFI dalla stessa
+immagine non modificata su CD-ROM e USB virtuali: manager in circa 22 secondi,
+tastiera, ritorno dopo uscita e spegnimento ACPI. Il disco sintetico estraneo
+resta invariato. Sono inclusi i binari e le immagini di produzione, ma la
+preparazione USB non è ancora disponibile: il manager lo segnala, disabilita
+la creazione di archivi e `/persist` è in sola lettura. Rete fisica,
+conversazioni online, sessioni KVM e Secure Boot restano fuori da questa prova.
+
+La [regressione della revoca](network-revocation-evidence.json) supera 33
+controlli in VM ARM64 sul Mac (534,49 s), compresi stream attivi durante
+errori di pulizia dei trasferimenti. La rete viene revocata prima della
+pulizia; il blocco globale ferma prima il gateway. Un errore successivo non
+viene presentato come chiusura riuscita dei volumi. Il provider è sintetico.
 
 L’[importazione dei documenti](FILE-COPY.md) è ora collegata al controller e
 al manager: `Ctrl+^`, scelta della sorgente e del percorso relativo, manifest
@@ -207,7 +222,7 @@ separatamente; Tor reale, OOM fisico e verifica dell'intera USB restano da compl
 | Credenziali API          | [Chiavi nominate nella TUI fidata](CREDENTIALS.md), archivio root 0600 nel generale, migrazione atomica, selezione in RAM e blocchi readonly/recupero/sessione aperta         | Provider reale, power loss durante migrazione e Wi-Fi                                 |
 | Documenti                | [Import USB, riconciliazione ed export ext4 nel manager](FILE-COPY.md)                                                                                                                                                             | USB fisica, ENOSPC/I/O, FAT/exFAT, copie A→B e OnionShare                                      |
 | Effimero                 | [Manager e VM con disco RAM](EPHEMERAL.md): TUI, seconda chat, gateway, crash e quota insufficiente verificati in Linux                                                      | Tor reale, OOM fisico, credenziali temporanee e zero scritture sull'intera USB          |
-| Live USB                 | Debian minimale scelta                                                                                                                                                        | Immagine x86, provisioning, boot fisico, firmware e periferiche                       |
+| Live USB | [Prima ISO: boot UEFI da CD-ROM e USB virtuali fino al manager](live-iso-evidence.json) | Preparazione persistenza USB, rete fisica, boot su PC, firmware e periferiche |
 | Integrità e manutenzione | Requisiti nel piano                                                                                                                                                           | Firma/catena boot, backup, upgrade/recovery, revisione indipendente, matrice hardware |
 
 Il ciclo funzionale è ora provato anche con la TUI interattiva: aprire A

@@ -353,3 +353,44 @@ RUN --mount=type=bind,from=transport-network-lab,source=/,target=/lab,ro \
 
 FROM scratch AS transport-network-artifacts
 COPY --from=transport-network-pack /out/ /
+
+# The live target never selects a laboratory host, guest or trust overlay.
+FROM guest AS live-session
+ARG OPENCODE_BINARY=artifacts/oblivion-beta-iso/client/cli-linux-x64-baseline/bin/opencode
+ARG OPENCODE_BUILD_EVIDENCE=artifacts/oblivion-beta-iso/client-evidence.json
+RUN apt-get update && apt-get install -y --no-install-recommends git ripgrep python3 \
+    && rm -rf /var/lib/apt/lists/*
+COPY ${OPENCODE_BINARY} /usr/bin/oblivion
+COPY ${OPENCODE_BUILD_EVIDENCE} /usr/lib/oblivion/build-evidence.json
+COPY packages/oblivion-host/guest/conversation.sh /usr/libexec/oblivion
+RUN chmod 0755 /usr/libexec/oblivion \
+    && python3 -c 'import hashlib,json; from pathlib import Path; assert hashlib.sha256(Path("/usr/bin/oblivion").read_bytes()).hexdigest() == json.loads(Path("/usr/lib/oblivion/build-evidence.json").read_text())["binary_sha256"]'
+
+FROM os AS live-host
+ARG TARGETARCH
+RUN test "$TARGETARCH" = amd64 \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    live-boot live-boot-initramfs-tools cryptsetup-bin dmsetup qemu-system-x86 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=compiler /bundle/oblivion-storage /bundle/oblivion-control /bundle/oblivion-manager /usr/bin/
+COPY packages/oblivion-host/host/ /etc/systemd/system/
+COPY script/oblivion/live-setup.sh /tmp/live-setup
+COPY script/oblivion/live-controller.json /etc/oblivion/controller.json
+RUN sh /tmp/live-setup && rm /tmp/live-setup
+
+FROM debian:trixie-slim@sha256:62bd423aeee912639ca8ee681c2b762cb3e25137e0a92b20be455898a9f034ad AS live-pack
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    squashfs-tools grub-pc-bin grub-efi-amd64-bin grub-common xorriso mtools python3 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=live-host / /host/
+COPY --from=live-session / /session/
+COPY --from=gateway-system / /gateway/
+COPY --from=import-guest / /import/
+COPY --from=export-guest / /export/
+COPY --from=compiler /bundle/sources.sha256 /sources/host-sources.sha256
+COPY --from=gateway-compiler /gateway-bundle/sources.sha256 /sources/gateway-sources.sha256
+COPY script/oblivion/live-* script/oblivion/Dockerfile.vm-lab /sources/
+RUN sh /sources/live-pack.sh
+
+FROM scratch AS beta-iso
+COPY --from=live-pack /out/ /

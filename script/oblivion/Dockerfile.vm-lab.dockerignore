@@ -53,6 +53,7 @@ script/oblivion/*
 !script/oblivion/transfer_fixture.py
 !script/oblivion/Dockerfile.vm-lab
 !script/oblivion/Dockerfile.vm-lab.dockerignore
+!script/oblivion/live-*
 !artifacts/
 artifacts/*
 !artifacts/ci/
@@ -89,6 +90,16 @@ artifacts/oblivion-build/cli-linux-x64-baseline/*
 !artifacts/oblivion-build/cli-linux-x64-baseline/bin/
 artifacts/oblivion-build/cli-linux-x64-baseline/bin/*
 !artifacts/oblivion-build/cli-linux-x64-baseline/bin/opencode
+!artifacts/oblivion-beta-iso/
+artifacts/oblivion-beta-iso/*
+!artifacts/oblivion-beta-iso/client-evidence.json
+!artifacts/oblivion-beta-iso/client/
+artifacts/oblivion-beta-iso/client/*
+!artifacts/oblivion-beta-iso/client/cli-linux-x64-baseline/
+artifacts/oblivion-beta-iso/client/cli-linux-x64-baseline/*
+!artifacts/oblivion-beta-iso/client/cli-linux-x64-baseline/bin/
+artifacts/oblivion-beta-iso/client/cli-linux-x64-baseline/bin/*
+!artifacts/oblivion-beta-iso/client/cli-linux-x64-baseline/bin/opencode
 !artifacts/oblivion-adapter-broker/
 artifacts/oblivion-adapter-broker/*
 !artifacts/oblivion-adapter-broker/cli-01/
