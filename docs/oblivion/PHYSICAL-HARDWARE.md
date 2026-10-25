@@ -12,8 +12,12 @@ superati in 23,52 secondi, oltre all'inventario iniziale e alla verifica finale.
 
 - Avvio UEFI fino al manager UID 1000, senza servizi falliti.
 - Ethernet Realtek RTL8125 con driver Debian `r8169` e DHCP funzionante.
-  La scheda Wi-Fi Intel è riconosciuta da `iwlwifi`; il solo riconoscimento
-  non dimostra associazione alla rete, trasferimento dati o riconnessione.
+- Wi-Fi Intel con driver `iwlwifi`: associazione e DHCP verificati dopo il
+  collegamento dal pannello locale. Tre richieste ARP vincolate a `wlo1`
+  ricevono tre risposte dal gateway, con incremento dei contatori RX/TX.
+  L'utente conferma che il Wi-Fi usa una VLAN diversa da Ethernet, rimasta
+  collegata durante il test. Il gateway non risponde al ping ICMP: il test
+  dimostra traffico locale bidirezionale, non connettività Internet o provider.
 - API KVM utilizzabile e avvio effettivo del kernel/root filesystem Debian
   inclusi nell'ISO, con QEMU UID 1100 e accelerazione KVM confermata da QMP.
   Il guest usa un `init=/bin/sh` diagnostico, senza NIC o cartelle condivise,
@@ -35,6 +39,14 @@ Non accetta dispositivi fisici come destinazione. I mount delle sessioni
 sintetiche sono eseguiti dal solo harness per verificarne i file; non cambiano
 l'architettura di produzione, in cui l'host non monta il filesystem delle chat.
 Durante la prova il controller normale viene fermato e poi ripristinato.
+
+La verifica Wi-Fi è successiva e separata dai sei controlli del harness.
+Usa `ip -j -4 route show dev wlo1` per individuare il gateway e
+`busybox arping -I wlo1 -c 3 -w 6 <gateway>` per vincolare i pacchetti alla
+scheda Wi-Fi. Le risposte ARP e i contatori sono registrati negli artefatti
+locali; SSID, password e indirizzi MAC non sono inclusi nel report.
+La verifica finale conferma manager attivo e mitigazione pstore ancora in
+vigore, senza disconnettere Ethernet o modificare la configurazione di rete.
 
 ## Riscontro: log di crash nella memoria del firmware
 
@@ -69,6 +81,8 @@ ancora l'intero avvio di una chat attraverso il controller, le quattro VM
 insieme, il provider reale, i trasferimenti USB, la persistenza del profilo
 sulla chiavetta o Secure Boot. I dati e le password del test sono sintetici;
 il contenitore generale è in RAM, non persistente sulla USB.
+Per il Wi-Fi restano da verificare riconnessione, accesso Internet attraverso
+il percorso previsto da Oblivion e accesso amministrativo senza Ethernet.
 
 Il primo tentativo del harness aveva anticipato un job di recupero accodato
 da systemd: il controller ha rifiutato l'apertura con `recovery_required`.

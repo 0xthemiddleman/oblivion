@@ -11,7 +11,21 @@
   },
   "network": {
     "ethernet": "Realtek RTL8125 / r8169, DHCP and authenticated LAN SSH verified",
-    "wifi": "Intel controller / iwlwifi recognized; association and traffic not tested"
+    "wifi": "Intel controller / iwlwifi: association, DHCP and three gateway ARP replies verified on wlo1; Ethernet retained",
+    "wifi_probe": {
+      "passed": true,
+      "interface": "wlo1",
+      "gateway_arp_requests": 3,
+      "gateway_arp_replies": 3,
+      "rx_packets_delta": 3,
+      "tx_packets_delta": 3,
+      "separate_vlan_confirmed_by_user": true,
+      "gateway_icmp_replied": false,
+      "internet_provider_tested": false,
+      "ethernet_retained": true,
+      "manager_active_after": true,
+      "pstore_mitigation_active_after": true
+    }
   },
   "probe": {
     "passed": true,
@@ -54,7 +68,7 @@
     "LUKS files and synthetic data are in RAM; USB persistence/provisioning is not tested.",
     "Unchanged physical-device counters cover the test window, not every firmware persistence mechanism.",
     "Live pstore mitigation is temporary until reboot; use the corrected ISO for subsequent boots.",
-    "Wi-Fi association, provider calls, physical transfer media, Secure Boot and power-loss recovery remain untested."
+    "Wi-Fi Internet/provider connectivity, reconnection, Wi-Fi-only SSH, physical transfer media, Secure Boot and power-loss recovery remain untested."
   ],
   "harness": {
     "path": "script/oblivion/hardware-probe.py",
@@ -88,6 +102,18 @@
     {
       "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/check.log",
       "sha256": "ef7c281e185b512f488f8d64a7622b049ab2ab9f01fe17b76490e93387f901a4"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/wifi-inspect.json",
+      "sha256": "7acee094cc790eac8ed34f338ec57936e01fc1dd7b2bbd5e7d4f4c2d35da9931"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/wifi-arp.json",
+      "sha256": "472dae23d59ab9640412d4e107addb6eefe4d76d835a0264de41731552b3520b"
+    },
+    {
+      "path": "artifacts/oblivion-hardware-iso/physical-20261025-0gg929d9/after-wifi.json",
+      "sha256": "e8ceafe1740e836a038a291ae71f9d0268c23b638edc9e61812557d71e382ea4"
     }
   ],
   "privacy": "Detailed device inventory, LAN addresses, server key and disk identifiers are local-only and omitted from this public report."

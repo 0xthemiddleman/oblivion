@@ -4,6 +4,9 @@ Il [primo collaudo fisico](PHYSICAL-HARDWARE.md) conferma Ethernet, API KVM,
 avvio di un guest diagnostico con kernel/root filesystem di produzione e
 operazioni LUKS del controller su file RAM: sei controlli passati, manager
 ripristinato e contatori di scrittura dei dischi fisici invariati nella prova.
+Una prova successiva conferma anche associazione Wi-Fi, DHCP e tre scambi
+ARP con il gateway su una VLAN diversa da Ethernet. Non verifica Internet
+o il provider tramite Wi-Fi.
 Il collaudo ha rilevato un backend EFI capace di conservare log di crash fuori
 da LUKS. È disabilitato nella live in esecuzione e nella
 [nuova ISO diagnostica](hardware-pstore-evidence.json), verificata in due avvii
@@ -34,8 +37,8 @@ Le [evidenze](hardware-iso-evidence.json) registrano 19 controlli in due avvii
 UEFI: DHCP, menu di rete, autenticazione, firewall, chiusura delle sessioni
 amministrative e stato temporaneo assente al nuovo avvio. La cattura distingue
 il traffico IPv6 iniziale del firmware da DHCP e SSH del sistema operativo.
-Il collaudo fisico resta da svolgere; i test non dichiarano compatibilità
-della radio Wi-Fi o funzionamento KVM sul PC dell'utente.
+Queste prove virtuali sono ora affiancate dal collaudo fisico descritto sopra;
+la copertura hardware è limitata al PC provato, senza estenderla ad altri modelli.
 
 La [regressione della revoca](network-revocation-evidence.json) supera 33
 controlli in VM ARM64 sul Mac (534,49 s), compresi stream attivi durante
