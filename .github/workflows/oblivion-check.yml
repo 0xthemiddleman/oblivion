@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   manager-import:
-    name: Manager USB import lifecycle x86
+    name: Manager USB import/export lifecycle x86
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
@@ -42,7 +42,7 @@ jobs:
         run: >-
           docker buildx build --platform linux/amd64 --progress plain
           -f script/oblivion/Dockerfile.vm-lab --target artifacts
-          --build-arg HOST=import-host
+          --build-arg HOST=export-host
           --build-arg GUEST=manager-import-guest
           --output type=local,dest=artifacts/ci/import-image .
       - name: Install the VM laboratory

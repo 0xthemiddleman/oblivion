@@ -33,13 +33,14 @@ for binary in /host/usr/bin/qemu-system-* /host/usr/lib/*/qemu/*.so; do
         (cd /host && cp -L --parents ".$library" /host/usr/lib/oblivion/vm/qemu-root/)
     done
 done
-for directory in dev proc sys run/oblivion-session run/oblivion-gateway-vm run/oblivion-import-vm tmp; do mkdir -p "/host/usr/lib/oblivion/vm/qemu-root/$directory"; done
+for directory in dev proc sys run/oblivion-session run/oblivion-gateway-vm run/oblivion-import-vm run/oblivion-export-vm tmp; do mkdir -p "/host/usr/lib/oblivion/vm/qemu-root/$directory"; done
 # Mount targets must exist before packing the immutable hypervisor root.
 touch /host/usr/lib/oblivion/vm/qemu-root/kernel /host/usr/lib/oblivion/vm/qemu-root/initrd /host/usr/lib/oblivion/vm/qemu-root/root.squashfs
 rm -rf /guest/boot /guest/var/cache/apt /guest/var/lib/apt/lists /host/var/cache/apt /host/var/lib/apt/lists
 mkdir -p /guest/boot
 mksquashfs /guest /host/usr/lib/oblivion/vm/guest.squashfs -noappend -comp zstd -processors 2 -quiet
 mksquashfs /import /host/usr/lib/oblivion/vm/import.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*'
+mksquashfs /export /host/usr/lib/oblivion/vm/export.squashfs -noappend -comp zstd -processors 2 -quiet -wildcards -e 'boot/*'
 if [ -f /host/usr/lib/oblivion/vm/import-lab ]; then
     touch /out/import-lab
     mkdir -p /fixture/documenti/vuota
@@ -47,6 +48,13 @@ if [ -f /host/usr/lib/oblivion/vm/import-lab ]; then
     printf OBLIVION_USB_UNSELECTED_CANARY_29a1 > /fixture/unselected.txt
     truncate -s 32M /out/import-source.raw
     mkfs.ext4 -q -m 0 -d /fixture /out/import-source.raw
+fi
+if [ -f /host/usr/lib/oblivion/vm/export-lab ]; then
+    touch /out/export-lab
+    mkdir /export-fixture
+    printf OBLIVION_EXPORT_EXISTING_CANARY_f4a8 > /export-fixture/existing.txt
+    truncate -s 32M /out/export-target.raw
+    mkfs.ext4 -q -m 0 -d /export-fixture /out/export-target.raw
 fi
 mksquashfs /host /out/host.squashfs -noappend -comp zstd -processors 2 -quiet
 cd /sources
@@ -58,3 +66,4 @@ if [ -f manager.sha256 ]; then sha256sum manager.sha256 >> SHA256SUMS; fi
 if [ -f tui-lab ]; then sha256sum tui-lab >> SHA256SUMS; fi
 
 if [ -f import-lab ]; then sha256sum import-lab import-source.raw >> SHA256SUMS; fi
+if [ -f export-lab ]; then sha256sum export-lab export-target.raw >> SHA256SUMS; fi

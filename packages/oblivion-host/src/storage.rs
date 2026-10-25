@@ -33,6 +33,7 @@ struct Config {
     vm: Option<crate::vm::Config>,
     gateway: Option<crate::vm::Config>,
     import: Option<crate::vm::Config>,
+    export: Option<crate::vm::Config>,
     #[serde(default)]
     gateway_network: bool,
 }
@@ -81,7 +82,11 @@ pub fn main() -> Result<()> {
             !recovery_required()? && mapping_open("oblivion-session")? && !crate::vm::stopped()?,
             "session_not_open",
         )?;
-        return crate::transfer_host::serve(config.import.as_ref(), config.manager_uid);
+        return crate::transfer_host::serve(
+            config.import.as_ref(),
+            config.export.as_ref(),
+            config.manager_uid,
+        );
     }
     if args.len() == 3 && op == "gateway-host-run" {
         require(!recovery_required()?, "recovery_required")?;
@@ -264,6 +269,7 @@ pub fn main() -> Result<()> {
                 transfers::Command::List => {
                     let status = crate::transfer_host::status(
                         config.import.is_some(),
+                        config.export.is_some(),
                         &config.general_image,
                     )?;
                     println!(
@@ -278,7 +284,22 @@ pub fn main() -> Result<()> {
                         .as_ref()
                         .ok_or(Error("transfers_not_configured"))?
                         .validate()?;
-                    let started = crate::transfer_host::start(&source, &config.general_image)?;
+                    let started =
+                        crate::transfer_host::start(&source, &config.general_image, false)?;
+                    println!(
+                        "{}",
+                        serde_json::to_string(&started).map_err(|_| Error("encode_failed"))?
+                    );
+                    Ok(())
+                }
+                transfers::Command::Export { target } => {
+                    config
+                        .export
+                        .as_ref()
+                        .ok_or(Error("exports_not_configured"))?
+                        .validate()?;
+                    let started =
+                        crate::transfer_host::start(&target, &config.general_image, true)?;
                     println!(
                         "{}",
                         serde_json::to_string(&started).map_err(|_| Error("encode_failed"))?
@@ -339,7 +360,10 @@ pub fn main() -> Result<()> {
             result
         }
         "close" | "leave" | "force-leave" => {
-            if config.import.is_some() || crate::transfer_host::prepared()? {
+            if config.import.is_some()
+                || config.export.is_some()
+                || crate::transfer_host::prepared()?
+            {
                 match crate::transfer_host::stop() {
                     Err(_) if op == "force-leave" => {
                         // An unresponsive destination cannot acknowledge port
@@ -360,7 +384,10 @@ pub fn main() -> Result<()> {
             close_session()
         }
         "lock" | "recover" => {
-            if config.import.is_some() || crate::transfer_host::prepared()? {
+            if config.import.is_some()
+                || config.export.is_some()
+                || crate::transfer_host::prepared()?
+            {
                 crate::transfer_host::stop()?;
             }
             // Remove gateway memory and every delegated connection before the
@@ -423,7 +450,7 @@ pub fn main() -> Result<()> {
                     None
                 },
                 laboratory_emulation: cfg!(feature = "lab-emulation"),
-                transfers_configured: config.import.is_some(),
+                transfers_configured: config.import.is_some() || config.export.is_some(),
                 gateway_network: config.gateway_network,
                 recovery_required: recovery_required()?,
                 gateway_state: if config.gateway.is_some() {

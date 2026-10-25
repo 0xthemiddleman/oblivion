@@ -22,13 +22,16 @@ struct Job {
     id: String,
     #[serde(default)]
     recovery: bool,
+    #[serde(default)]
+    export: bool,
 }
 
-pub fn status(configured: bool, general: &Path) -> Result<Status> {
+pub fn status(configured: bool, export_configured: bool, general: &Path) -> Result<Status> {
     Ok(Status {
         configured,
+        export_configured,
         active: !matches!(vm::unit_state(UNIT)?.as_str(), "inactive" | "failed"),
-        sources: if configured {
+        sources: if configured || export_configured {
             sources(general)?
         } else {
             Vec::new()
@@ -65,7 +68,9 @@ fn sources(general: &Path) -> Result<Vec<Source>> {
         let fixture = cfg!(feature = "lab-emulation")
             && fs::read_to_string(path.join("serial"))
                 .ok()
-                .is_some_and(|serial| serial.trim() == "oblivion-import");
+                .is_some_and(|serial| {
+                    matches!(serial.trim(), "oblivion-import" | "oblivion-export")
+                });
         if !usb && !fixture {
             continue;
         }
@@ -115,7 +120,7 @@ fn sources(general: &Path) -> Result<Vec<Source>> {
     Ok(devices)
 }
 
-pub fn start(source: &str, general: &Path) -> Result<Started> {
+pub fn start(source: &str, general: &Path, export: bool) -> Result<Started> {
     idle()?;
     let source = sources(general)?
         .into_iter()
@@ -124,6 +129,7 @@ pub fn start(source: &str, general: &Path) -> Result<Started> {
     let path = format!("/dev/{}", source.name);
     let device = OpenOptions::new()
         .read(true)
+        .write(export)
         .custom_flags(libc::O_NOFOLLOW | libc::O_CLOEXEC)
         .open(path)
         .map_err(|_| Error("source_not_available"))?;
@@ -139,48 +145,72 @@ pub fn start(source: &str, general: &Path) -> Result<Started> {
             ) == source.id,
         "source_changed",
     )?;
-    // A readonly mapping holds the selected block device for the operation.
-    // Only this mapping is delegated to the networkless import VM; the host
-    // never mounts or parses the external filesystem.
-    vm::execute(
-        "/usr/sbin/dmsetup",
-        &[
-            "create".into(),
-            "oblivion-import".into(),
-            "--readonly".into(),
-            "--table".into(),
-            format!("0 {} linear {} 0", source.bytes / 512, source.id),
-        ],
-    )?;
-    let path = CString::new(vm::IMPORT_DEVICE).map_err(|_| Error("invalid_device"))?;
+    let name = if export {
+        "oblivion-export"
+    } else {
+        "oblivion-import"
+    };
+    let uid = if export {
+        vm::EXPORT_UID
+    } else {
+        vm::IMPORT_UID
+    };
+    let mut args = vec!["create".into(), name.into()];
+    if !export {
+        args.push("--readonly".into());
+    }
+    args.extend([
+        "--table".into(),
+        format!("0 {} linear {} 0", source.bytes / 512, source.id),
+    ]);
+    vm::execute("/usr/sbin/dmsetup", &args)?;
+    let path = if export {
+        vm::EXPORT_DEVICE
+    } else {
+        vm::IMPORT_DEVICE
+    };
     require(
-        unsafe { libc::chown(path.as_ptr(), vm::IMPORT_UID, vm::IMPORT_UID) } == 0,
+        unsafe {
+            libc::chown(
+                CString::new(path)
+                    .map_err(|_| Error("invalid_device"))?
+                    .as_ptr(),
+                uid,
+                uid,
+            )
+        } == 0,
         "device_owner_failed",
     )?;
-    fs::set_permissions(vm::IMPORT_DEVICE, fs::Permissions::from_mode(0o400))
-        .map_err(|_| Error("device_permissions_failed"))?;
-    start_job(false)
+    fs::set_permissions(
+        path,
+        fs::Permissions::from_mode(if export { 0o600 } else { 0o400 }),
+    )
+    .map_err(|_| Error("device_permissions_failed"))?;
+    start_job(false, export)
 }
 
 pub fn start_recovery() -> Result<Started> {
     idle()?;
-    start_job(true)
+    start_job(true, false)
 }
 
 fn idle() -> Result<()> {
     require(
         matches!(vm::unit_state(UNIT)?.as_str(), "inactive" | "failed")
-            && vm::stopped_role(Role::Import)?,
+            && vm::stopped_role(Role::Import)?
+            && vm::stopped_role(Role::Export)?,
         "transfer_already_running",
     )?;
     require(
-        !Path::new(JOB).exists() && !Path::new(vm::IMPORT_DEVICE).exists(),
+        !Path::new(JOB).exists()
+            && !Path::new(vm::IMPORT_DEVICE).exists()
+            && !Path::new(vm::EXPORT_DEVICE).exists(),
         "transfer_cleanup_required",
     )?;
     Ok(())
 }
 
-fn start_job(recovery: bool) -> Result<Started> {
+fn start_job(recovery: bool, export: bool) -> Result<Started> {
     let id = crate::storage::random_id()?;
     let mut job = OpenOptions::new()
         .write(true)
@@ -193,6 +223,7 @@ fn start_job(recovery: bool) -> Result<Started> {
         &serde_json::to_vec(&Job {
             id: id.clone(),
             recovery,
+            export,
         })
         .map_err(|_| Error("transfer_state_failed"))?,
     )
@@ -202,12 +233,15 @@ fn start_job(recovery: bool) -> Result<Started> {
 }
 
 pub fn prepared() -> Result<bool> {
-    Ok(Path::new(JOB)
-        .try_exists()
-        .map_err(|_| Error("transfer_state_failed"))?
-        || Path::new(vm::IMPORT_DEVICE)
+    for path in [JOB, vm::IMPORT_DEVICE, vm::EXPORT_DEVICE] {
+        if Path::new(path)
             .try_exists()
-            .map_err(|_| Error("device_check_failed"))?)
+            .map_err(|_| Error("transfer_state_failed"))?
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 pub fn stop() -> Result<()> {
@@ -245,22 +279,23 @@ fn job() -> Result<Option<Job>> {
                 .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
         "invalid_transfer_state",
     )?;
+    require(!(job.export && job.recovery), "invalid_transfer_state")?;
     Ok(Some(job))
 }
 
 pub fn cleanup() -> Result<()> {
     vm::stop_role(Role::Import, true)?;
+    vm::stop_role(Role::Export, true)?;
     if let Some(job) = job()? {
         vm::remove_copy_port(&job.id)?;
     }
-    if Path::new(vm::IMPORT_DEVICE)
-        .try_exists()
-        .map_err(|_| Error("device_check_failed"))?
-    {
-        vm::execute(
-            "/usr/sbin/dmsetup",
-            &["remove".into(), "oblivion-import".into()],
-        )?;
+    for name in ["oblivion-import", "oblivion-export"] {
+        if Path::new(&format!("/dev/mapper/{name}"))
+            .try_exists()
+            .map_err(|_| Error("device_check_failed"))?
+        {
+            vm::execute("/usr/sbin/dmsetup", &["remove".into(), name.into()])?;
+        }
     }
     if job()?.is_some() {
         fs::remove_file(JOB).map_err(|_| Error("transfer_cleanup_failed"))?;
@@ -268,30 +303,51 @@ pub fn cleanup() -> Result<()> {
     Ok(())
 }
 
-pub fn serve(config: Option<&vm::Config>, uid: u32) -> Result<()> {
+pub fn serve(import: Option<&vm::Config>, export: Option<&vm::Config>, uid: u32) -> Result<()> {
     let job = job()?.ok_or(Error("transfer_not_prepared"))?;
-    let source = if job.recovery {
+    let external = if job.recovery {
         None
     } else {
-        let config = config.ok_or(Error("transfers_not_configured"))?;
+        let config =
+            if job.export { export } else { import }.ok_or(Error("transfers_not_configured"))?;
+        let role = if job.export {
+            Role::Export
+        } else {
+            Role::Import
+        };
         config.validate()?;
-        config.start_role(Role::Import)?;
-        let source = UnixStream::connect("/run/oblivion-import-vm/copy.sock")
+        config.start_role(role)?;
+        let source = UnixStream::connect(format!("{}/copy.sock", role.runtime()))
             .map_err(|_| Error("transfer_port_unavailable"))?;
-        crate::gateway::peer(&source, vm::IMPORT_UID)?;
-        vm::resume_import()?;
+        crate::gateway::peer(
+            &source,
+            if job.export {
+                vm::EXPORT_UID
+            } else {
+                vm::IMPORT_UID
+            },
+        )?;
+        vm::resume_transfer(role)?;
         Some(source)
     };
-    let destination = vm::copy_port(&job.id)?;
-    for port in source.iter().chain(std::iter::once(&destination)) {
+    let session = vm::copy_port(&job.id, job.export)?;
+    for port in external.iter().chain(std::iter::once(&session)) {
         let mut ready = [0; 6];
         Channel::new(port, Duration::from_secs(90))
             .read_exact(&mut ready)
             .map_err(|_| Error("transfer_guest_not_ready"))?;
         require(&ready == b"ready\n", "invalid_transfer_guest")?;
     }
-    let source = source.map(|source| File::from(OwnedFd::from(source)));
-    let destination = File::from(OwnedFd::from(destination));
+    let session = File::from(OwnedFd::from(session));
+    let external = external.map(|port| File::from(OwnedFd::from(port)));
+    let (source, destination) = if job.export {
+        (
+            Some(session),
+            external.ok_or(Error("transfer_port_unavailable"))?,
+        )
+    } else {
+        (external, session)
+    };
     let mut owners = source
         .iter()
         .chain(std::iter::once(&destination))
@@ -369,6 +425,20 @@ pub fn serve(config: Option<&vm::Config>, uid: u32) -> Result<()> {
             )
             .map_err(|_| Error("transfer_failed"));
         };
+        if job.export {
+            return relay::export(
+                source,
+                destination,
+                control,
+                owners,
+                remaining,
+                Permit {
+                    id: job.id,
+                    limits: transfers::limits(),
+                },
+            )
+            .map_err(|_| Error("transfer_failed"));
+        }
         return relay::run_permitted(
             source,
             destination,

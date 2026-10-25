@@ -15,6 +15,56 @@ const LIMITS: Limits = Limits {
     bytes: 1024 * 1024,
 };
 
+#[test]
+fn external_export_preserves_existing_data_and_never_reuses_a_destination() {
+    let source = Tree::new();
+    let target = Tree::new();
+    fs::write(source.0.join("note"), b"selected").unwrap();
+    fs::write(target.0.join("existing"), b"keep this document").unwrap();
+    let (manifest, bytes) = encode(&source, &["note"]);
+    let receipt = oblivion_transfer::receive_external(
+        &mut Cursor::new(bytes.clone()),
+        &manifest,
+        &target.0,
+        ID,
+    )
+    .unwrap();
+    assert_eq!(receipt.manifest_sha256, manifest.sha256());
+    let exported = target.0.join(format!("Oblivion-{ID}/files/note"));
+    assert_eq!(fs::read(&exported).unwrap(), b"selected");
+    assert_eq!(fs::metadata(&exported).unwrap().mode() & 0o777, 0o644);
+    fs::write(&exported, b"external edit").unwrap();
+    assert!(
+        oblivion_transfer::receive_external(&mut Cursor::new(bytes), &manifest, &target.0, ID)
+            .is_err()
+    );
+    assert_eq!(fs::read(&exported).unwrap(), b"external edit");
+    assert_eq!(
+        fs::read(target.0.join("existing")).unwrap(),
+        b"keep this document"
+    );
+}
+
+#[test]
+fn truncated_external_export_removes_only_its_new_partial_copy() {
+    let source = Tree::new();
+    let target = Tree::new();
+    fs::write(source.0.join("note"), b"selected").unwrap();
+    fs::write(target.0.join("existing"), b"keep").unwrap();
+    let (manifest, bytes) = encode(&source, &["note"]);
+    assert!(
+        oblivion_transfer::receive_external(
+            &mut Cursor::new(&bytes[..bytes.len() - 1]),
+            &manifest,
+            &target.0,
+            ID
+        )
+        .is_err()
+    );
+    assert!(!target.0.join(format!("Oblivion-{ID}")).exists());
+    assert_eq!(fs::read(target.0.join("existing")).unwrap(), b"keep");
+}
+
 fn empty(path: &str) -> Entry {
     Entry::File {
         path: path.into(),

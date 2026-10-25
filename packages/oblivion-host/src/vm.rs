@@ -16,6 +16,8 @@ const DEVICE: &str = "/dev/mapper/oblivion-session";
 pub const VM_UID: u32 = 1100;
 pub const GATEWAY_UID: u32 = 1101;
 pub const IMPORT_UID: u32 = 1102;
+pub const EXPORT_UID: u32 = 1103;
+pub const EXPORT_DEVICE: &str = "/dev/mapper/oblivion-export";
 pub const IMPORT_DEVICE: &str = "/dev/mapper/oblivion-import";
 
 #[derive(Clone, Copy)]
@@ -23,6 +25,7 @@ pub enum Role {
     Session,
     Gateway,
     Import,
+    Export,
 }
 
 impl Role {
@@ -31,6 +34,7 @@ impl Role {
             Self::Session => "oblivion-session",
             Self::Gateway => "oblivion-gateway-vm",
             Self::Import => "oblivion-import-vm",
+            Self::Export => "oblivion-export-vm",
         }
     }
 
@@ -39,6 +43,7 @@ impl Role {
             Self::Session => VM_UID,
             Self::Gateway => GATEWAY_UID,
             Self::Import => IMPORT_UID,
+            Self::Export => EXPORT_UID,
         }
     }
 
@@ -262,6 +267,13 @@ impl Config {
                 format!("--property=DeviceAllow={IMPORT_DEVICE} r"),
             ]);
         }
+        if matches!(role, Role::Export) {
+            args.extend([
+                "--property=BindsTo=oblivion-transfer-host.service".to_owned(),
+                format!("--property=BindPaths={EXPORT_DEVICE}:/dev/oblivion-export"),
+                format!("--property=DeviceAllow={EXPORT_DEVICE} rw"),
+            ]);
+        }
         if network {
             args.push("--property=BindReadOnlyPaths=/run/oblivion-gateway-vm/inside.sock:/run/oblivion-session/network.sock".to_owned());
         }
@@ -332,6 +344,22 @@ impl Config {
                     .to_owned(),
                 "-device".to_owned(),
                 "virtserialport,chardev=copy,name=oblivion.import".to_owned(),
+            ]);
+        }
+        if matches!(role, Role::Export) {
+            args.extend([
+                "-S".to_owned(),
+                "-device".to_owned(),
+                "virtio-serial-pci".to_owned(),
+                "-drive".to_owned(),
+                "file=/dev/oblivion-export,format=raw,if=none,id=destination,cache=none".to_owned(),
+                "-device".to_owned(),
+                "virtio-blk-pci,drive=destination,serial=oblivion-export".to_owned(),
+                "-chardev".to_owned(),
+                "socket,id=copy,path=/run/oblivion-export-vm/copy.sock,server=on,wait=off"
+                    .to_owned(),
+                "-device".to_owned(),
+                "virtserialport,chardev=copy,name=oblivion.export".to_owned(),
             ]);
         }
         if matches!(role, Role::Gateway) {
@@ -470,14 +498,14 @@ pub fn resume_gateway() -> Result<()> {
     Ok(())
 }
 
-pub fn resume_import() -> Result<()> {
-    qmp(Role::Import, "cont")?;
+pub fn resume_transfer(role: Role) -> Result<()> {
+    qmp(role, "cont")?;
     Ok(())
 }
 
 /// A fresh channel per transfer. Connect its host side before hotplugging the
 /// guest port so the guest's readiness marker cannot be discarded by QEMU.
-pub fn copy_port(id: &str) -> Result<UnixStream> {
+pub fn copy_port(id: &str, export: bool) -> Result<UnixStream> {
     require(
         id.len() == 32
             && id
@@ -497,7 +525,7 @@ pub fn copy_port(id: &str) -> Result<UnixStream> {
     qmp_arguments(
         Role::Session,
         "device_add",
-        json!({"driver":"virtserialport","id":name,"chardev":name,"bus":"oblivion-serial.0","name":format!("oblivion.copy.{id}")}),
+        json!({"driver":"virtserialport","id":name,"chardev":name,"bus":"oblivion-serial.0","name":format!("oblivion.{}.{id}", if export { "export" } else { "copy" })}),
     )?;
     Ok(stream)
 }

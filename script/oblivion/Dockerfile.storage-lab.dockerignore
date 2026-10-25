@@ -29,3 +29,5 @@ packages/oblivion-transfer/*
 !packages/oblivion-transfer/tests/**
 !packages/oblivion-host/import/
 !packages/oblivion-host/import/**
+!packages/oblivion-host/export/
+!packages/oblivion-host/export/**

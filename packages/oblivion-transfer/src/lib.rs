@@ -248,6 +248,58 @@ pub fn receive(
     Ok(receipt)
 }
 
+/// Plaintext export, called only after the launcher authorizes the external
+/// filesystem. Existing export IDs are never reused or replaced.
+pub fn receive_external(
+    reader: &mut impl Read,
+    manifest: &Manifest,
+    root: &Path,
+    id: &str,
+) -> io::Result<Receipt> {
+    validate_id(id)?;
+    let root = Directory::open(root)?;
+    let name = format!("Oblivion-{id}");
+    let transaction = root.create_directory(&name)?;
+    if let Err(error) = receive_transaction(reader, manifest, &transaction) {
+        root.remove_directory(&name)?;
+        root.sync()?;
+        return Err(error);
+    }
+    let files = transaction.directory("files")?;
+    for entry in manifest.entries() {
+        let mut parent = files.clone()?;
+        let mut components = entry.path().split('/').peekable();
+        while let Some(component) = components.next() {
+            if components.peek().is_some() {
+                parent = parent.directory(component)?;
+                continue;
+            }
+            let file = parent.source(component)?;
+            file.set_permissions(std::fs::Permissions::from_mode(
+                if matches!(entry, Entry::Directory { .. }) {
+                    0o755
+                } else {
+                    0o644
+                },
+            ))?;
+            file.sync_all()?;
+        }
+    }
+    // The dedicated VM isolates the writer. Exported ordinary documents must
+    // remain readable after taking the external medium out of Oblivion.
+    files.mode(0o755)?;
+    files.sync()?;
+    transaction.mode(0o755)?;
+    transaction.sync()?;
+    root.sync()?;
+    Ok(Receipt {
+        id: id.to_owned(),
+        manifest_sha256: manifest.sha256(),
+        entries: manifest.entries().len(),
+        bytes: manifest.bytes(),
+    })
+}
+
 fn validate_id(id: &str) -> io::Result<()> {
     require(
         id.len() == 32

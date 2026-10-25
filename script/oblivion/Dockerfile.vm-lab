@@ -84,6 +84,15 @@ RUN mkdir /source && passwd -l root && chmod 0755 /usr/lib/oblivion/import/*.sh 
     && printf 'virtio_console\nvfat\nexfat\n' > /etc/modules-load.d/oblivion-import.conf \
     && printf '%s\n' 'SUBSYSTEM=="virtio-ports", ATTR{name}=="oblivion.import", OWNER="root", GROUP="root", MODE="0600", TAG+="systemd", ENV{SYSTEMD_WANTS}="oblivion-import-source.service"' > /etc/udev/rules.d/71-oblivion-import.rules
 
+FROM os AS export-guest
+COPY --from=compiler /bundle/oblivion-copy /usr/bin/oblivion-copy
+COPY packages/oblivion-host/export/ /usr/lib/oblivion/export/
+RUN mkdir /target && passwd -l root && chmod 0755 /usr/lib/oblivion/export/*.sh \
+    && cp /usr/lib/oblivion/export/oblivion-export-target.service /etc/systemd/system/ \
+    && mkdir -p /etc/modules-load.d /etc/udev/rules.d \
+    && printf 'virtio_console\n' > /etc/modules-load.d/oblivion-export.conf \
+    && printf '%s\n' 'SUBSYSTEM=="virtio-ports", ATTR{name}=="oblivion.export", OWNER="root", GROUP="root", MODE="0600", TAG+="systemd", ENV{SYSTEMD_WANTS}="oblivion-export-target.service"' > /etc/udev/rules.d/72-oblivion-export.rules
+
 FROM guest AS opencode-guest
 ARG TARGETARCH
 ARG OPENCODE_BUILD_EVIDENCE=docs/oblivion/privacy-evidence.json
@@ -138,6 +147,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends cryptsetup-bin 
     && groupadd --gid 1100 oblivion-vm && useradd --uid 1100 --gid 1100 --no-create-home --shell /usr/sbin/nologin oblivion-vm \
     && groupadd --gid 1101 oblivion-gateway-vm && useradd --uid 1101 --gid 1101 --no-create-home --shell /usr/sbin/nologin oblivion-gateway-vm \
     && groupadd --gid 1102 oblivion-import-vm && useradd --uid 1102 --gid 1102 --no-create-home --shell /usr/sbin/nologin oblivion-import-vm \
+    && groupadd --gid 1103 oblivion-export-vm && useradd --uid 1103 --gid 1103 --no-create-home --shell /usr/sbin/nologin oblivion-export-vm \
     && passwd -l root
 COPY --from=compiler /tmp/oblivion-storage /usr/bin/oblivion-storage
 COPY --from=compiler /build/target/release/oblivion-storage /usr/bin/oblivion-storage-lab
@@ -154,6 +164,9 @@ RUN touch /usr/lib/oblivion/vm/manager-lab
 FROM manager-host AS import-host
 COPY script/oblivion/vm-import-test.py /usr/libexec/oblivion-vm-test
 RUN touch /usr/lib/oblivion/vm/import-lab
+
+FROM import-host AS export-host
+RUN touch /usr/lib/oblivion/vm/export-lab
 
 FROM manager-host AS tui-host
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pyte python3-pil fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
@@ -173,6 +186,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends squashfs-tools 
 COPY --from=selected-guest / /guest/
 COPY --from=selected-host / /host/
 COPY --from=import-guest / /import/
+COPY --from=export-guest / /export/
 COPY --from=compiler /bundle/oblivion-transfer-host.service /host/etc/systemd/system/oblivion-transfer-host.service
 COPY packages/oblivion-host/ /sources/packages/oblivion-host/
 COPY packages/oblivion-tor-state/ /sources/packages/oblivion-tor-state/

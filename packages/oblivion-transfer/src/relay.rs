@@ -59,6 +59,37 @@ pub fn run_permitted(
     budget: Duration,
     permit: Option<Permit>,
 ) -> io::Result<()> {
+    run_copy(source, destination, control, owners, budget, permit, false)
+}
+
+pub fn export(
+    source: File,
+    destination: File,
+    control: File,
+    owners: Vec<OwnedFd>,
+    budget: Duration,
+    permit: Permit,
+) -> io::Result<()> {
+    run_copy(
+        source,
+        destination,
+        control,
+        owners,
+        budget,
+        Some(permit),
+        true,
+    )
+}
+
+fn run_copy(
+    source: File,
+    destination: File,
+    control: File,
+    owners: Vec<OwnedFd>,
+    budget: Duration,
+    permit: Option<Permit>,
+    external: bool,
+) -> io::Result<()> {
     let deadline = Instant::now()
         .checked_add(budget)
         .ok_or_else(|| io::Error::from(io::ErrorKind::InvalidInput))?;
@@ -73,7 +104,15 @@ pub fn run_permitted(
         destination.watch(owner.try_clone()?);
         control.watch(owner);
     }
-    let result = exchange(&mut source, &mut destination, &mut control, permit);
+    let result =
+        exchange(&mut source, &mut destination, &mut control, permit).and_then(|receipt| {
+            if external {
+                let mut detached = [0; 9];
+                destination.read_exact(&mut detached)?;
+                require(&detached == b"detached\n", "export_not_detached")?;
+            }
+            Ok(receipt)
+        });
     // Release both VM ports before returning a receipt or closing the control
     // connection. The controller must still reap this worker before teardown.
     drop(source);

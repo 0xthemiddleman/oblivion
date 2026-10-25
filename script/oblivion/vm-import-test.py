@@ -74,6 +74,8 @@ def cleaned():
         time.sleep(0.1)
     assert not Path("/run/oblivion/transfer.json").exists()
     assert not Path("/dev/mapper/oblivion-import").exists()
+    assert not Path("/dev/mapper/oblivion-export").exists()
+    assert systemctl("show", "oblivion-export-vm.service", "-p", "ActiveState", "--value") in ("inactive", "failed")
     assert systemctl("show", "oblivion-import-vm.service", "-p", "ActiveState", "--value") in ("inactive", "failed")
     assert not list(Path("/run/oblivion-session").glob("copy-*.sock"))
 
@@ -83,6 +85,65 @@ def offer():
     send(b"\r", "Percorso relativo sulla USB")
     send(b"documenti\r", "OBLIVION - conferma importazione")
     return json.loads(Path("/run/oblivion/transfer.json").read_text())["id"]
+
+
+def exports(copied, mode="persistent"):
+    def target_hash():
+        with Path("/dev/vdd").open("rb") as stream:
+            return hashlib.file_digest(stream, "sha256").hexdigest()
+
+    def begin():
+        send(b"\x1e", "OBLIVION - importa documenti")
+        send(b"j", "OBLIVION - importa documenti")
+        send(b"e", "Percorso nella sessione")
+        send(f"imports/{copied}/files/documenti\r".encode(), "OBLIVION - autorizza USB in scrittura")
+
+    before = target_hash()
+    begin()
+    send(b"\x1b", "OBLIVION - importa documenti")
+    send(b"\x1b", "OBLIVION | SESSIONE APERTA")
+    assert target_hash() == before
+    cleaned()
+    check(f"{mode} export cancellation before device-write authorization leaves the target disk byte-identical")
+    begin()
+    send(b"e", "OBLIVION - conferma esportazione")
+    identifier = json.loads(Path("/run/oblivion/transfer.json").read_text())["id"]
+    writer = systemctl("show", "oblivion-export-vm.service", "-p", "MainPID", "--value")
+    argv = Path(f"/proc/{writer}/cmdline").read_bytes().split(b"\0")
+    assert argv[argv.index(b"-nic") + 1] == b"none"
+    assert any(b"oblivion-export,format=raw" in arg for arg in argv)
+    assert not any(b"virtfs" in arg or b"9p" in arg or b"oblivion-session" in arg for arg in argv)
+    assert subprocess.check_output(["blockdev", "--getro", "/dev/mapper/oblivion-export"]).strip() == b"0"
+    assert "/target" not in Path("/proc/self/mountinfo").read_text()
+    send(b"e", "Esportazione completata")
+    cleaned()
+    assert not Path(f"/proc/{writer}").exists()
+    # Read only this synthetic fixture after the production worker has detached
+    # it. Production never parses the external filesystem on the host.
+    def read_export(path):
+        return subprocess.check_output(["debugfs", "-R", f"cat /{path}", "/dev/vdd"], stderr=subprocess.DEVNULL)
+    assert read_export(f"Oblivion-{identifier}/files/imports/{copied}/files/documenti/note.txt") == b"OBLIVION_USB_EDIT_CANARY_1b72"
+    assert read_export("existing.txt") == b"OBLIVION_EXPORT_EXISTING_CANARY_f4a8"
+    send(b"\r", "OBLIVION | SESSIONE APERTA")
+    guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
+    check(f"{mode} manager export reports removal only after writer detach and cleanup")
+    check(f"{mode} export preserves the existing USB document and the edited session original")
+    if mode == "persistent":
+        begin()
+        send(b"e", "OBLIVION - conferma esportazione")
+        writer = int(systemctl("show", "oblivion-export-vm.service", "-p", "MainPID", "--value"))
+        os.kill(writer, signal.SIGSTOP)
+        offset = len(screen)
+        send(b"e", "Copia e verifica in corso")
+        send(b"\x1b", "Export interrotto senza conferma di smontaggio")
+        cleaned()
+        assert not status()["session_open"]
+        assert b"Esportazione completata" not in screen[offset:]
+        assert b"Puoi rimuovere il supporto" not in screen[offset:]
+        send(b"\r", "Password della sessione")
+        send(PASSWORD + b"\r", "OBLIVION_GUEST_READY")
+        guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
+        check("an interrupted writer never reports eject success and cleanup preserves the encrypted session original")
 
 
 def guest(command_text, marker):
@@ -96,9 +157,11 @@ subprocess.run(["mount", "/dev/vdb", "/data"], check=True)
 vm = {"root": "/usr/lib/oblivion/vm/qemu-root", "kernel": "/usr/lib/oblivion/vm/kernel",
     "initrd": "/usr/lib/oblivion/vm/initrd", "filesystem": "/usr/lib/oblivion/vm/guest.squashfs",
     "memory_mib": 768, "cpus": 2, "accelerator": "tcg"}
+export_lab = Path("/usr/lib/oblivion/vm/export-lab").exists()
 Path(CONFIG).write_text(json.dumps({"general_image": "/data/general.luks", "general_mib": 768,
     "session_mib": 128, "pbkdf_memory_kib": 65536, "manager_uid": 1000, "vm": vm,
-    "import": {**vm, "filesystem": "/usr/lib/oblivion/vm/import.squashfs"}}))
+    "import": {**vm, "filesystem": "/usr/lib/oblivion/vm/import.squashfs"},
+    "export": {**vm, "filesystem": "/usr/lib/oblivion/vm/export.squashfs"} if export_lab else None}))
 dropin = Path("/run/systemd/system") / (WORKER + ".d")
 dropin.mkdir(parents=True)
 dropin.joinpath("lab.conf").write_text("[Service]\nStandardError=journal\nExecStart=\nExecStopPost=\n"
@@ -179,6 +242,8 @@ try:
     send(b"\x1b", "OBLIVION | SESSIONE APERTA")
     guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
     check("reconciliation reads a private durable receipt without rehashing or deleting later chat edits")
+    if export_lab:
+        exports(copied)
     offer()
     source_pid = int(systemctl("show", "oblivion-import-vm.service", "-p", "MainPID", "--value"))
     os.kill(source_pid, signal.SIGKILL)
@@ -225,11 +290,13 @@ try:
     send(GENERAL + b"\r", "Avvio effimero")
     send(b"n", "OBLIVION_GUEST_READY")
     guest("imports-empty", "OBLIVION_IMPORTS_EMPTY")
-    offer()
+    ephemeral_copy = offer()
     send(b"i", "Importazione verificata")
     send(b"\r", "OBLIVION | SESSIONE APERTA")
     cleaned()
     guest("imports-check", "OBLIVION_IMPORT_VERIFIED")
+    if export_lab:
+        exports(ephemeral_copy, "ephemeral")
     send(b"\x1d", "Avvio effimero")
     assert not Path("/run/oblivion/ephemeral.luks").exists()
     send(b"b", "Archivio generale bloccato")

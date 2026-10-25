@@ -18,7 +18,10 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
         .first()
         .is_some_and(|role| matches!(role.as_str(), "import" | "recover"));
     if args.len() != if import { 4 } else { 3 }
-        || !matches!(args[0].as_str(), "send" | "receive" | "import" | "recover")
+        || !matches!(
+            args[0].as_str(),
+            "send" | "receive" | "import" | "recover" | "documents" | "export"
+        )
         || !Path::new(&args[1]).is_absolute()
         || (import && !Path::new(&args[2]).is_absolute())
     {
@@ -36,6 +39,12 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     }
     if args[0] == "receive" {
         endpoint::accept(&mut channel, Path::new(&args[1]))?;
+    }
+    if args[0] == "documents" {
+        endpoint::documents(&mut channel, Path::new(&args[1]))?;
+    }
+    if args[0] == "export" {
+        endpoint::export(&mut channel, Path::new(&args[1]))?;
     }
     if args[0] == "import" {
         endpoint::import(&mut channel, Path::new(&args[1]), Path::new(&args[2]))?;

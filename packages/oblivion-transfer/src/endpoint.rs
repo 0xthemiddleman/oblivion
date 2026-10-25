@@ -29,8 +29,25 @@ pub struct ReceiveRequest {
 /// One selection, one approval and one receipt. No listener or retry loop.
 /// The controller supplies a private channel and owns the user's decision.
 pub fn send(channel: &mut Channel, root: &Path) -> io::Result<()> {
+    send_from(channel, root, false)
+}
+
+pub fn documents(channel: &mut Channel, root: &Path) -> io::Result<()> {
+    send_from(channel, root, true)
+}
+
+fn send_from(channel: &mut Channel, root: &Path, documents: bool) -> io::Result<()> {
     let request: OfferRequest = read_message(channel, 64 * 1024)?;
     validate_id(&request.id)?;
+    if documents {
+        require(
+            request
+                .paths
+                .iter()
+                .all(|path| matches!(path.split('/').next(), Some("workspace" | "imports"))),
+            "invalid_document_selection",
+        )?;
+    }
     let mut selection = Selection::prepare(root, &request.paths, request.limits)?;
     selection.manifest().write(channel)?;
     let approval: Approval = read_message(channel, 1024)?;
@@ -69,6 +86,19 @@ pub fn recover(channel: &mut Channel, root: &Path, published: &Path) -> io::Resu
     let request = read_message(channel, 1024)?;
     let response = crate::recovery::execute(root, published, request)?;
     write_message(channel, &response)
+}
+
+pub fn export(channel: &mut Channel, root: &Path) -> io::Result<()> {
+    let request: ReceiveRequest = read_message(channel, 1024)?;
+    validate_id(&request.approval.id)?;
+    let manifest = Manifest::read(channel, request.limits)?;
+    require(
+        manifest.sha256() == request.approval.manifest_sha256,
+        "offer_not_approved",
+    )?;
+    channel.write_all(b"receive\n")?;
+    let receipt = crate::receive_external(channel, &manifest, root, &request.approval.id)?;
+    write_message(channel, &receipt)
 }
 
 fn accept_into(channel: &mut Channel, root: &Path, published: Option<&Path>) -> io::Result<()> {

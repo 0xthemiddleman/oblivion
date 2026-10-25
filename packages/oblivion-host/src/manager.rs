@@ -459,6 +459,7 @@ fn run(preview: bool) -> Result<()> {
                 "invalid_destination" | "invalid_destination_port" | "invalid_destination_pattern" | "reserved_destination" => "Destinazione non valida: usa un dominio pubblico (anche *.example.com), un IP pubblico e una porta da 1 a 65535.",
                 "too_many_network_rules" => "Sono ammesse al massimo 128 regole web.",
                 "network_rule_missing" => "La regola non esiste più. Riapri il menu delle regole web.",
+                "export_outcome_unknown" => "Export interrotto senza conferma di smontaggio. La USB può contenere una copia completa o parziale; non è stata confermata la rimozione sicura.",
                 "transfer_outcome_unknown" => "Importazione interrotta senza conferma finale. Una copia già completata può essere presente nei documenti della sessione.",
                 "session_must_be_closed" => "Chiudi la sessione prima di cambiare chiave o percorso di rete.",
                 "session_channel_failed" | "invalid_session_ready" => "La sessione non ha completato l'avvio protetto. Chiudila prima di riprovare.",

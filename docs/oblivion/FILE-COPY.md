@@ -4,8 +4,8 @@ Il pacchetto `packages/oblivion-transfer` implementa il primo componente del
 percorso USB → sessione → USB: selezione di file e cartelle, offerta validata,
 stream di byte e ricezione in un deposito privato. Il binario `oblivion-copy`
 è provato fra due VM con porte virtio-serial dedicate. Il controller e il
-manager ora collegano l’importazione alla sessione attiva; export e USB fisica
-restano da verificare. Il prototipo non è una live pronta per documenti privati.
+manager ora collegano importazione, recupero ed export ext4 alla sessione attiva.
+La USB fisica resta da verificare; il prototipo non è una live pronta per documenti privati.
 
 Il confine resta quello di [NETWORK-AND-FILES.md](NETWORK-AND-FILES.md): la VM
 di importazione vede il solo dispositivo autorizzato; quella della chat
@@ -253,9 +253,44 @@ Una ricevuta persa dopo la pubblicazione non significa che la copia sia
 assente: il manager segnala esito incerto e non riprova automaticamente.
 Un errore durante la pubblicazione può lasciare un ID privato riservato;
 non viene sovrascritto. La riconciliazione ora segue il percorso descritto sotto.
-Restano export con flush/smontaggio, copia A→B e OnionShare. Rimozione USB,
+L’export ext4 è ora collegato e il ciclo completo supera 19 controlli VM sul Mac,
+inclusi writer interrotto e sessione effimera.
+Restano altri filesystem, copia A→B e OnionShare. Rimozione USB,
 ENOSPC del destinatario, guasti I/O, FAT/exFAT e hardware fisico restano gate
 di verifica. Nessuna delle prove trasforma l’originale esterno in un file cifrato.
+
+### Export USB in ext4
+
+Il menu Documenti offre **E — Esporta** per la USB selezionata. Prima del
+montaggio l’utente autorizza esplicitamente l’accesso in scrittura: il mount
+ext4 può aggiornare il journal anche se la copia viene poi annullata.
+Una seconda conferma approva il manifest dei documenti. Sono copie ordinarie
+leggibili: la cifratura del vault non si estende alla destinazione esterna.
+Il primo writer accetta **solo ext4**; FAT/exFAT restano da implementare e provare.
+
+Il controller crea una mappatura distinta `oblivion-export`, scrivibile solo
+per la VM UID/GID 1103. Il guest senza rete riceve questo solo disco esterno;
+la chat non vede il dispositivo. La sessione espone un mittente UID 1000,
+con filesystem readonly, su una nuova porta monouso. Accetta selezioni sotto
+`workspace` e `imports`, escludendo i percorsi dello stato della sessione.
+Hash e limiti restano quelli dell’importazione; una sorgente modificata
+interrompe lo stream prima della fine autorizzata.
+
+La destinazione è una nuova `Oblivion-<id>/files`, mai riusata o sovrascritta.
+File 0644 e directory 0755 rendono la copia leggibile fuori da Oblivion;
+non si conservano bit eseguibili, link o file speciali. Un errore controllato
+rimuove solo la nuova transazione parziale. Un’interruzione forzata o un errore
+durante la pulizia possono lasciarla sul supporto; non si promette rollback.
+
+La ricevuta dei byte verificati non basta per il completamento: il wrapper
+nel guest deve smontare `/target`, completare `blockdev --flushbufs` e inviare
+il marcatore finale sul canale privato. Solo allora il relay restituisce
+successo. Il manager attende anche la distruzione della VM writer, la rimozione
+della porta e del mapping prima di indicare che il supporto può essere rimosso.
+Una risposta persa o un annullamento durante la copia non confermano lo
+smontaggio; il messaggio conserva esplicitamente tale incertezza.
+Il supporto fisico e il comportamento del suo controller/cache restano gate
+distinti: un flush software non dimostra la resistenza a ogni power loss.
 
 ### Riconciliazione nel manager
 

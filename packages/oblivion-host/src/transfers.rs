@@ -10,6 +10,7 @@ pub const BUDGET_SECONDS: u64 = 300;
 pub enum Command {
     List,
     Import { source: String },
+    Export { target: String },
     Recover,
     Cancel,
 }
@@ -26,6 +27,7 @@ pub struct Source {
 #[serde(deny_unknown_fields)]
 pub struct Status {
     pub configured: bool,
+    pub export_configured: bool,
     pub active: bool,
     pub sources: Vec<Source>,
 }

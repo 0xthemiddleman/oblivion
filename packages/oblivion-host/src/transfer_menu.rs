@@ -17,14 +17,14 @@ pub fn run(terminal: &mut Terminal) -> Result<()> {
     let mut selected = 0usize;
     loop {
         let status: Status = serde_json::from_str(&command(&Command::List)?)?;
-        if !status.configured {
+        if !status.configured && !status.export_configured {
             terminal.write(&format!("{CLEAR} Importazione non configurata in questa immagine.\r\n Premi un tasto per tornare alla chat."))?;
             terminal.input(-1)?;
             return Ok(());
         }
         selected = selected.min(status.sources.len().saturating_sub(1));
         let mut view = format!(
-            "{CLEAR}{BRAND} OBLIVION - importa documenti{RESET}\r\n\r\n Sorgenti USB non montate, aperte solo in lettura.\r\n"
+            "{CLEAR}{BRAND} OBLIVION - importa documenti{RESET}\r\n\r\n USB non montate: importazione readonly, export con conferma.\r\n"
         );
         let (rows, _) = terminal.size();
         let count = rows.saturating_sub(12).max(1) as usize;
@@ -56,7 +56,7 @@ pub fn run(terminal: &mut Terminal) -> Result<()> {
         if status.active {
             view.push_str(" Un trasferimento e' ancora attivo. Premi C per annullarlo.\r\n");
         }
-        view.push_str(&format!("\r\n {ACTION}[J/K] Scegli  [Invio] Importa  [R] Aggiorna\r\n [U] Copie della sessione  [C] Annulla trasferimento\r\n [B] Blocca tutto  [Esc] Indietro{RESET}"));
+        view.push_str(&format!("\r\n {ACTION}[J/K] Scegli  [Invio] Importa  [E] Esporta  [R] Aggiorna\r\n [U] Copie della sessione  [C] Annulla trasferimento\r\n [B] Blocca tutto  [Esc] Indietro{RESET}"));
         terminal.write(&view)?;
         let input = terminal.input(-1)?;
         match input.as_slice() {
@@ -74,23 +74,45 @@ pub fn run(terminal: &mut Terminal) -> Result<()> {
                 selected = (selected + 1).min(status.sources.len().saturating_sub(1))
             }
             b"k" | b"K" | b"\x1b[A" => selected = selected.saturating_sub(1),
-            b"\r" | b"\n" if !status.active && !status.sources.is_empty() => {
-                let Some(path) = terminal.text(
-                    "Percorso relativo sulla USB: un file o una cartella, senza / iniziale",
-                )?
+            b"\r" | b"\n" | b"e" | b"E" if !status.active && !status.sources.is_empty() => {
+                let export = matches!(input.as_slice(), b"e" | b"E");
+                if (export && !status.export_configured) || (!export && !status.configured) {
+                    continue;
+                }
+                let Some(path) = terminal.text(if export {
+                    "Percorso nella sessione: workspace/... oppure imports/..."
+                } else {
+                    "Percorso relativo sulla USB: un file o una cartella, senza / iniziale"
+                })?
                 else {
                     continue;
                 };
                 if path.is_empty() {
                     continue;
                 }
-                terminal.write(&format!(
-                    "{CLEAR} Preparazione della sorgente in sola lettura..."
-                ))?;
-                let started: Started = serde_json::from_str(&command(&Command::Import {
-                    source: status.sources[selected].id.clone(),
-                })?)?;
-                let result = import(terminal, &started, path);
+                if export {
+                    terminal.write(&format!("{CLEAR}{BRAND} OBLIVION - autorizza USB in scrittura{RESET}\r\n\r\n Destinazione: {} (filesystem ext4)\r\n I documenti esportati saranno copie ordinarie leggibili.\r\n La cifratura della sessione non protegge questa USB.\r\n Il montaggio puo' aggiornare i metadati del filesystem.\r\n\r\n [E] Autorizza e prepara  [B] Blocca tutto\r\n Ogni altro tasto annulla.", status.sources[selected].name))?;
+                    match terminal.input(-1)?.as_slice() {
+                        b"e" | b"E" => {}
+                        b"b" | b"B" => {
+                            control::request("lock", None, &[])?;
+                            return Ok(());
+                        }
+                        _ => continue,
+                    }
+                }
+                terminal.write(&format!("{CLEAR} Preparazione del trasferimento..."))?;
+                let operation = if export {
+                    Command::Export {
+                        target: status.sources[selected].id.clone(),
+                    }
+                } else {
+                    Command::Import {
+                        source: status.sources[selected].id.clone(),
+                    }
+                };
+                let started: Started = serde_json::from_str(&command(&operation)?)?;
+                let result = copy(terminal, &started, path, export);
                 // Reap the worker and remove its VM, port and readonly mapping
                 // even after a lost receipt or a locally interrupted dialogue.
                 let stopped = command(&Command::Cancel);
@@ -107,7 +129,7 @@ fn command(value: &Command) -> Result<String> {
     control::request("transfers", None, &serde_json::to_vec(value)?)
 }
 
-fn import(terminal: &mut Terminal, started: &Started, path: String) -> Result<()> {
+fn copy(terminal: &mut Terminal, started: &Started, path: String, export: bool) -> Result<()> {
     if started.id.len() != 32
         || !started
             .id
@@ -143,9 +165,19 @@ fn import(terminal: &mut Terminal, started: &Started, path: String) -> Result<()
         let (rows, cols) = terminal.size();
         let count = rows.saturating_sub(14).max(1) as usize;
         let mut view = format!(
-            "{CLEAR}{BRAND} OBLIVION - conferma importazione{RESET}\r\n\r\n {} voci, {} byte. La USB resta invariata.\r\n\r\n",
+            "{CLEAR}{BRAND} OBLIVION - conferma {}{RESET}\r\n\r\n {} voci, {} byte. {}\r\n\r\n",
+            if export {
+                "esportazione"
+            } else {
+                "importazione"
+            },
             manifest.entries().len(),
-            manifest.bytes()
+            manifest.bytes(),
+            if export {
+                "Copie leggibili sulla USB selezionata."
+            } else {
+                "La USB resta invariata."
+            }
         );
         for (index, entry) in manifest
             .entries()
@@ -175,7 +207,11 @@ fn import(terminal: &mut Terminal, started: &Started, path: String) -> Result<()
                 name
             ));
         }
-        view.push_str(&format!("\r\n Confermando, i file verificati saranno disponibili alla chat.\r\n Usarli come contesto puo' inviarne contenuti ad Abliteration.\r\n\r\n {ACTION}[I] Importa nella chat  [J/K] Scorri\r\n [Esc] Annulla  [B] Blocca tutto{RESET}"));
+        if export {
+            view.push_str(&format!("\r\n La copia uscira' dal volume cifrato della sessione.\r\n Nessun file preesistente sara' sovrascritto.\r\n {ACTION}[E] Conferma esportazione  [J/K] Scorri\r\n [Esc] Annulla  [B] Blocca tutto{RESET}"));
+        } else {
+            view.push_str(&format!("\r\n Confermando, i file verificati saranno disponibili alla chat.\r\n Usarli come contesto puo' inviarne contenuti ad Abliteration.\r\n\r\n {ACTION}[I] Importa nella chat  [J/K] Scorri\r\n [Esc] Annulla  [B] Blocca tutto{RESET}"));
+        }
         terminal.write(&view)?;
         let input = terminal.input(1000)?;
         // Refresh against the worker's fixed deadline even while the user is
@@ -203,7 +239,8 @@ fn import(terminal: &mut Terminal, started: &Started, path: String) -> Result<()
                 selected = (selected + 1).min(manifest.entries().len().saturating_sub(1))
             }
             b"k" | b"K" | b"\x1b[A" => selected = selected.saturating_sub(1),
-            b"i" | b"I" => break,
+            b"i" | b"I" if !export => break,
+            b"e" | b"E" if export => break,
             _ => {}
         }
     }
@@ -217,20 +254,31 @@ fn import(terminal: &mut Terminal, started: &Started, path: String) -> Result<()
     terminal.write(&format!(
         "{CLEAR} Copia e verifica in corso...\r\n [Esc] Interrompi  [B] Blocca tutto"
     ))?;
+    let uncertain = if export {
+        "export_outcome_unknown"
+    } else {
+        "transfer_outcome_unknown"
+    };
     let Some(receipt): Option<Receipt> =
-        wait(terminal, &stream, |channel| read_message(channel, 1024))
-            .map_err(|_| "transfer_outcome_unknown")?
+        wait(terminal, &stream, |channel| read_message(channel, 1024)).map_err(|_| uncertain)?
     else {
-        return Err("transfer_outcome_unknown".into());
+        return Err(uncertain.into());
     };
     if receipt.id != started.id
         || receipt.manifest_sha256 != manifest.sha256()
         || receipt.entries != manifest.entries().len()
         || receipt.bytes != manifest.bytes()
     {
-        return Err("transfer_outcome_unknown".into());
+        return Err(uncertain.into());
     }
-    terminal.write(&format!("{CLEAR}{FEEDBACK} Importazione verificata.{RESET}\r\n\r\n File disponibili nella sessione:\r\n /vault/imports/{}/files\r\n\r\n Premi un tasto per tornare al manager.", started.id))?;
+    if export {
+        // Receiving the detached marker is necessary, and the host must also
+        // finish revoking the writer VM/mapping before declaring safe removal.
+        command(&Command::Cancel)?;
+        terminal.write(&format!("{CLEAR}{FEEDBACK} Esportazione completata.{RESET}\r\n\r\n USB sincronizzata, smontata e rilasciata.\r\n Puoi rimuovere il supporto.\r\n Cartella: Oblivion-{}/files\r\n\r\n Premi un tasto per tornare al manager.", started.id))?;
+    } else {
+        terminal.write(&format!("{CLEAR}{FEEDBACK} Importazione verificata.{RESET}\r\n\r\n File disponibili nella sessione:\r\n /vault/imports/{}/files\r\n\r\n Premi un tasto per tornare al manager.", started.id))?;
+    }
     terminal.input(-1)?;
     Ok(())
 }

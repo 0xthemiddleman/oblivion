@@ -22,6 +22,74 @@ const LIMITS: Limits = Limits {
 const CONTENT: &[u8] = b"OBLIVION_RELAY_CANARY_91e";
 
 #[test]
+fn export_receipt_is_withheld_until_detach_and_disconnect_is_not_eject_success() {
+    use std::os::fd::AsRawFd;
+    for detached in [true, false] {
+        let source = Tree::new();
+        let target = Tree::new();
+        fs::write(source.0.join("document.txt"), CONTENT).unwrap();
+        let (from, sender) = UnixStream::pair().unwrap();
+        let (to, receiver) = UnixStream::pair().unwrap();
+        let (controller, manager) = UnixStream::pair().unwrap();
+        let monitor = manager.try_clone().unwrap();
+        let (owner_a, alive_a) = UnixStream::pair().unwrap();
+        let (owner_b, alive_b) = UnixStream::pair().unwrap();
+        let relay = std::thread::spawn(move || {
+            relay::export(
+                file(from),
+                file(to),
+                file(controller),
+                vec![owner_a.into(), owner_b.into()],
+                Duration::from_secs(5),
+                relay::Permit {
+                    id: ID.into(),
+                    limits: LIMITS,
+                },
+            )
+        });
+        let from = source.0.clone();
+        let sender = std::thread::spawn(move || endpoint::send(&mut channel(sender), &from));
+        let to = target.0.clone();
+        let (ready, published) = std::sync::mpsc::sync_channel(0);
+        let (release, released) = std::sync::mpsc::sync_channel(0);
+        let receiver = std::thread::spawn(move || {
+            let mut receiver = channel(receiver);
+            endpoint::export(&mut receiver, &to).unwrap();
+            ready.send(()).unwrap();
+            released.recv().unwrap();
+            if detached {
+                receiver.write_all(b"detached\n").unwrap();
+            }
+        });
+        let mut manager = channel(manager);
+        write_message(&mut manager, &request()).unwrap();
+        let manifest = Manifest::read(&mut manager, LIMITS).unwrap();
+        write_message(&mut manager, &approval(&manifest)).unwrap();
+        published.recv().unwrap();
+        sender.join().unwrap().unwrap();
+        let mut poll = libc::pollfd {
+            fd: monitor.as_raw_fd(),
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        assert_eq!(unsafe { libc::poll(&mut poll, 1, 0) }, 0);
+        release.send(()).unwrap();
+        if detached {
+            let receipt: Receipt = read_message(&mut manager, 1024).unwrap();
+            assert_eq!(receipt.manifest_sha256, manifest.sha256());
+            relay.join().unwrap().unwrap();
+        } else {
+            let mut output = Vec::new();
+            manager.read_to_end(&mut output).unwrap();
+            assert!(output.is_empty());
+            assert!(relay.join().unwrap().is_err());
+        }
+        receiver.join().unwrap();
+        drop((alive_a, alive_b));
+    }
+}
+
+#[test]
 fn recovery_relay_validates_the_inventory_and_revokes_it_with_the_guest_or_manager() {
     use oblivion_transfer::recovery::{Request, Response};
     for case in ["complete", "owner", "manager", "invalid"] {

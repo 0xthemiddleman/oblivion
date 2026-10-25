@@ -231,6 +231,9 @@ if disk:
         stream.truncate(1024 * 1024 * 1024)
 import_source = image / "import-source.raw" if (image / "import-lab").exists() else None
 import_digest = hashlib.sha256(import_source.read_bytes()).hexdigest() if import_source else None
+export_target = output / "export-target.raw" if (image / "export-lab").exists() else None
+if export_target:
+    shutil.copyfile(image / "export-target.raw", export_target)
 started = time.monotonic()
 with (output / "serial.log").open("xb") as log:
     command = [
@@ -249,6 +252,9 @@ with (output / "serial.log").open("xb") as log:
         "-drive", f"file={import_source},format=raw,if=none,id=import-source,cache=none",
         "-device", "virtio-blk-pci,drive=import-source,serial=oblivion-import",
     ] if import_source else []) + ([
+        "-drive", f"file={export_target},format=raw,if=none,id=export-target,cache=none",
+        "-device", "virtio-blk-pci,drive=export-target,serial=oblivion-export",
+    ] if export_target else []) + ([
         "-drive", f"file={gateway_image / 'gateway.squashfs'},format=raw,if=none,id=gateway-image,readonly=on",
         "-device", "virtio-blk-pci,drive=gateway-image,serial=oblivion-gw-image",
     ] if gateway_image else []) + ([
@@ -281,6 +287,8 @@ markers = [b"OBLIVION_VM_A_CANARY_4d02", b"OBLIVION_VM_B_CANARY_b0ca", b"OBLIVIO
 if import_source:
     assert hashlib.sha256(import_source.read_bytes()).hexdigest() == import_digest, "Import source changed"
     markers.extend([b"OBLIVION_USB_SELECTED_CANARY_82f1", b"OBLIVION_USB_EDIT_CANARY_1b72", b"OBLIVION_USB_UNSELECTED_CANARY_29a1", b"OBLIVION_IMPORT_PARTIAL_CANARY_c26a"])
+if export_target:
+    markers.append(b"OBLIVION_EXPORT_EXISTING_CANARY_f4a8")
 if args.stream:
     markers.extend([b"OBLIVION_STREAM_REQUEST", b"Synthetic open stream"])
     markers.extend([b"OBLIVION_WEB_TOOLS_REQUEST", b"OBLIVION_WEB_TOOLS_VERIFIED", b"OBLIVION_WEB_HTTP", b"OBLIVION_WEB_HTTPS"])
@@ -323,6 +331,8 @@ summary = {
     "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
     "workload": "selective Tor state persistence and bootstrap" if args.tor_state else "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
     "import_source_sha256": import_digest,
+    "export_target_sha256": hashlib.sha256(export_target.read_bytes()).hexdigest() if export_target else None,
+    "export_target_plaintext_expected": bool(export_target),
     "outer_accelerator": args.accelerator, "host_system": platform.system(), "architecture": args.architecture,
     "inner_accelerator": None if args.gateway_bundle else "tcg", "production_kvm_tested": False,
     "seconds": round(time.monotonic() - started, 2), "qemu_exit": result.returncode,
