@@ -573,6 +573,18 @@ if SOCKS:
     receive(client, b"OBLIVION_STREAM_STARTED")
     observed = stream_status()
     assert observed["active"] == [3] and observed["credentials"]["3"] == "initial"
+    # A torn transfer receipt is a real cleanup error, without stubbing either
+    # the transfer controller or the active provider connection.
+    transfer_state = Path("/run/oblivion/transfer.json")
+    assert not transfer_state.exists()
+    transfer_state.write_text("{")
+    transfer_state.chmod(0o600)
+    assert command("leave", success=False) == "invalid_transfer_state"
+    stream_closed(3)
+    assert status()["session_open"] and status()["general_open"]
+    assert property("oblivion-session.service", "ActiveState") == "active"
+    transfer_state.unlink()
+    check("failed transfer cleanup still revokes the active provider stream before returning an error; session and general volumes remain interlocked")
     command("force-leave")
     client.close()
     stream_closed(3)
@@ -673,6 +685,16 @@ if SOCKS:
     receive(client, b"OBLIVION_STREAM_STARTED")
     observed = stream_status()
     assert observed["active"] == [5] and observed["credentials"]["5"] == "alternate"
+    assert not transfer_state.exists()
+    transfer_state.write_text("{")
+    transfer_state.chmod(0o600)
+    assert command("lock", success=False) == "invalid_transfer_state"
+    stopped()
+    stream_closed(5)
+    assert status()["session_open"] and status()["general_open"]
+    assert Path("/run/oblivion/ephemeral.luks").exists()
+    transfer_state.unlink()
+    check("failed global lock stops the gateway and active ephemeral stream before transfer cleanup, without falsely reporting either volume closed")
     command("lock")
     client.close()
     stopped()

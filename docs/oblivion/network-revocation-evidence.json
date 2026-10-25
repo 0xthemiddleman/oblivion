@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-25",
+  "status": "verified-in-arm64-vm",
+  "change": "Revoke the session grant or stop the gateway before attempting transfer cleanup.",
+  "production_source": "packages/oblivion-host/src/storage.rs",
+  "production_source_sha256": "c7449d486356ec664968e5a8bf2185413facf0a4bafdd68fd8aeeca5dc5179da",
+  "environment": {
+    "host": "macOS ARM64",
+    "outer_accelerator": "hvf",
+    "nested_accelerator": "tcg",
+    "provider": "synthetic external SOCKS/TLS fixture"
+  },
+  "passed": true,
+  "checks": 33,
+  "seconds": 534.49,
+  "regressions": [
+    "PASS: failed transfer cleanup still revokes the active provider stream before returning an error; session and general volumes remain interlocked",
+    "PASS: failed global lock stops the gateway and active ephemeral stream before transfer cleanup, without falsely reporting either volume closed"
+  ],
+  "fixture_verified": true,
+  "host_bundle_verified": true,
+  "plaintext_markers_on_lab_disk": [],
+  "limits": [
+    "Fault injection uses a malformed private transfer record; it does not exercise every physical USB I/O failure.",
+    "Synthetic provider and laboratory TCG sessions; not online Abliteration or a production KVM isolation test.",
+    "Tests cover failed leave and global lock. The close/force-leave and recover branches share the same ordering.",
+    "The later ISO storage-unavailable UI is not part of this ARM64 bundle."
+  ],
+  "artifacts": [
+    {
+      "path": "artifacts/oblivion-beta-iso/revoke-01/summary.json",
+      "sha256": "c70ebb9a6ab829f4b89943b1736e7d8e547afb68526fcbcda6e7140450c4e17f"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/revoke-01/serial.log",
+      "sha256": "7e3f4a0eeee1b5a4b0a47aadd74115e4b01cb01fe92c584bcb7743aff0b77cfc"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/host-arm64/SHA256SUMS",
+      "sha256": "0c506aa77eb4b269ca08826df99a86407b2aea03d4984dc406a78d7d4e582a5f"
+    },
+    {
+      "path": "artifacts/oblivion-beta-iso/host-arm64/sources.sha256",
+      "sha256": "36ba3aa0fcfd2fa36427d30ed1c5363f6f9c59875593dadd04f5d07e12e31fe2"
+    }
+  ]
+}

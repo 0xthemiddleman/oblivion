@@ -360,6 +360,11 @@ pub fn main() -> Result<()> {
             result
         }
         "close" | "leave" | "force-leave" => {
+            // Transfer cleanup can fail while a session is still running.
+            // Revoke its network before attempting any fallible teardown.
+            if config.gateway.is_some() {
+                crate::gateway::revoke()?;
+            }
             if config.import.is_some()
                 || config.export.is_some()
                 || crate::transfer_host::prepared()?
@@ -375,25 +380,22 @@ pub fn main() -> Result<()> {
                     result => result?,
                 }
             }
-            if config.gateway.is_some() {
-                crate::gateway::revoke()?;
-            }
             if config.vm.is_some() && op != "close" {
                 crate::vm::stop(op == "force-leave")?;
             }
             close_session()
         }
         "lock" | "recover" => {
+            // Even failed transfer cleanup must leave no gateway connections
+            // or credentials active. Storage remains interlocked on failure.
+            if config.gateway.is_some() {
+                crate::gateway::stop()?;
+            }
             if config.import.is_some()
                 || config.export.is_some()
                 || crate::transfer_host::prepared()?
             {
                 crate::transfer_host::stop()?;
-            }
-            // Remove gateway memory and every delegated connection before the
-            // session/general mappings can be reported locked.
-            if config.gateway.is_some() {
-                crate::gateway::stop()?;
             }
             if config.vm.is_some() {
                 crate::vm::stop(false)?;
