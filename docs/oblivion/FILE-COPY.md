@@ -4,7 +4,7 @@ Il pacchetto `packages/oblivion-transfer` implementa il primo componente del
 percorso USB → sessione → USB: selezione di file e cartelle, offerta validata,
 stream di byte e ricezione in un deposito privato. Il binario `oblivion-copy`
 è provato fra due VM con porte virtio-serial dedicate. Il controller e il
-manager ora collegano importazione, recupero ed export ext4 alla sessione attiva.
+manager ora collegano importazione, recupero ed export alla sessione attiva.
 La USB fisica resta da verificare; il prototipo non è una live pronta per documenti privati.
 
 Il confine resta quello di [NETWORK-AND-FILES.md](NETWORK-AND-FILES.md): la VM
@@ -255,18 +255,24 @@ Un errore durante la pubblicazione può lasciare un ID privato riservato;
 non viene sovrascritto. La riconciliazione ora segue il percorso descritto sotto.
 L’export ext4 è ora collegato e il ciclo completo supera 19 controlli VM sul Mac,
 inclusi writer interrotto e sessione effimera.
-Restano altri filesystem, copia A→B e OnionShare. Rimozione USB,
-ENOSPC del destinatario, guasti I/O, FAT/exFAT e hardware fisico restano gate
+Il writer FAT/exFAT e le prove di roundtrip, collisioni ed ENOSPC sono ora in
+verifica. Restano copia A→B, OnionShare, rimozione USB,
+guasti I/O e hardware fisico come gate
 di verifica. Nessuna delle prove trasforma l’originale esterno in un file cifrato.
 
-### Export USB in ext4
+### Export USB
 
 Il menu Documenti offre **E — Esporta** per la USB selezionata. Prima del
 montaggio l’utente autorizza esplicitamente l’accesso in scrittura: il mount
 ext4 può aggiornare il journal anche se la copia viene poi annullata.
 Una seconda conferma approva il manifest dei documenti. Sono copie ordinarie
 leggibili: la cifratura del vault non si estende alla destinazione esterna.
-Il primo writer accetta **solo ext4**; FAT/exFAT restano da implementare e provare.
+Il writer riconosce **ext4, FAT ed exFAT** dentro la VM, senza parsing del
+filesystem sull’host. FAT usa `utf8=1`, exFAT `iocharset=utf8`; entrambi vengono
+montati con proprietario root e maschere private. I permessi di questi formati
+derivano dal mount e non sono ACL persistenti: il ricevitore evita `chmod`.
+Riferimenti: [VFAT](https://www.kernel.org/doc/html/v6.12/filesystems/vfat.html),
+[exFAT](https://docs.kernel.org/next/filesystems/exfat.html).
 
 Il controller crea una mappatura distinta `oblivion-export`, scrivibile solo
 per la VM UID/GID 1103. Il guest senza rete riceve questo solo disco esterno;
@@ -277,10 +283,13 @@ Hash e limiti restano quelli dell’importazione; una sorgente modificata
 interrompe lo stream prima della fine autorizzata.
 
 La destinazione è una nuova `Oblivion-<id>/files`, mai riusata o sovrascritta.
-File 0644 e directory 0755 rendono la copia leggibile fuori da Oblivion;
+Su ext4, file 0644 e directory 0755 rendono la copia leggibile fuori da Oblivion;
 non si conservano bit eseguibili, link o file speciali. Un errore controllato
 rimuove solo la nuova transazione parziale. Un’interruzione forzata o un errore
 durante la pulizia possono lasciarla sul supporto; non si promette rollback.
+Su FAT/exFAT si rifiutano componenti con punti/spazi finali o caratteri non
+rappresentabili; una collisione rilevata dal filesystem interrompe la copia.
+Non si rinominano automaticamente i documenti per farli entrare nel formato.
 
 La ricevuta dei byte verificati non basta per il completamento: il wrapper
 nel guest deve smontare `/target`, completare `blockdev --flushbufs` e inviare
@@ -289,6 +298,10 @@ successo. Il manager attende anche la distruzione della VM writer, la rimozione
 della porta e del mapping prima di indicare che il supporto può essere rimosso.
 Una risposta persa o un annullamento durante la copia non confermano lo
 smontaggio; il messaggio conserva esplicitamente tale incertezza.
+Se il writer termina con errore, il wrapper tenta lo smontaggio e spegne la
+VM dedicata: l’uscita di QEMU revoca il relay tramite pidfd. Questo evita di
+attendere la sola scadenza del protocollo quando la porta virtio resta aperta
+dopo l’uscita del processo guest. Non equivale a una conferma di export.
 Il supporto fisico e il comportamento del suo controller/cache restano gate
 distinti: un flush software non dimostra la resistenza a ogni power loss.
 

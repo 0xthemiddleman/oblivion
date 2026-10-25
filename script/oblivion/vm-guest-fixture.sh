@@ -60,6 +60,7 @@ while IFS= read -r command; do
             [ "$#" = 1 ]
             [ "$(cat "$1/files/documenti/note.txt")" = OBLIVION_USB_SELECTED_CANARY_82f1 ]
             [ -d "$1/files/documenti/vuota" ]
+            [ "$(cat "$1/files/documenti/caffè.txt")" = OBLIVION_USB_SELECTED_CANARY_82f1 ]
             [ ! -e "$1/files/unselected.txt" ]
             [ ! -r /vault/.oblivion-inbox ]
             if touch /vault/imports/chat-created 2>/dev/null; then exit 1; fi
@@ -73,6 +74,29 @@ while IFS= read -r command; do
             [ "$(cat "$1/files/documenti/note.txt")" = OBLIVION_USB_EDIT_CANARY_1b72 ]
             [ ! -r /vault/.oblivion-inbox ]
             printf 'OBLIVION_IMPORT_RESUMED\n'
+            ;;
+        imports-roundtrip)
+            set -- /vault/imports/*
+            [ "$#" = 2 ]
+            [ "$(find /vault/imports -name note.txt | wc -l)" = 2 ]
+            [ "$(find /vault/imports -name note.txt -exec cat '{}' \;)" = OBLIVION_USB_EDIT_CANARY_1b72OBLIVION_USB_EDIT_CANARY_1b72 ]
+            [ "$(find /vault/imports -name caffè.txt | wc -l)" = 2 ]
+            [ "$(find /vault/imports -name caffè.txt -exec cat '{}' \;)" = OBLIVION_USB_SELECTED_CANARY_82f1OBLIVION_USB_SELECTED_CANARY_82f1 ]
+            printf 'OBLIVION_IMPORT_ROUNDTRIP\n'
+            ;;
+        export-faults)
+            mkdir -p /vault/workspace/collision /vault/workspace/space
+            printf first > /vault/workspace/collision/note.txt
+            printf second > /vault/workspace/collision/NOTE.txt
+            dd if=/dev/zero of=/vault/workspace/space/large.txt bs=1M count=8 2>/dev/null
+            sync
+            printf 'OBLIVION_EXPORT_FAULTS_READY\n'
+            ;;
+        export-originals)
+            [ "$(cat /vault/workspace/collision/note.txt)" = first ]
+            [ "$(cat /vault/workspace/collision/NOTE.txt)" = second ]
+            [ "$(stat -c %s /vault/workspace/space/large.txt)" = 8388608 ]
+            printf 'OBLIVION_EXPORT_ORIGINALS\n'
             ;;
         chat-a|chat-b|chat-resume)
             python3 /usr/libexec/oblivion-chat-probe "$command"

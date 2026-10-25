@@ -30,6 +30,9 @@ scadenza quando la VM è congelata. Il blocco non è dichiarato finché la
 pulizia non riesce; la chiusura forzata resta una scelta esplicita.
 La CI `2e5c2f4` completa tutti i 31 job. La successiva `9331b27` termina con
 tutti i 32 job passati, incluso quello x86 di importazione (nove controlli).
+La successiva CI `4252654` termina anch’essa con 32 job passati e porta il
+collaudo x86 del recupero a 12 controlli (251,23 s), senza i 15 marcatori
+cercati in chiaro sul disco. È precedente all’export.
 Il recupero nel manager aggiunge ora un elenco delle copie, ricevute private
 persistenti e cancellazione esplicita dei soli tentativi non consegnati.
 Le modifiche successive della chat non vengono ricalcolate né eliminate.

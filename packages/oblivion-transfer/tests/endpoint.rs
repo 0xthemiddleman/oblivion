@@ -46,52 +46,55 @@ fn document_sender_refuses_session_state_and_only_exports_approved_document_root
         assert!(output.is_empty());
         sender.finish(false);
     }
-    fs::create_dir(source.0.join("workspace")).unwrap();
-    fs::write(source.0.join("workspace/document.txt"), CONTENT).unwrap();
-    let target = Tree::new();
-    let mut sender = Endpoint::start("documents", &source, 5000);
-    let mut receiver = Endpoint::start("export", &target, 5000);
-    write_message(
-        &mut sender.channel,
-        &OfferRequest {
-            paths: vec!["workspace/document.txt".into()],
-            ..request()
-        },
-    )
-    .unwrap();
-    let manifest = Manifest::read(&mut sender.channel, LIMITS).unwrap();
-    write_message(
-        &mut receiver.channel,
-        &ReceiveRequest {
-            approval: approval(&manifest),
-            limits: LIMITS,
-        },
-    )
-    .unwrap();
-    manifest.write(&mut receiver.channel).unwrap();
-    let mut ready = [0; 8];
-    receiver.channel.read_exact(&mut ready).unwrap();
-    assert_eq!(&ready, b"receive\n");
-    write_message(&mut sender.channel, &approval(&manifest)).unwrap();
-    let mut data = vec![0; CONTENT.len() + 8];
-    sender.channel.read_exact(&mut data).unwrap();
-    receiver.channel.write_all(&data).unwrap();
-    let receipt: Receipt = read_message(&mut receiver.channel, 1024).unwrap();
-    write_message(&mut sender.channel, &receipt).unwrap();
-    let mut done = [0; 7];
-    sender.channel.read_exact(&mut done).unwrap();
-    assert_eq!(&done, b"copied\n");
-    sender.finish(true);
-    receiver.finish(true);
-    assert_eq!(
-        fs::read(
-            target
-                .0
-                .join(format!("Oblivion-{ID}/files/workspace/document.txt"))
+    for role in ["export", "export-portable"] {
+        let source = Tree::new();
+        fs::create_dir(source.0.join("workspace")).unwrap();
+        fs::write(source.0.join("workspace/document.txt"), CONTENT).unwrap();
+        let target = Tree::new();
+        let mut sender = Endpoint::start("documents", &source, 5000);
+        let mut receiver = Endpoint::start(role, &target, 5000);
+        write_message(
+            &mut sender.channel,
+            &OfferRequest {
+                paths: vec!["workspace/document.txt".into()],
+                ..request()
+            },
         )
-        .unwrap(),
-        CONTENT
-    );
+        .unwrap();
+        let manifest = Manifest::read(&mut sender.channel, LIMITS).unwrap();
+        write_message(
+            &mut receiver.channel,
+            &ReceiveRequest {
+                approval: approval(&manifest),
+                limits: LIMITS,
+            },
+        )
+        .unwrap();
+        manifest.write(&mut receiver.channel).unwrap();
+        let mut ready = [0; 8];
+        receiver.channel.read_exact(&mut ready).unwrap();
+        assert_eq!(&ready, b"receive\n");
+        write_message(&mut sender.channel, &approval(&manifest)).unwrap();
+        let mut data = vec![0; CONTENT.len() + 8];
+        sender.channel.read_exact(&mut data).unwrap();
+        receiver.channel.write_all(&data).unwrap();
+        let receipt: Receipt = read_message(&mut receiver.channel, 1024).unwrap();
+        write_message(&mut sender.channel, &receipt).unwrap();
+        let mut done = [0; 7];
+        sender.channel.read_exact(&mut done).unwrap();
+        assert_eq!(&done, b"copied\n");
+        sender.finish(true);
+        receiver.finish(true);
+        assert_eq!(
+            fs::read(
+                target
+                    .0
+                    .join(format!("Oblivion-{ID}/files/workspace/document.txt"))
+            )
+            .unwrap(),
+            CONTENT
+        );
+    }
 }
 
 struct Endpoint {

@@ -248,15 +248,36 @@ pub fn receive(
     Ok(receipt)
 }
 
-/// Plaintext export, called only after the launcher authorizes the external
-/// filesystem. Existing export IDs are never reused or replaced.
+/// Permission policy selected by the trusted writer launcher, never the peer.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum ExportMode {
+    Posix,
+    /// FAT/exFAT permissions come from the isolated guest's mount options.
+    Portable,
+}
+
+/// Plaintext export into a new, exclusive directory on the authorized medium.
 pub fn receive_external(
     reader: &mut impl Read,
     manifest: &Manifest,
     root: &Path,
     id: &str,
+    mode: ExportMode,
 ) -> io::Result<Receipt> {
     validate_id(id)?;
+    if mode == ExportMode::Portable {
+        for entry in manifest.entries() {
+            for name in entry.path().split('/') {
+                require(
+                    !name.ends_with(['.', ' '])
+                        && !name
+                            .chars()
+                            .any(|c| matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')),
+                    "unsupported_export_name",
+                )?;
+            }
+        }
+    }
     let root = Directory::open(root)?;
     let name = format!("Oblivion-{id}");
     let transaction = root.create_directory(&name)?;
@@ -266,30 +287,32 @@ pub fn receive_external(
         return Err(error);
     }
     let files = transaction.directory("files")?;
-    for entry in manifest.entries() {
-        let mut parent = files.clone()?;
-        let mut components = entry.path().split('/').peekable();
-        while let Some(component) = components.next() {
-            if components.peek().is_some() {
-                parent = parent.directory(component)?;
-                continue;
+    // FAT/exFAT synthesize permissions at mount; chmod is not a portable
+    // operation there. POSIX media must be readable by users outside Oblivion.
+    if mode == ExportMode::Posix {
+        for entry in manifest.entries() {
+            let mut parent = files.clone()?;
+            let mut components = entry.path().split('/').peekable();
+            while let Some(component) = components.next() {
+                if components.peek().is_some() {
+                    parent = parent.directory(component)?;
+                    continue;
+                }
+                let file = parent.source(component)?;
+                file.set_permissions(std::fs::Permissions::from_mode(
+                    if matches!(entry, Entry::Directory { .. }) {
+                        0o755
+                    } else {
+                        0o644
+                    },
+                ))?;
+                file.sync_all()?;
             }
-            let file = parent.source(component)?;
-            file.set_permissions(std::fs::Permissions::from_mode(
-                if matches!(entry, Entry::Directory { .. }) {
-                    0o755
-                } else {
-                    0o644
-                },
-            ))?;
-            file.sync_all()?;
         }
+        files.mode(0o755)?;
+        transaction.mode(0o755)?;
     }
-    // The dedicated VM isolates the writer. Exported ordinary documents must
-    // remain readable after taking the external medium out of Oblivion.
-    files.mode(0o755)?;
     files.sync()?;
-    transaction.mode(0o755)?;
     transaction.sync()?;
     root.sync()?;
     Ok(Receipt {

@@ -229,7 +229,11 @@ disk = None if args.gateway_bundle else output / "data.raw"
 if disk:
     with disk.open("xb") as stream:
         stream.truncate(1024 * 1024 * 1024)
-import_source = image / "import-source.raw" if (image / "import-lab").exists() else None
+import_source = output / "import-source.raw" if (image / "import-lab").exists() else None
+if import_source:
+    # Each fault-injection run owns its media. A mistaken test selection must
+    # fail the hash assertion without corrupting a reusable image template.
+    shutil.copyfile(image / "import-source.raw", import_source)
 import_digest = hashlib.sha256(import_source.read_bytes()).hexdigest() if import_source else None
 export_target = output / "export-target.raw" if (image / "export-lab").exists() else None
 if export_target:
@@ -331,6 +335,7 @@ summary = {
     "scope": "gateway component tests over synthetic loopback SOCKS/TLS; no Tor or provider connection" if args.gateway_bundle else "real LUKS/systemd/QEMU lifecycle with synthetic data; nested TCG is NOT an isolation guarantee",
     "workload": "selective Tor state persistence and bootstrap" if args.tor_state else "session gateway grant, private token delivery and network isolation" if session_image else "general LUKS credentials and real host gateway lifecycle" if gateway_image else "gateway API validation, transport, revocation and Linux activation" if args.gateway_bundle else "systemd service crash/recovery with real manager and VM" if args.services_bundle else ("trusted manager TUI + " if (image / "manager.sha256").exists() else "") + ("compiled interactive OpenCode TUI" if (image / "tui-lab").exists() else "compiled OpenCode CLI" if (image / "opencode.sha256").exists() else "synthetic shell"),
     "import_source_sha256": import_digest,
+    "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
     "export_target_sha256": hashlib.sha256(export_target.read_bytes()).hexdigest() if export_target else None,
     "export_target_plaintext_expected": bool(export_target),
     "outer_accelerator": args.accelerator, "host_system": platform.system(), "architecture": args.architecture,

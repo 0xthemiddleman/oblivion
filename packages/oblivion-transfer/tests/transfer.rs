@@ -1,6 +1,6 @@
 mod support;
 
-use oblivion_transfer::{Entry, Limits, Manifest, Selection, publish, receive};
+use oblivion_transfer::{Entry, ExportMode, Limits, Manifest, Selection, publish, receive};
 use std::fs;
 use std::io::{Cursor, Read, Write};
 use std::os::unix::fs::{MetadataExt, PermissionsExt, symlink};
@@ -27,6 +27,7 @@ fn external_export_preserves_existing_data_and_never_reuses_a_destination() {
         &manifest,
         &target.0,
         ID,
+        ExportMode::Posix,
     )
     .unwrap();
     assert_eq!(receipt.manifest_sha256, manifest.sha256());
@@ -35,14 +36,43 @@ fn external_export_preserves_existing_data_and_never_reuses_a_destination() {
     assert_eq!(fs::metadata(&exported).unwrap().mode() & 0o777, 0o644);
     fs::write(&exported, b"external edit").unwrap();
     assert!(
-        oblivion_transfer::receive_external(&mut Cursor::new(bytes), &manifest, &target.0, ID)
-            .is_err()
+        oblivion_transfer::receive_external(
+            &mut Cursor::new(bytes),
+            &manifest,
+            &target.0,
+            ID,
+            ExportMode::Posix
+        )
+        .is_err()
     );
     assert_eq!(fs::read(&exported).unwrap(), b"external edit");
     assert_eq!(
         fs::read(target.0.join("existing")).unwrap(),
         b"keep this document"
     );
+}
+
+#[test]
+fn portable_export_rejects_names_that_could_be_rewritten_by_the_filesystem() {
+    let target = Tree::new();
+    for name in [
+        "note.", "note ", "a:b", "a?b", "a*b", "a\"b", "a<b", "a>b", "a|b",
+    ] {
+        // The common manifest accepts these POSIX filenames. The external
+        // portable writer must reject them before creating a transaction.
+        let manifest = Manifest::new(vec![empty(name)], LIMITS).unwrap();
+        assert!(
+            oblivion_transfer::receive_external(
+                &mut Cursor::new(b"OBLVEND1"),
+                &manifest,
+                &target.0,
+                ID,
+                ExportMode::Portable,
+            )
+            .is_err()
+        );
+        assert_eq!(fs::read_dir(&target.0).unwrap().count(), 0);
+    }
 }
 
 #[test]
@@ -57,7 +87,8 @@ fn truncated_external_export_removes_only_its_new_partial_copy() {
             &mut Cursor::new(&bytes[..bytes.len() - 1]),
             &manifest,
             &target.0,
-            ID
+            ID,
+            ExportMode::Posix,
         )
         .is_err()
     );

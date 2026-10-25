@@ -90,7 +90,7 @@ COPY packages/oblivion-host/export/ /usr/lib/oblivion/export/
 RUN mkdir /target && passwd -l root && chmod 0755 /usr/lib/oblivion/export/*.sh \
     && cp /usr/lib/oblivion/export/oblivion-export-target.service /etc/systemd/system/ \
     && mkdir -p /etc/modules-load.d /etc/udev/rules.d \
-    && printf 'virtio_console\n' > /etc/modules-load.d/oblivion-export.conf \
+    && printf 'virtio_console\nvfat\nexfat\n' > /etc/modules-load.d/oblivion-export.conf \
     && printf '%s\n' 'SUBSYSTEM=="virtio-ports", ATTR{name}=="oblivion.export", OWNER="root", GROUP="root", MODE="0600", TAG+="systemd", ENV{SYSTEMD_WANTS}="oblivion-export-target.service"' > /etc/udev/rules.d/72-oblivion-export.rules
 
 FROM guest AS opencode-guest
@@ -166,6 +166,7 @@ COPY script/oblivion/vm-import-test.py /usr/libexec/oblivion-vm-test
 RUN touch /usr/lib/oblivion/vm/import-lab
 
 FROM import-host AS export-host
+RUN apt-get update && apt-get install -y --no-install-recommends dosfstools exfatprogs && rm -rf /var/lib/apt/lists/*
 RUN touch /usr/lib/oblivion/vm/export-lab
 
 FROM manager-host AS tui-host

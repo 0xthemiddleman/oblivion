@@ -45,6 +45,7 @@ if [ -f /host/usr/lib/oblivion/vm/import-lab ]; then
     touch /out/import-lab
     mkdir -p /fixture/documenti/vuota
     printf OBLIVION_USB_SELECTED_CANARY_82f1 > /fixture/documenti/note.txt
+    printf OBLIVION_USB_SELECTED_CANARY_82f1 > /fixture/documenti/caffè.txt
     printf OBLIVION_USB_UNSELECTED_CANARY_29a1 > /fixture/unselected.txt
     truncate -s 32M /out/import-source.raw
     mkfs.ext4 -q -m 0 -d /fixture /out/import-source.raw
@@ -53,7 +54,7 @@ if [ -f /host/usr/lib/oblivion/vm/export-lab ]; then
     touch /out/export-lab
     mkdir /export-fixture
     printf OBLIVION_EXPORT_EXISTING_CANARY_f4a8 > /export-fixture/existing.txt
-    truncate -s 32M /out/export-target.raw
+    truncate -s 64M /out/export-target.raw
     mkfs.ext4 -q -m 0 -d /export-fixture /out/export-target.raw
 fi
 mksquashfs /host /out/host.squashfs -noappend -comp zstd -processors 2 -quiet

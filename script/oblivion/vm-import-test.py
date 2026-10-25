@@ -87,7 +87,41 @@ def offer():
     return json.loads(Path("/run/oblivion/transfer.json").read_text())["id"]
 
 
-def exports(copied, mode="persistent"):
+def target_mount(filesystem, readonly=False):
+    target = Path("/run/oblivion-export-check")
+    target.mkdir(exist_ok=True)
+    options = "ro" if readonly else "rw"
+    options += ",nodev,nosuid,noexec"
+    options += ",utf8=1" if filesystem == "vfat" else ",iocharset=utf8" if filesystem == "exfat" else ",noload" if readonly else ""
+    subprocess.run(["mount", "-t", filesystem, "-o", options, "/dev/vdd", str(target)], check=True)
+    return target
+
+
+def format_target(filesystem, full=False):
+    cleaned()
+    # These are known disposable laboratory disks, never a production code path.
+    args = ["mkfs.ext4", "-q", "-F", "-m", "0"] if filesystem == "ext4" else ["mkfs.vfat", "-F", "32", "--mbr=no"] if filesystem == "vfat" else ["mkfs.exfat"]
+    subprocess.run([*args, "/dev/vdd"], check=True, stdout=subprocess.DEVNULL)
+    assert not list(Path("/sys/class/block/vdd").glob("vdd*")), "fixture disk unexpectedly partitioned"
+    target = target_mount(filesystem)
+    try:
+        (target / "existing.txt").write_bytes(b"OBLIVION_EXPORT_EXISTING_CANARY_f4a8")
+        if full:
+            with (target / "filler.bin").open("wb", buffering=0) as filler:
+                try:
+                    while True:
+                        filler.write(bytes(1024 * 1024))
+                except OSError as error:
+                    assert error.errno == 28, error
+                filler.truncate(max(0, filler.tell() - 1024 * 1024))
+                os.fsync(filler.fileno())
+            stats = os.statvfs(target)
+            assert 0 < stats.f_bavail * stats.f_frsize < 2 * 1024 * 1024
+    finally:
+        subprocess.run(["umount", str(target)], check=True)
+
+
+def exports(copied, mode="persistent", filesystem="ext4"):
     def target_hash():
         with Path("/dev/vdd").open("rb") as stream:
             return hashlib.file_digest(stream, "sha256").hexdigest()
@@ -96,7 +130,8 @@ def exports(copied, mode="persistent"):
         send(b"\x1e", "OBLIVION - importa documenti")
         send(b"j", "OBLIVION - importa documenti")
         send(b"e", "Percorso nella sessione")
-        send(f"imports/{copied}/files/documenti\r".encode(), "OBLIVION - autorizza USB in scrittura")
+        authorization = send(f"imports/{copied}/files/documenti\r".encode(), "OBLIVION - autorizza USB in scrittura")
+        assert b"Destinazione: vdd " in authorization, authorization
 
     before = target_hash()
     begin()
@@ -118,12 +153,16 @@ def exports(copied, mode="persistent"):
     send(b"e", "Esportazione completata")
     cleaned()
     assert not Path(f"/proc/{writer}").exists()
-    # Read only this synthetic fixture after the production worker has detached
-    # it. Production never parses the external filesystem on the host.
-    def read_export(path):
-        return subprocess.check_output(["debugfs", "-R", f"cat /{path}", "/dev/vdd"], stderr=subprocess.DEVNULL)
-    assert read_export(f"Oblivion-{identifier}/files/imports/{copied}/files/documenti/note.txt") == b"OBLIVION_USB_EDIT_CANARY_1b72"
-    assert read_export("existing.txt") == b"OBLIVION_EXPORT_EXISTING_CANARY_f4a8"
+    # Inspect only this synthetic disk after detach, never production media.
+    target = target_mount(filesystem, readonly=True)
+    try:
+        exported = target / f"Oblivion-{identifier}/files/imports/{copied}/files/documenti"
+        assert (exported / "note.txt").read_bytes() == b"OBLIVION_USB_EDIT_CANARY_1b72"
+        assert (exported / "caffè.txt").read_bytes() == b"OBLIVION_USB_SELECTED_CANARY_82f1"
+        assert (exported / "vuota").is_dir()
+        assert (target / "existing.txt").read_bytes() == b"OBLIVION_EXPORT_EXISTING_CANARY_f4a8"
+    finally:
+        subprocess.run(["umount", str(target)], check=True)
     send(b"\r", "OBLIVION | SESSIONE APERTA")
     guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
     check(f"{mode} manager export reports removal only after writer detach and cleanup")
@@ -144,6 +183,38 @@ def exports(copied, mode="persistent"):
         send(PASSWORD + b"\r", "OBLIVION_GUEST_READY")
         guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
         check("an interrupted writer never reports eject success and cleanup preserves the encrypted session original")
+    return identifier
+
+
+def export_faults():
+    guest("export-faults", "OBLIVION_EXPORT_FAULTS_READY")
+    for filesystem, fault, selection in [("ext4", "ENOSPC", "space"), ("vfat", "case collision", "collision"), ("exfat", "case collision", "collision")]:
+        format_target(filesystem, full=fault == "ENOSPC")
+        send(b"\x1e", "OBLIVION - importa documenti")
+        send(b"j", "OBLIVION - importa documenti")
+        send(b"e", "Percorso nella sessione")
+        authorization = send(f"workspace/{selection}\r".encode(), "OBLIVION - autorizza USB in scrittura")
+        assert b"Destinazione: vdd " in authorization, authorization
+        send(b"e", "OBLIVION - conferma esportazione")
+        offset = len(screen)
+        started = time.monotonic()
+        send(b"e", "Export interrotto senza conferma di smontaggio")
+        assert time.monotonic() - started < 45, "writer error must not await the 300-second relay deadline"
+        cleaned()
+        assert not status()["session_open"]
+        assert b"Esportazione completata" not in screen[offset:]
+        assert b"Puoi rimuovere il supporto" not in screen[offset:]
+        target = target_mount(filesystem, readonly=True)
+        try:
+            assert not list(target.glob("Oblivion-*"))
+            assert (target / "existing.txt").read_bytes() == b"OBLIVION_EXPORT_EXISTING_CANARY_f4a8"
+        finally:
+            subprocess.run(["umount", str(target)], check=True)
+        send(b"\r", "Password della sessione")
+        send(PASSWORD + b"\r", "OBLIVION_GUEST_READY")
+        guest("export-originals", "OBLIVION_EXPORT_ORIGINALS")
+        guest("imports-resumed", "OBLIVION_IMPORT_RESUMED")
+        check(f"{filesystem} {fault} revokes the copy promptly, removes the private partial copy and preserves existing documents")
 
 
 def guest(command_text, marker):
@@ -244,6 +315,8 @@ try:
     check("reconciliation reads a private durable receipt without rehashing or deleting later chat edits")
     if export_lab:
         exports(copied)
+        export_faults()
+        format_target("ext4")
     offer()
     source_pid = int(systemctl("show", "oblivion-import-vm.service", "-p", "MainPID", "--value"))
     os.kill(source_pid, signal.SIGKILL)
@@ -303,6 +376,36 @@ try:
     with Path("/data/general.luks").open("rb") as general:
         assert hashlib.file_digest(general, "sha256").hexdigest() == saved
     check("ephemeral import and edits disappear at closure with the persistent general byte-identical")
+    if export_lab:
+        for filesystem in ["vfat", "exfat"]:
+            format_target(filesystem)
+            send(b"e", "Password del volume generale")
+            send(GENERAL + b"\r", "Avvio effimero")
+            send(b"n", "OBLIVION_GUEST_READY")
+            copied = offer()
+            send(b"i", "Importazione verificata")
+            send(b"\r", "OBLIVION | SESSIONE APERTA")
+            cleaned()
+            guest("imports-check", "OBLIVION_IMPORT_VERIFIED")
+            identifier = exports(copied, "ephemeral " + filesystem, filesystem)
+            with Path("/dev/vdd").open("rb") as stream:
+                source_hash = hashlib.file_digest(stream, "sha256").hexdigest()
+            send(b"\x1e", "OBLIVION - importa documenti")
+            send(b"j", "OBLIVION - importa documenti")
+            send(b"\r", "Percorso relativo sulla USB")
+            send(f"Oblivion-{identifier}/files/imports/{copied}/files/documenti\r".encode(), "OBLIVION - conferma importazione")
+            send(b"i", "Importazione verificata")
+            send(b"\r", "OBLIVION | SESSIONE APERTA")
+            cleaned()
+            guest("imports-roundtrip", "OBLIVION_IMPORT_ROUNDTRIP")
+            with Path("/dev/vdd").open("rb") as stream:
+                assert hashlib.file_digest(stream, "sha256").hexdigest() == source_hash
+            send(b"\x1d", "Avvio effimero")
+            assert not Path("/run/oblivion/ephemeral.luks").exists()
+            send(b"b", "Archivio generale bloccato")
+            with Path("/data/general.luks").open("rb") as general:
+                assert hashlib.file_digest(general, "sha256").hexdigest() == saved
+            check(f"{filesystem} roundtrip preserves UTF-8 names and bytes, leaves the source unchanged and writes no persistent general state")
     assert GENERAL not in screen and PASSWORD not in screen
     assert b"OBLIVION_USB_SELECTED_CANARY_82f1" not in screen
     check("manager output contains neither document payloads nor volume passwords")

@@ -88,7 +88,7 @@ pub fn recover(channel: &mut Channel, root: &Path, published: &Path) -> io::Resu
     write_message(channel, &response)
 }
 
-pub fn export(channel: &mut Channel, root: &Path) -> io::Result<()> {
+pub fn export(channel: &mut Channel, root: &Path, mode: crate::ExportMode) -> io::Result<()> {
     let request: ReceiveRequest = read_message(channel, 1024)?;
     validate_id(&request.approval.id)?;
     let manifest = Manifest::read(channel, request.limits)?;
@@ -97,7 +97,7 @@ pub fn export(channel: &mut Channel, root: &Path) -> io::Result<()> {
         "offer_not_approved",
     )?;
     channel.write_all(b"receive\n")?;
-    let receipt = crate::receive_external(channel, &manifest, root, &request.approval.id)?;
+    let receipt = crate::receive_external(channel, &manifest, root, &request.approval.id, mode)?;
     write_message(channel, &receipt)
 }
 

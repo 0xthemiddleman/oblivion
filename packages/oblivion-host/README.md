@@ -210,8 +210,10 @@ discard; published archives are never silently reused or overwritten.
 
 Configure `export` with a separate `export.squashfs` VM image (see the example
 configuration). `E` authorizes the selected USB for writing before it is mounted;
-the user then approves the document manifest separately. The initial writer
-supports ext4 only. FAT/exFAT export and physical-device failure tests remain open.
+the user then approves the document manifest separately. The writer supports
+ext4, FAT and exFAT. The portable filesystems use mount permissions and UTF-8
+names; the receiver does not attempt POSIX chmod on them. Names that require
+rewriting are rejected and filesystem name collisions fail without overwriting.
 
 A dedicated networkless UID/GID 1103 VM receives only the writable external
 mapping. The chat guest supplies selected `workspace` or `imports` files via a
@@ -223,3 +225,6 @@ The relay withholds success until the receiver confirms unmount and block-device
 flush. The manager additionally waits for writer VM, port and mapping cleanup
 before displaying safe removal. Cancellation or loss of the final response may
 leave a complete or partial external copy and does not confirm safe removal.
+On a writer error, the disposable guest attempts an unmount and powers off so
+the relay observes its process exit even if virtio does not signal guest-port
+closure. Physical-device removal, I/O and power-loss tests remain release gates.

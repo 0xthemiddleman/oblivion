@@ -20,7 +20,7 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() != if import { 4 } else { 3 }
         || !matches!(
             args[0].as_str(),
-            "send" | "receive" | "import" | "recover" | "documents" | "export"
+            "send" | "receive" | "import" | "recover" | "documents" | "export" | "export-portable"
         )
         || !Path::new(&args[1]).is_absolute()
         || (import && !Path::new(&args[2]).is_absolute())
@@ -44,7 +44,18 @@ fn execute() -> Result<(), Box<dyn std::error::Error>> {
         endpoint::documents(&mut channel, Path::new(&args[1]))?;
     }
     if args[0] == "export" {
-        endpoint::export(&mut channel, Path::new(&args[1]))?;
+        endpoint::export(
+            &mut channel,
+            Path::new(&args[1]),
+            oblivion_transfer::ExportMode::Posix,
+        )?;
+    }
+    if args[0] == "export-portable" {
+        endpoint::export(
+            &mut channel,
+            Path::new(&args[1]),
+            oblivion_transfer::ExportMode::Portable,
+        )?;
     }
     if args[0] == "import" {
         endpoint::import(&mut channel, Path::new(&args[1]), Path::new(&args[2]))?;

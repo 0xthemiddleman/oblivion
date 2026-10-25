@@ -54,7 +54,7 @@ fn export_receipt_is_withheld_until_detach_and_disconnect_is_not_eject_success()
         let (release, released) = std::sync::mpsc::sync_channel(0);
         let receiver = std::thread::spawn(move || {
             let mut receiver = channel(receiver);
-            endpoint::export(&mut receiver, &to).unwrap();
+            endpoint::export(&mut receiver, &to, oblivion_transfer::ExportMode::Posix).unwrap();
             ready.send(()).unwrap();
             released.recv().unwrap();
             if detached {

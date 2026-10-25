@@ -20,6 +20,9 @@ La prova usa ext4 virtuale e una shell con l’identità della chat: non complet
 USB fisica o live. La CI precedente `9331b27` termina con tutti i **32 job
 passati**, incluso il nuovo job x86 di importazione. Riconciliazione ed export
 non fanno parte di quel commit.
+La successiva CI `4252654` verifica anche il recupero: tutti i **32 job**
+passano, con 12 controlli del manager x86 in 251,23 secondi e nessuno dei
+15 marcatori cercati sul disco. L’export resta successivo a quella CI.
 
 Sono implementati il generale LUKS2 e i volumi indipendenti delle sessioni,
 il controller Linux, una VM nuova per apertura, il manager fidato e il profilo

@@ -91,7 +91,7 @@ pub fn run(terminal: &mut Terminal) -> Result<()> {
                     continue;
                 }
                 if export {
-                    terminal.write(&format!("{CLEAR}{BRAND} OBLIVION - autorizza USB in scrittura{RESET}\r\n\r\n Destinazione: {} (filesystem ext4)\r\n I documenti esportati saranno copie ordinarie leggibili.\r\n La cifratura della sessione non protegge questa USB.\r\n Il montaggio puo' aggiornare i metadati del filesystem.\r\n\r\n [E] Autorizza e prepara  [B] Blocca tutto\r\n Ogni altro tasto annulla.", status.sources[selected].name))?;
+                    terminal.write(&format!("{CLEAR}{BRAND} OBLIVION - autorizza USB in scrittura{RESET}\r\n\r\n Destinazione: {} (ext4, FAT o exFAT)\r\n I documenti esportati saranno copie ordinarie leggibili.\r\n La cifratura della sessione non protegge questa USB.\r\n Il montaggio puo' aggiornare i metadati del filesystem.\r\n\r\n [E] Autorizza e prepara  [B] Blocca tutto\r\n Ogni altro tasto annulla.", status.sources[selected].name))?;
                     match terminal.input(-1)?.as_slice() {
                         b"e" | b"E" => {}
                         b"b" | b"B" => {
@@ -113,7 +113,7 @@ pub fn run(terminal: &mut Terminal) -> Result<()> {
                 };
                 let started: Started = serde_json::from_str(&command(&operation)?)?;
                 let result = copy(terminal, &started, path, export);
-                // Reap the worker and remove its VM, port and readonly mapping
+                // Reap the worker and remove its VM, port and external mapping
                 // even after a lost receipt or a locally interrupted dialogue.
                 let stopped = command(&Command::Cancel);
                 result?;
